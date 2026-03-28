@@ -3,7 +3,7 @@
 ## 工程概览
 
 根工程 Maven 坐标为 `com.backend:smartVillages`，采用 **多模块 + 单 Spring Boot 进程**（`service` 模块打包可执行 jar）。  
-各业务 jar **只依赖 `common`**；`common` 收敛 Web / MyBatis-Plus / Knife4j(OpenAPI) / JWT 等共用能力。根包名为 **`com.backend.*`**（与旧文档中的 `com.blogbackend` / 单体 `modules` 目录已不一致）。
+各业务 jar **只依赖 `common`**；`common` 收敛 Web / MyBatis-Plus / Swagger / JWT 等共用能力。根包名为 **`com.backend.*`**（与旧文档中的 `com.blogbackend` / 单体 `modules` 目录已不一致）。
 
 ### 仓库目录（Maven 模块）
 
@@ -12,7 +12,7 @@ smartVillages/                          # 父工程（packaging=pom）
 ├── pom.xml
 ├── common/                             # 公共模块（无启动类）
 │   └── src/main/java/com/backend/common/
-│       ├── config/                     # OpenAPI 元信息、MyBatis-Plus、CORS、拦截器等
+│       ├── config/                     # Swagger、MyBatis-Plus、CORS、拦截器等
 │       ├── exception/                  # GlobalExceptionHandler
 │       ├── filter/                     # CharacterEncodingFilter
 │       ├── result/                     # Result
@@ -215,7 +215,7 @@ flowchart TB
         M[media]
     end
 
-    C[common<br/>Web / MyBatis-Plus / Knife4j / JWT 等]
+    C[common<br/>Web / MyBatis-Plus / Swagger / JWT 等]
 
     S --> C
     S --> A
