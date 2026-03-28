@@ -62,7 +62,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - Token 刷新
 - 权限拦截
 
-**数据表：** `auth`（用户认证表）
+**数据表：** [`auth`](service/src/main/resources/sql/auth.sql)（用户认证表，DDL 见链接）
 - 字段：id, username, password, role, status
 
 **使用场景：**
@@ -80,7 +80,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - 管理员账号增删改查
 - 权限配置
 
-**数据表：** `admin`（管理员表）
+**数据表：** [`admin`](service/src/main/resources/sql/admin.sql)（管理员表，DDL 见链接）
 - 字段：id, username, password, role, permissions, status
 
 **使用场景：**
@@ -100,7 +100,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - 公告置顶
 - 公告分类（通知、公告、公示）
 
-**数据表：** `announcement`（村务公告表）
+**数据表：** [`announcement`](service/src/main/resources/sql/announcement.sql)（村务公告表，DDL 见链接）
 - 字段：id, title, content, type, status, is_top, create_time, audit_time
 
 **使用场景：**
@@ -121,7 +121,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - 政策公开
 - 审核流程
 
-**数据表：** `open`（村务公开表）
+**数据表：** [`open`](service/src/main/resources/sql/open.sql)（村务公开表，DDL 见链接）
 - 字段：id, title, content, category, amount, attachments, status
 
 **使用场景：**
@@ -142,7 +142,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - 历史文化展示
 - 相册管理
 
-**数据表：** `feature`（乡村风采表）
+**数据表：** [`feature`](service/src/main/resources/sql/feature.sql)（乡村风采表，DDL 见链接）
 - 字段：id, title, content, images, type, sort, status
 
 **使用场景：**
@@ -163,7 +163,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - 状态跟踪（新建→处理中→已回复→已关闭）
 - 留言评价
 
-**数据表：** `interaction`（村民留言表）
+**数据表：** [`interaction`](service/src/main/resources/sql/interaction.sql)（村民留言表，DDL 见链接）
 - 字段：id, user_id, content, type, reply, status, create_time, reply_time
 
 **使用场景：**
@@ -184,7 +184,7 @@ smartVillages/                          # 父工程（packaging=pom）
 - 富文本内容存储
 - 文件访问控制
 
-**数据表：** `media`（媒体资源表）
+**数据表：** [`media`](service/src/main/resources/sql/media.sql)（媒体资源表，DDL 见链接）
 - 字段：id, file_name, file_url, file_type, file_size, upload_user, status
 
 **使用场景：**
