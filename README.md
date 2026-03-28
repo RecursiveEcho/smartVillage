@@ -1,114 +1,62 @@
-com.blogbackend.smartvillages/
-├── SmartVillagesApplication.java
-├── config/                          # 配置类
-│   ├── SwaggerConfig.java
-│   ── MybatisPlusConfig.java
-├── common/                          # 公共模块
-│   ├── result/                      # 统一返回结果
-│   │   └── Result.java
-│   ── exception/                   # 全局异常
-│       └── GlobalExceptionHandler.java
-├── modules/                         # 业务模块
-│   ├── auth/                        # 1. 认证模块
-│   │   ├── controller/
-│   │   │   └── AuthController.java
-│   │   ├── service/
-│   │   │   ├── AuthService.java
-│   │   │   └── impl/
-│   │   │       └── AuthServiceImpl.java
-│   │   ├── mapper/
-│   │   │   └── AuthMapper.java
-│   │   ├── entity/
-│   │   │   └── AuthEntity.java
-│   │   └── dto/
-│   │       ├── LoginRequest.java
-│   │       └── JwtResponse.java
-│   │
-│   ├── admin/                       # 2. 后台用户管理
-│   │   ├── controller/
-│   │   │   └── AdminController.java
-│   │   ├── service/
-│   │   │   ├── AdminService.java
-│   │   │   └── impl/
-│   │   │       └── AdminServiceImpl.java
-│   │   ├── mapper/
-│   │   │   └── AdminMapper.java
-│   │   ├── entity/
-│   │   │   └── AdminEntity.java
-│   │   └── dto/
-│   │       └── AdminDTO.java
-│   │
-│   ├── announcement/                # 3. 村务公告管理
-│   │   ├── controller/
-│   │   │   └── AnnouncementController.java
-│   │   ├── service/
-│   │   │   ├── AnnouncementService.java
-│   │   │   ── impl/
-│   │   │       ── AnnouncementServiceImpl.java
-│   │   ├── mapper/
-│   │   │   └── AnnouncementMapper.java
-│   │   ├── entity/
-│   │   │   └── AnnouncementEntity.java
-│   │   └── dto/
-│   │       └── AnnouncementDTO.java
-│   │
-│   ├── open/                        # 4. 村务公开
-│   │   ├── controller/
-│   │   │   └── OpenController.java
-│   │   ├── service/
-│   │   │   ├── OpenService.java
-│   │   │   └── impl/
-│   │   │       └── OpenServiceImpl.java
-│   │   ├── mapper/
-│   │   │   └── OpenMapper.java
-│   │   ── entity/
-│   │       └── OpenEntity.java
-│   │
-│   ├── feature/                     # 5. 乡村风采
-│   │   ├── controller/
-│   │   │   └── FeatureController.java
-│   │   ├── service/
-│   │   │   ├── FeatureService.java
-│   │   │   └── impl/
-│   │   │       └── FeatureServiceImpl.java
-│   │   ├── mapper/
-│   │   │   └── FeatureMapper.java
-│   │   └── entity/
-│   │       └── FeatureEntity.java
-│   │
-│   ├── interaction/                 # 6. 村民留言
-│   │   ├── controller/
-│   │   │   └── InteractionController.java
-│   │   ├── service/
-│   │   │   ├── InteractionService.java
-│   │   │   └── impl/
-│   │   │       └── InteractionServiceImpl.java
-│   │   ├── mapper/
-│   │   │   ── InteractionMapper.java
-│   │   └── entity/
-│   │       └── InteractionEntity.java
-│   │
-│   └── media/                       # 7. 媒体资源
-│       ├── controller/
-│       │   └── MediaController.java
-│       ├── service/
-│       │   ├── MediaService.java
-│       │   └── impl/
-│       │       └── MediaServiceImpl.java
-│       ├── mapper/
-│       │   └── MediaMapper.java
-│       └── entity/
-│           └── MediaEntity.java
-└── utils/                           # 工具类
-└── JwtUtils.java
+# 智慧乡村后端（smartVillages）
+
+## 工程概览
+
+根工程 Maven 坐标为 `com.backend:smartVillages`，采用 **多模块 + 单 Spring Boot 进程**（`service` 模块打包可执行 jar）。  
+各业务 jar **只依赖 `common`**；`common` 收敛 Web / MyBatis-Plus / Swagger / JWT 等共用能力。根包名为 **`com.backend.*`**（与旧文档中的 `com.blogbackend` / 单体 `modules` 目录已不一致）。
+
+### 仓库目录（Maven 模块）
+
+```text
+smartVillages/                          # 父工程（packaging=pom）
+├── pom.xml
+├── common/                             # 公共模块（无启动类）
+│   └── src/main/java/com/backend/common/
+│       ├── config/                     # Swagger、MyBatis-Plus、CORS、拦截器等
+│       ├── exception/                  # GlobalExceptionHandler
+│       ├── filter/                     # CharacterEncodingFilter
+│       ├── result/                     # Result
+│       └── utils/                      # JwtUtils
+├── auth/                               # 1. 认证（包：com.backend.auth）
+├── admin/                              # 2. 后台用户
+├── announcement/                       # 3. 村务公告
+├── open/                               # 4. 村务公开
+├── feature/                            # 5. 乡村风采
+├── interaction/                        # 6. 村民留言
+├── media/                              # 7. 媒体资源
+└── service/                            # 启动与配置（聚合全部模块）
+    ├── pom.xml                         # 依赖 common + 上述业务模块 + MySQL 驱动
+    └── src/main/
+        ├── java/com/backend/
+        │   └── SmartVillagesApplication.java
+        ├── resources/
+        │   ├── application.yml
+        │   └── sql/                    # 表结构/初始化脚本
+        └── test/java/com/backend/
+            └── SmartVillagesApplicationTests.java
+```
+
+### 业务模块内代码分层（每个 Maven 子模块相同约定）
+
+每个业务模块的路径形如：`模块名/src/main/java/com/backend/<模块名>/`，下挂典型分层（具体类以仓库为准）：
+
+```text
+<模块>/
+├── controller/
+├── service/
+│   └── impl/
+├── mapper/
+├── entity/
+└── dto/                                # 按需
+```
 
 ### 7 个模块详细介绍
 
-#### 1️ auth 模块 - 认证中心
+#### 1️⃣ auth 模块 - 认证中心
 **功能：** JWT 登录、角色权限验证
 
 **核心功能：**
-- 用户登录（账号密码/手机号）s
+- 用户登录（账号密码/手机号）
 - JWT Token 生成和验证
 - 用户登出
 - Token 刷新
@@ -248,3 +196,43 @@ com.blogbackend.smartvillages/
 ---
 
 ### 模块关系图
+
+依赖方向：**业务模块 → common**；**service → common + 全部业务模块**（运行时一个进程加载所有 jar）。
+
+```mermaid
+flowchart TB
+    subgraph runtime["可运行模块"]
+        S[service<br/>SmartVillagesApplication]
+    end
+
+    subgraph libs["业务模块（仅依赖 common）"]
+        A[auth]
+        D[admin]
+        N[announcement]
+        O[open]
+        F[feature]
+        I[interaction]
+        M[media]
+    end
+
+    C[common<br/>Web / MyBatis-Plus / Swagger / JWT 等]
+
+    S --> C
+    S --> A
+    S --> D
+    S --> N
+    S --> O
+    S --> F
+    S --> I
+    S --> M
+
+    A --> C
+    D --> C
+    N --> C
+    O --> C
+    F --> C
+    I --> C
+    M --> C
+```
+
+**开发与打包：** 在仓库根目录执行 `mvn clean package`，可执行 jar 位于 `service/target/`。
