@@ -9,3 +9,7 @@ CREATE TABLE `admin` (
   `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted` TINYINT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='后台管理员表';
+
+-- 假数据：依赖 auth 表已插入 id=1 的管理员账号
+INSERT INTO `admin` (`auth_id`, `real_name`, `permissions`, `last_login_time`, `last_login_ip`, `deleted`) VALUES
+(1, '系统管理员', '["feature:*","announcement:*","open:*","interaction:*","media:*"]', '2026-03-15 09:30:00', '127.0.0.1', 0);

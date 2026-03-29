@@ -3,7 +3,15 @@
 ## 工程概览
 
 根工程 Maven 坐标为 `com.backend:smartVillages`，采用 **多模块 + 单 Spring Boot 进程**（`service` 模块打包可执行 jar）。  
-各业务 jar **只依赖 `common`**；`common` 收敛 Web / MyBatis-Plus / Knife4j(OpenAPI) / JWT 等共用能力。根包名为 **`com.backend.*`**（与旧文档中的 `com.blogbackend` / 单体 `modules` 目录已不一致）。
+各业务 jar **只依赖 `common`**；`common` 收敛 Web / MyBatis-Plus / Knife4j(OpenAPI) / JWT、**统一错误码（`ErrorCode`）**、**统一返回体（`Result`）**、**全局异常（`GlobalExceptionHandler`）** 等共用能力。根包名为 **`com.backend.*`**（与旧文档中的 `com.blogbackend` / 单体 `modules` 目录已不一致）。
+
+### 统一返回与错误约定
+
+| 能力 | 位置（`common`） | 说明 |
+|------|------------------|------|
+| **ErrorCode** | `enums/ErrorCode.java` | 按码段划分：`1xxx` 用户/认证，`2xxx` 权限，`3xxx` 文件/配置，`4xxx` 通用业务与村务域（`41xx` 等），`5xxx` 系统，`6xxx` 路由语义；**同一语义对应唯一数字**，新增时在对应段内递增。 |
+| **Result** | `result/Result.java` | 接口统一 JSON 结构（`code` / `message` / `data` 等），成功与失败均经此包装，便于前端与 Knife4j 文档一致处理。 |
+| **GlobalExceptionHandler** | `exception/GlobalExceptionHandler.java` | 将异常转为上述 `Result` + `ErrorCode`；如 **`ExpiredJwtException`** → `LOGIN_EXPIRED`，其它 **`JwtException`** → `INVALID_TOKEN`（具体映射以实现为准）。业务代码可抛携带 `ErrorCode` 的自定义异常，由全局处理器统一输出。 |
 
 ### 仓库目录（Maven 模块）
 
@@ -13,9 +21,10 @@ smartVillages/                          # 父工程（packaging=pom）
 ├── common/                             # 公共模块（无启动类）
 │   └── src/main/java/com/backend/common/
 │       ├── config/                     # OpenAPI 元信息、MyBatis-Plus、CORS、拦截器等
+│       ├── enums/                      # ErrorCode 等业务错误码
 │       ├── exception/                  # GlobalExceptionHandler
 │       ├── filter/                     # CharacterEncodingFilter
-│       ├── result/                     # Result
+│       ├── result/                     # Result 统一返回
 │       └── utils/                      # JwtUtils
 ├── auth/                               # 1. 认证（包：com.backend.auth）
 ├── admin/                              # 2. 后台用户
@@ -215,7 +224,7 @@ flowchart TB
         M[media]
     end
 
-    C[common<br/>Web / MyBatis-Plus / Knife4j / JWT 等]
+    C[common<br/>Web / MyBatis-Plus / Knife4j / JWT<br/>ErrorCode / Result / 全局异常]
 
     S --> C
     S --> A
