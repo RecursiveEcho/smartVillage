@@ -23,7 +23,7 @@ smartVillages/                          # 父工程（packaging=pom）
 │       ├── config/                     # OpenAPI 元信息、MyBatis-Plus、CORS、拦截器等
 │       ├── enums/                      # ErrorCode 等业务错误码
 │       ├── exception/                  # GlobalExceptionHandler
-│       ├── filter/                     # CharacterEncodingFilter
+│       ├── filter/                     # JwtAuthenticationFilter（Header token 鉴权；字符编码用 server.servlet.encoding）
 │       ├── result/                     # Result 统一返回
 │       └── utils/                      # JwtUtils
 ├── auth/                               # 1. 认证（包：com.backend.auth）
