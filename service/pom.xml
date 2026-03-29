@@ -57,7 +57,7 @@
         </dependency>
         <dependency>
             <groupId>com.backend</groupId>
-            <artifactId>open</artifactId>
+            <artifactId>management</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

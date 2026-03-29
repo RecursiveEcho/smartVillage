@@ -12,4 +12,4 @@ CREATE TABLE `admin` (
 
 -- 假数据：依赖 auth 表已插入 id=1 的管理员账号
 INSERT INTO `admin` (`auth_id`, `real_name`, `permissions`, `last_login_time`, `last_login_ip`, `deleted`) VALUES
-(1, '系统管理员', '["feature:*","announcement:*","open:*","interaction:*","media:*"]', '2026-03-15 09:30:00', '127.0.0.1', 0);
+(1, '系统管理员', '["feature:*","announcement:*","management:*","interaction:*","media:*"]', '2026-03-15 09:30:00', '127.0.0.1', 0);

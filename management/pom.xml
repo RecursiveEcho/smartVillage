@@ -10,8 +10,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>open</artifactId>
-    <name>open</name>
+    <artifactId>management</artifactId>
+    <name>management</name>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

@@ -23,7 +23,7 @@
         <module>feature</module>
         <module>interaction</module>
         <module>media</module>
-        <module>open</module>
+        <module>management</module>
         <module>service</module>
     </modules>
 

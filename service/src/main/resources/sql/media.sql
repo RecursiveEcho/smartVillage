@@ -12,7 +12,7 @@ CREATE TABLE `media` (
   `deleted` TINYINT DEFAULT 0 comment ' 逻辑删除：0-未删除 1-已删除'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='媒体资源表';
 
--- 假数据：file_url 与 feature/open 一致使用 /upload/ 前缀；upload_user 对应 auth.id=1
+-- 假数据：file_url 与 feature/management 一致使用 /upload/ 前缀；upload_user 对应 auth.id=1
 INSERT INTO `media` (`file_name`, `file_url`, `file_type`, `file_size`, `category`, `upload_user`, `status`, `deleted`) VALUES
 ('banner_home.jpg', '/upload/media/banner_home.jpg', 'image', 245760, 'banner', 1, 1, 0),
 ('notice_202603.pdf', '/upload/media/notice_202603.pdf', 'document', 102400, 'announcement', 1, 1, 0),
