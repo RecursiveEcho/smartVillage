@@ -119,6 +119,4 @@ SmartVillages-Backend/                   # 后端父工程（packaging=pom）
 
 ## 更多文档
 
-- 开发约定（含前端补充）：`开发手册.md`
-- 前端目录架构：`SmartVillages-Web/README.md`
 
