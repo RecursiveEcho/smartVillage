@@ -1,31 +1,28 @@
-# smartvillages-web
+# SmartVillages Web（前端）
 
-This template should help get you started developing with Vue 3 in Vite.
+本目录是智慧乡村前端工程，基于 **Vue 3 + Vite**。根 `README.md` 只说明整体结构和启动方式，这里重点说明前端分层与目录。
 
-## Recommended IDE Setup
+## 启动与构建
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- **安装依赖**：
 
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
 npm install
 ```
 
-## 项目目录架构（智慧乡村综合服务平台）
+- **开发启动**：
+
+```bash
+npm run dev
+```
+
+- **打包构建**：
+
+```bash
+npm run build
+```
+
+## 分层架构（整体思路）
 
 这个项目按“**应用装配层（app）→ 跨模块共享层（shared）→ 业务 API 层（services）→ 路由页面层（pages）→ 页级组件层（widgets）→ 状态层（store）**”分层，目的是让：
 
@@ -90,10 +87,10 @@ src/shared/
 │   └── result.js             # 适配后端 Result{code,message,data}
 ├── auth/
 │   ├── token.js              # localStorage 读写 token
-│   └── guards.js             # needAuth / role 判定（可选）
+│   └── guards.js             # needAuth / role 判定
 ├── config/
 │   └── env.js                # 读取 import.meta.env
-├── ui/                       # 基础组件封装（可选）
+├── ui/                       # 基础组件封装
 └── utils/
 ```
 
@@ -148,20 +145,12 @@ src/pages/
 
 - **用途**：样式（scss/css）、图标、图片等。
 
-### 路由与权限的落点（你后续会用到）
+### 路由与权限的落点
 
 - **路由表**：`src/app/router/routes/*.routes.js` 按模块拆分，避免一个文件越写越大。
 - **鉴权守卫**：`src/app/router/index.js` 统一做“是否登录 / 是否有菜单权限”判断。
 - **token 与 401 处理**：`src/shared/auth/token.js` 与 `src/shared/api/interceptors.js` 统一处理，页面不重复写。
 
-### Compile and Hot-Reload for Development
+## 相关链接
 
-```sh
-npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
-npm run build
-```
+- Vite 配置文档：`https://vite.dev/config/`
