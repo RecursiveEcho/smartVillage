@@ -1,4 +1,4 @@
-package com.interceptor;
+package com.backend.common.interceptor;
 
 /**
  * @author chenyang
