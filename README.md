@@ -117,6 +117,4 @@ SmartVillages-Backend/                   # 后端父工程（packaging=pom）
 - **token 位置**：后端过滤器读取请求头 `token`（不是 `Authorization: Bearer`）
 - **401 返回**：JWT 不合法/缺 token 时，过滤器直接返回 `HTTP 401`，通常**不返回** `Result` JSON
 
-## 更多文档
-
 
