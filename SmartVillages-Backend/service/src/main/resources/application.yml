@@ -22,3 +22,7 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+jwt:
+  secret: smartVillages
+  expiration-ms: 7200000 # 2 小时（毫秒）

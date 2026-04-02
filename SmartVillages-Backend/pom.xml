@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.4</version>
+        <version>3.3.10</version>
         <relativePath/>
     </parent>
     <groupId>com.backend</groupId>
@@ -40,9 +40,9 @@
                 <version>3.5.9</version>
             </dependency>
             <dependency>
-                <groupId>com.github.xiaoymin</groupId>
+                <groupId>com.github.xingfudeshi</groupId>
                 <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
-                <version>4.5.0</version>
+                <version>4.6.0</version>
             </dependency>
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>

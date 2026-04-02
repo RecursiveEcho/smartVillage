@@ -2,38 +2,58 @@ package com.backend.common.utils;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Component;
-
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
  * @author chenyang
- * @date 2026/3/27
- * @description JWT 工具类（jjwt 0.9.x：签发与解析须使用同一 secret）
+ * @date 2026/4/2
+ * @description JWT 工具类
  */
 @Component
 public class JwtUtils {
 
-    private static final String secretKey = "smartVillages";
-    private static final long expiration = 1000L * 60 * 60 * 24 * 7; // 7 天
+    // 为了最大化与现有静态调用兼容：静态入口方法使用静态字段。
+    private static String SECRET_KEY;
+    private static long EXPIRATION_MS;
 
-    public static String generateToken(String userId, String username) {
+    // 从 application.yml 读取配置
+    @Value("${jwt.secret:smartVillages}")
+    private String secretKey;
+
+    @Value("${jwt.expiration-ms:7200000}")
+    private long expirationMs;
+
+    @PostConstruct
+    private void init() {
+        SECRET_KEY = secretKey;
+        EXPIRATION_MS = expirationMs;
+    }
+
+    public static String generateToken(String userId,String username,String role) {
         return Jwts.builder()
-                .setSubject(userId + ":" + username)
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(SignatureAlgorithm.HS256, secretKey.getBytes())
+                .setSubject(userId + ":" + username + ":" + role)
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY.getBytes(StandardCharsets.UTF_8))
                 .compact();
     }
 
-    public static String parseToken(String token) {
+    public static String parseToken(String token) throws Exception {
         if (token == null || token.isBlank()) {
-            return null;
+            throw new Exception("token is blank");
         }
-
-            return Jwts.parser()
-                .setSigningKey(secretKey.getBytes())
+        String subject = Jwts.parser()
+                .setSigningKey(SECRET_KEY.getBytes(StandardCharsets.UTF_8))
                 .parseClaimsJws(token)
-                    .getBody()
-                    .getSubject();
-    }
+                .getBody()
+                .getSubject();
+        if(!StringUtils.hasText(subject)){
+            throw new Exception("token is invalid");
+        }
+        return subject;
+    }   
 }

@@ -6,6 +6,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -15,20 +16,28 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.util.Set;
-
 /**
  * 全局异常 → 统一 {@link Result}，与 {@link ErrorCode} 对齐。
+ */
+
+/**
+ * @author chenyang
+ * @date 2026/4/2
+ * @description 全局异常处理
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(BusinessException.class)
-    public Result<?> handleBusinessException(BusinessException e) {
+    public ResponseEntity<Result<?>> handleBusinessException(BusinessException e) {
         log.warn("业务异常: {}", e.getMessage(), e);
-        return Result.fail(e.getCode(), e.getMessage());
+        if (e.getCode() == ErrorCode.NO_PERMISSION.getCode()) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Result.error(ErrorCode.NO_PERMISSION.getCode(), ErrorCode.NO_PERMISSION.getMessage()));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Result.fail(e.getCode(), e.getMessage()));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
