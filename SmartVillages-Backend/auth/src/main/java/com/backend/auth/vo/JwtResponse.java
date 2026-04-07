@@ -1,9 +1,5 @@
-package com.backend.auth.dto;
+package com.backend.auth.vo;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,5 +17,5 @@ public class JwtResponse {
 
     private String username;// 用户名
 
-    private String token;
+    private String token;// JWT
 }

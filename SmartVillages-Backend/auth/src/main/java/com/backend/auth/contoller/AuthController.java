@@ -1,6 +1,6 @@
 package com.backend.auth.contoller;
 
-import com.backend.auth.dto.JwtResponse;
+import com.backend.auth.vo.JwtResponse;
 import com.backend.auth.dto.LoginRequest;
 import com.backend.auth.service.AuthService;
 import com.backend.common.result.Result;
@@ -12,9 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import com.backend.common.context.LoginUserContext;
 
 @RestController
 @RequiredArgsConstructor

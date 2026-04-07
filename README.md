@@ -47,6 +47,8 @@ npm run build
 
 ## 文档入口
 
-- **后端详细说明**：`SmartVillages-Backend/README.md`
+- **后端详细说明**（含登录、JWT、`/doc.html` 白名单）：`SmartVillages-Backend/README.md`
 - **前端目录架构**：`SmartVillages-Web/README.md`
-- **开发手册**：`开发手册.md`
+- **开发手册**：`开发手册.md`（根目录）；后端专项见 `SmartVillages-Backend/开发手册.md`
+
+联调提示：后端接口默认请求头 **`token`** 携带 JWT；登录接口为 **`POST /auth/login`**（路径以实际后端地址与 context-path 为准）。

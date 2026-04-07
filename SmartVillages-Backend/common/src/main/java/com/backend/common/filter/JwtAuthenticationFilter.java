@@ -16,7 +16,7 @@ import java.io.IOException;
  * @date 2026/4/2
  * @description JWT 认证过滤器
  */
-/** 仅对三端 API（{@code /api/user|cadre|admin}）验 Header {@code token}；{@code …/login} 与 OPTIONS 放行。 */
+/** 除白名单路径外校验 Header {@code token}；白名单含 {@code /auth/login}、Knife4j/OpenAPI 静态资源；OPTIONS 放行。 */
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {

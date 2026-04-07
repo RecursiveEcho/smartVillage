@@ -39,6 +39,12 @@
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>3.5.9</version>
             </dependency>
+            <!-- 3.5.x 起 PaginationInnerInterceptor 等在此模块，starter 未始终传递引入时需显式依赖 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
+                <version>3.5.9</version>
+            </dependency>
             <dependency>
                 <groupId>com.github.xingfudeshi</groupId>
                 <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
