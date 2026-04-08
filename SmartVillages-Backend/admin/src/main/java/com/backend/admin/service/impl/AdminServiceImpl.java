@@ -2,6 +2,7 @@ package com.backend.admin.service.impl;
 
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.vo.AdminVO;
+import com.backend.announcement.dto.AnnouncementCreateDTO;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
@@ -93,7 +94,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         AuthEntity updateEntity = new AuthEntity();
         updateEntity.setId(id);
         updateEntity.setStatus(status);
-        updateEntity.setUpdateTime(entity.getUpdateTime());
         authMapper.updateById(updateEntity);
     }
+
+
 }

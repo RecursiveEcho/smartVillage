@@ -13,20 +13,16 @@ import com.backend.admin.service.AdminService;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.result.Result;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import java.util.Map;
-import com.backend.auth.vo.AuthVO;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.bind.annotation.RequestParam;
-import com.backend.admin.entity.AdminEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
+@Slf4j
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
-@Slf4j
 @Tag(name = "管理员接口", description = "管理员接口")
 public class AdminController {
     
@@ -68,7 +64,7 @@ public class AdminController {
     }
 
     @Operation(summary = "启用/禁用用户")
-    @PostMapping("/users/{id}/status")
+    @PutMapping("/users/{id}/status")
     public Result<?> updateUserStatus(@PathVariable Integer id,
                                       @RequestParam Integer status) {
         adminService.updateUserStatus(id, status);
