@@ -20,6 +20,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.backend.admin.entity.AdminEntity;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @RestController
 @RequestMapping("/admin")
@@ -56,9 +58,20 @@ public class AdminController {
     @Operation(summary = "分页查询用户")
     @GetMapping("/users")
     public Result<Page<AdminVO>> pageUser(
+        @RequestParam(required = false) String username,
+        @RequestParam(required = false) String role,
+        @RequestParam(required = false) Integer status,
         @RequestParam(defaultValue = "1") long current,
         @RequestParam(defaultValue = "10") long size
     ) {
-        return Result.success(adminService.pageUsers(current, size));
+        return Result.success(adminService.pageUsers(username, role, status, current, size));
+    }
+
+    @Operation(summary = "启用/禁用用户")
+    @PostMapping("/users/{id}/status")
+    public Result<?> updateUserStatus(@PathVariable Integer id,
+                                      @RequestParam Integer status) {
+        adminService.updateUserStatus(id, status);
+        return Result.success("更新用户状态成功");
     }
 }

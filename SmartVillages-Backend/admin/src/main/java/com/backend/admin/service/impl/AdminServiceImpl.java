@@ -18,9 +18,14 @@ import com.backend.auth.mapper.AuthMapper;
 
 import java.util.stream.Collectors;
 
+import org.springframework.util.StringUtils;
+
+import com.backend.common.exception.BusinessException;
+import com.backend.common.enums.ErrorCode;
+
 /**
  * @author chenyang
- * @date 2026/3/27
+ * @date 2026/4/8
  * @description 管理员服务实现类
  */
 @Service
@@ -38,32 +43,57 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      * @return 用户列表
      */
     @Override
-    public Page<AdminVO> pageUsers(Long current, Long size) {
+    public Page<AdminVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
         Page<AuthEntity> page = new Page<>(current, size);
         LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(AuthEntity::getId);
-
+        if(StringUtils.hasText(username)){
+            wrapper.like(AuthEntity::getUsername, username);
+        }
+        if(StringUtils.hasText(role)){
+            wrapper.eq(AuthEntity::getRole, role);
+        }
+        if(status != null){
+            wrapper.eq(AuthEntity::getStatus, status);
+        }
+        wrapper.orderByDesc(AuthEntity::getStatus)
+                .orderByDesc(AuthEntity::getCreateTime)
+                .orderByAsc(AuthEntity::getId);
         IPage<AuthEntity> entityPage = authMapper.selectPage(page, wrapper);
-        
         Page<AdminVO> voPage = new Page<>(
-            entityPage.getCurrent(),
-            entityPage.getSize(),
-            entityPage.getTotal()
-    );
-    voPage.setRecords(entityPage.getRecords().stream().map(e -> {
+                entityPage.getCurrent(),
+                entityPage.getSize(),
+                entityPage.getTotal()
+        );
+        voPage.setRecords(entityPage.getRecords().stream()
+                .map(this::convertToAdminVO)
+                .collect(Collectors.toList())
+        );
+        return  voPage;
+    }
+    private AdminVO convertToAdminVO(AuthEntity entity){
         AdminVO vo = new AdminVO();
-        vo.setId(e.getId());
-        vo.setUsername(e.getUsername());
-        vo.setRole(e.getRole());
-        vo.setPhone(e.getPhone());
-        vo.setCreateTime(e.getCreateTime());
-        vo.setUpdateTime(e.getUpdateTime());
-        vo.setDeleted(e.getDeleted());
-        vo.setStatus(e.getStatus());
+        vo.setId(entity.getId());
+        vo.setUsername(entity.getUsername());
+        vo.setRole(entity.getRole());
+        vo.setPhone(entity.getPhone());
+        vo.setCreateTime(entity.getCreateTime());
+        vo.setUpdateTime(entity.getUpdateTime());
+        vo.setDeleted(entity.getDeleted());
+        vo.setStatus(entity.getStatus());
         return vo;
-    }).collect(Collectors.toList()));
-    return voPage;
     }
 
-    
+    @Override
+    public void updateUserStatus(Integer id, Integer status) {
+        if(id==null){throw new BusinessException(ErrorCode.PARAM_INVALID);}
+        if(status==null||status!=0&&status!=1){throw new BusinessException(ErrorCode.STATUS_INVALID);}
+        AuthEntity entity = authMapper.selectById(id);
+        if(entity == null){throw new BusinessException(ErrorCode.USER_NOT_FOUND);}
+        if(Integer.valueOf(1).equals(entity.getDeleted())){throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);}
+        AuthEntity updateEntity = new AuthEntity();
+        updateEntity.setId(id);
+        updateEntity.setStatus(status);
+        updateEntity.setUpdateTime(entity.getUpdateTime());
+        authMapper.updateById(updateEntity);
+    }
 }

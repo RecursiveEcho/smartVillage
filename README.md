@@ -52,3 +52,5 @@ npm run build
 - **开发手册**：`开发手册.md`（根目录）；后端专项见 `SmartVillages-Backend/开发手册.md`
 
 联调提示：后端接口默认请求头 **`token`** 携带 JWT；登录接口为 **`POST /auth/login`**（路径以实际后端地址与 context-path 为准）。
+
+当前进度：后端登录/登出已完成，正在推进管理员用户分页接口。

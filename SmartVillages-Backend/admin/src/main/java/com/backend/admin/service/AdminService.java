@@ -11,5 +11,6 @@ import com.backend.admin.entity.AdminEntity;
  * @description 管理员服务接口
  */
 public interface AdminService extends IService<AdminEntity> {
-    Page<AdminVO> pageUsers(Long current, Long size);
+    Page<AdminVO> pageUsers(String username, String role, Integer status, Long current, Long size);
+    void updateUserStatus(Integer id, Integer status);
 }
