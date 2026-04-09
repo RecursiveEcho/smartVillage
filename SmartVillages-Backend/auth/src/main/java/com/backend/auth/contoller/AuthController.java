@@ -27,12 +27,25 @@ class AuthController {
     @Resource
     private final AuthService authService;
     
+    /**
+     * @author chenyang
+     * @date 2026/4/2
+     * @description 登录
+     * @param loginRequest 登录请求
+     * @return 登录响应
+     */
     @Operation(summary = "登录")
     @PostMapping("/login")
     public Result<JwtResponse> login(@RequestBody LoginRequest loginRequest) {
         return authService.login(loginRequest.getUsername(), loginRequest.getPassword());
     }
 
+    /**
+     * @author chenyang
+     * @date 2026/4/2
+     * @description 登出
+     * @return 登出响应
+     */
     @Operation(summary = "登出")
     @DeleteMapping("/logout")
     public Result<String> logout() {

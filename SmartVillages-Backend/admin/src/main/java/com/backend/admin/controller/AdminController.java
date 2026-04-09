@@ -31,7 +31,9 @@ public class AdminController {
     private final AdminService adminService;
 
     /**
-     * 获取当前用户信息
+     * @author chenyang
+     * @date 2026/4/2
+     * @description 获取当前用户信息
      * @return 当前用户信息
      */
     @GetMapping("/me")
@@ -47,7 +49,9 @@ public class AdminController {
     }
 
     /**
-     * 分页查询用户
+     * @author chenyang
+     * @date 2026/4/7
+     * @description 分页查询用户
      * @param current 当前页
      * @param size 每页数量
      * @return 分页结果
@@ -64,6 +68,14 @@ public class AdminController {
         return Result.success(adminService.pageUsers(username, role, status, current, size));
     }
 
+    /**
+     * @author chenyang
+     * @date 2026/4/8
+     * @description 启用/禁用用户
+     * @param id 用户ID
+     * @param status 状态
+     * @return 更新用户状态成功
+     */
     @Operation(summary = "启用/禁用用户")
     @PutMapping("/users/{id}/status")
     public Result<?> updateUserStatus(@PathVariable Integer id,
@@ -71,4 +83,6 @@ public class AdminController {
         adminService.updateUserStatus(id, status);
         return Result.success("更新用户状态成功");
     }
+
+    
 }

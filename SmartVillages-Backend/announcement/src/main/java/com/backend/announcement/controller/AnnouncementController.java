@@ -31,7 +31,9 @@ public class AnnouncementController {
     private final AnnouncementService announcementService;
 
     /**
-     * 管理员新增公告
+     * @author chenyang
+     * @date 2026/4/8
+     * @description 管理员新增公告
      * @param dto
      */
     @Operation(summary = "管理员新增公告")
@@ -42,6 +44,9 @@ public class AnnouncementController {
     }
 
     /**
+     * @author chenyang
+     * @date 2026/4/8
+     * @description 前台分页公告（仅已发布）
      * 前台分页公告（仅已发布）
      * @param current
      * @param size
@@ -55,8 +60,11 @@ public class AnnouncementController {
         return Result.success(announcementService.pagePublished(current, size));
     }
 
+
     /**
-     * 编辑公告基础信息
+     * @author chenyang
+     * @date 2026/4/9
+     * @description 编辑公告基础信息
      * @param id
      * @param dto
      */
@@ -72,5 +80,19 @@ public class AnnouncementController {
     public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         announcementService.updateStatus(id, status);
         return Result.success("公告状态更新成功");
+    }
+
+    
+    /**
+     * @author chenyang
+     * @date 2026/4/9
+     * @description 公告详细
+     * @param id 公告ID
+     * @return 公告详细
+     */
+    @Operation(summary="公告详细")
+    @GetMapping("/announcements/{id}")
+    public Result<AnnouncementVO> getAnnouncement(@PathVariable Long id) {
+        return Result.success(announcementService.getAnnouncement(id));
     }
 }

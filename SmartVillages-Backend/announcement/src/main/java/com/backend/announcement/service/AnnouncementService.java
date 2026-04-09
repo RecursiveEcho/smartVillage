@@ -16,4 +16,5 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     void create(AnnouncementCreateDTO dto);
     void updateAnnouncement(Long id, AnnouncementUpdateDTO dto);
     void updateStatus(Long id, Integer status);
+    AnnouncementVO getAnnouncement(Long id);
 }

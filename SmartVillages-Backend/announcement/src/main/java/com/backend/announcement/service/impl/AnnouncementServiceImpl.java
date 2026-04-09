@@ -99,4 +99,18 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setStatus(status);
         this.updateById(entity);
     }
+    @Override
+    public AnnouncementVO getAnnouncement(Long id){
+        if(id==null){
+            throw new BusinessException(ErrorCode.PARAM_INVALID);
+        }
+        AnnouncementEntity entity=this.getById(id);
+        if(entity==null||Integer.valueOf(1).equals(entity.getDeleted())){
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        Integer viewCount=entity.getViewCount()==null?0:entity.getViewCount();
+        entity.setViewCount(viewCount+1);
+        this.updateById(entity);
+        return toVO(entity);
+    }
 }
