@@ -25,4 +25,4 @@ knife4j:
 
 jwt:
   secret: smartVillages
-  expiration-ms: 7200000 # 2 小时（毫秒）
+  expiration-ms: 86400000 # 24 小时（毫秒）

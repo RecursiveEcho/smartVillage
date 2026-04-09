@@ -13,7 +13,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.DeleteMapping;
-
+/**
+ * @author chenyang
+ * @date 2026/4/2
+ * @description 登录控制器
+ */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")

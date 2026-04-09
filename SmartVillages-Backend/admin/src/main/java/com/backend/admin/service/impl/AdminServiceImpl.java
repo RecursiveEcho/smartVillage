@@ -2,7 +2,6 @@ package com.backend.admin.service.impl;
 
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.vo.AdminVO;
-import com.backend.announcement.dto.AnnouncementCreateDTO;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +32,6 @@ import com.backend.common.enums.ErrorCode;
 @Slf4j
 @RequiredArgsConstructor
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> implements AdminService {
-    private final AdminMapper adminMapper;
     private final AuthMapper authMapper;
 
     /**
@@ -44,7 +42,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      * @return 用户列表
      */
     @Override
-    public Page<AdminVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
+    public IPage<AdminVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
         Page<AuthEntity> page = new Page<>(current, size);
         LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<>();
         if(StringUtils.hasText(username)){

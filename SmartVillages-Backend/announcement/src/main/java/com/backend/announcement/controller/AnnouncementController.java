@@ -15,10 +15,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import com.backend.announcement.dto.AnnouncementCreateDTO;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import com.backend.announcement.dto.AnnouncementUpdateDTO;
 /**
  * @author chenyang
- * @date 2026/4/8
- * @description 
+ * {@code @date} 2026/4/8
+ * {@code @description} 公告控制器
  */
 @Slf4j
 @RestController
@@ -26,17 +29,48 @@ import com.backend.announcement.dto.AnnouncementCreateDTO;
 @Tag(name="公告接口",description="公告接口")
 public class AnnouncementController {
     private final AnnouncementService announcementService;
+
+    /**
+     * 管理员新增公告
+     * @param dto
+     */
     @Operation(summary = "管理员新增公告")
     @PostMapping("/admin/announcements")
     public Result<String> create(@RequestBody AnnouncementCreateDTO dto) {
         announcementService.create(dto);
         return Result.success("公告创建成功");
     }
+
+    /**
+     * 前台分页公告（仅已发布）
+     * @param current
+     * @param size
+     * @return
+     */
     @Operation(summary = "前台分页公告（仅已发布）")
     @GetMapping("/announcements")
     public Result<IPage<AnnouncementVO>> pagePublished(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size) {
         return Result.success(announcementService.pagePublished(current, size));
+    }
+
+    /**
+     * 编辑公告基础信息
+     * @param id
+     * @param dto
+     */
+    @Operation(summary = "编辑公告基础信息")
+    @PutMapping("/admin/announcements/{id}")
+    public Result<String> update(@PathVariable Long id, @RequestBody AnnouncementUpdateDTO dto) {
+        announcementService.updateAnnouncement(id, dto);  
+        return Result.success("公告编辑成功");
+    }
+
+    @Operation(summary = "上架/下架公告")
+    @PutMapping("/admin/announcements/{id}/status")
+    public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+        announcementService.updateStatus(id, status);
+        return Result.success("公告状态更新成功");
     }
 }

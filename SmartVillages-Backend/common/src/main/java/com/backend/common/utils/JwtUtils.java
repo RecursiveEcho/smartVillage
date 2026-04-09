@@ -25,7 +25,7 @@ public class JwtUtils {
     @Value("${jwt.secret:smartVillages}")
     private String secretKey;
 
-    @Value("${jwt.expiration-ms:7200000}")
+    @Value("${jwt.expiration-ms:86400000}")
     private long expirationMs;
 
     @PostConstruct

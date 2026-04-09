@@ -2,6 +2,7 @@ package com.backend.admin.controller;
 
 import com.backend.admin.vo.AdminVO;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -53,7 +54,7 @@ public class AdminController {
      */
     @Operation(summary = "分页查询用户")
     @GetMapping("/users")
-    public Result<Page<AdminVO>> pageUser(
+    public Result<IPage<AdminVO>> pageUser(
         @RequestParam(required = false) String username,
         @RequestParam(required = false) String role,
         @RequestParam(required = false) Integer status,
