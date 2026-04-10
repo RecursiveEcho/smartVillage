@@ -16,6 +16,9 @@ import com.backend.common.exception.BusinessException;
 import com.backend.announcement.dto.AnnouncementUpdateDTO;
 import com.backend.common.enums.ErrorCode;
 import org.springframework.util.StringUtils;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 /**
  * @author chenyang
  * {@code @date} 2026/4/8
@@ -31,19 +34,28 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     public void create(AnnouncementCreateDTO dto){
         AnnouncementEntity entity=new AnnouncementEntity();
         if(!StringUtils.hasText(dto.getTitle())){
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+            throw new BusinessException(ErrorCode.PARAM_INVALID);
         }
         entity.setTitle(dto.getTitle());
         if(!StringUtils.hasText(dto.getContent())){
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+            throw new BusinessException(ErrorCode.PARAM_INVALID);
         }
         entity.setContent(dto.getContent());
         entity.setStatus(1);
+        if(dto.getType()==null||dto.getType()!=1&&dto.getType()!=2&&dto.getType()!=3){
+            throw new BusinessException(ErrorCode.PARAM_INVALID);
+        }
         entity.setType(dto.getType());
+        if(dto.getIsTop()==null||dto.getIsTop()!=0&&dto.getIsTop()!=1){
+            throw new BusinessException(ErrorCode.PARAM_INVALID);
+        }
         entity.setIsTop(dto.getIsTop());
+        entity.setPublishTime(LocalDateTime.now());
+        entity.setViewCount(0);
         entity.setDeleted(0);
         this.save(entity);
     }
+
     @Override
     public IPage<AnnouncementVO> pagePublished(Long current,Long size){
         LambdaQueryWrapper<AnnouncementEntity> wrapper=new LambdaQueryWrapper<>();
@@ -64,10 +76,16 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         vo.setType(entity.getType());
         vo.setIsTop(entity.getIsTop());
         vo.setPublishTime(entity.getPublishTime());
+        vo.setAuditTime(entity.getAuditTime());
+        vo.setAuditUser(entity.getAuditUser());
+        vo.setViewCount(entity.getViewCount());
+        vo.setCreateUser(entity.getCreateUser());
         vo.setCreateTime(entity.getCreateTime());
         vo.setUpdateTime(entity.getUpdateTime());
+        vo.setDeleted(entity.getDeleted());
         return vo;
     }
+
     @Override
     public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto){
         if(id==null){
@@ -86,6 +104,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         }
         this.updateById(entity);   
     }
+
     @Override
     public void updateStatus(Long id, Integer status){
         if(id==null){
@@ -93,12 +112,19 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         }
         AnnouncementEntity entity=this.getById(id);
         if(entity==null||Integer.valueOf(1).equals(entity.getDeleted())){throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);}
-        if(status==null||(status==0||status==1)){
+        if (status == null || (status != 0 && status != 1)) {
             throw new BusinessException(ErrorCode.STATUS_INVALID);
         }
         entity.setStatus(status);
+        if (Integer.valueOf(1).equals(status)) {
+            if (entity.getPublishTime() == null) {
+                entity.setPublishTime(LocalDateTime.now());
+            }
+            entity.setAuditTime(LocalDateTime.now());
+        }
         this.updateById(entity);
     }
+
     @Override
     public AnnouncementVO getAnnouncement(Long id){
         if(id==null){
@@ -112,5 +138,20 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setViewCount(viewCount+1);
         this.updateById(entity);
         return toVO(entity);
+    }
+
+    @Override
+    public List<AnnouncementVO> listHot(Integer limit){
+        if(limit==null||limit<=0){
+            limit=5;
+        }
+        LambdaQueryWrapper<AnnouncementEntity> wrapper=new LambdaQueryWrapper<>();
+        wrapper.eq(AnnouncementEntity::getStatus,1)
+               .eq(AnnouncementEntity::getDeleted,0)
+               .orderByDesc(AnnouncementEntity::getViewCount)
+               .orderByDesc(AnnouncementEntity::getCreateTime)
+               .last("limit "+limit);
+        List<AnnouncementEntity> list=announcementMapper.selectList(wrapper);
+        return list.stream().map(this::toVO).toList();
     }
 }

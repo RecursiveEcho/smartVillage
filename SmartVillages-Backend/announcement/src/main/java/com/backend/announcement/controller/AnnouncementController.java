@@ -18,6 +18,7 @@ import com.backend.announcement.dto.AnnouncementCreateDTO;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.backend.announcement.dto.AnnouncementUpdateDTO;
+import java.util.List;
 /**
  * @author chenyang
  * {@code @date} 2026/4/8
@@ -94,5 +95,17 @@ public class AnnouncementController {
     @GetMapping("/announcements/{id}")
     public Result<AnnouncementVO> getAnnouncement(@PathVariable Long id) {
         return Result.success(announcementService.getAnnouncement(id));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/10
+     * @description 热门公告
+     * @return 热门公告
+     */
+    @Operation(summary="热门公告")
+    @GetMapping("/announcements/hot")
+    public Result<List<AnnouncementVO>> getHotAnnouncements(@RequestParam(defaultValue = "5") Integer limit) {
+        return Result.success(announcementService.listHot(limit));
     }
 }

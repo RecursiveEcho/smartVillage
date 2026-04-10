@@ -6,6 +6,7 @@ import com.backend.announcement.dto.AnnouncementCreateDTO;
 import com.backend.announcement.dto.AnnouncementUpdateDTO;
 import com.backend.announcement.entity.AnnouncementEntity;
 import com.baomidou.mybatisplus.extension.service.IService;
+import java.util.List;
 /**
  * @author chenyang
  * {@code @date} 2026/4/8
@@ -17,4 +18,5 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     void updateAnnouncement(Long id, AnnouncementUpdateDTO dto);
     void updateStatus(Long id, Integer status);
     AnnouncementVO getAnnouncement(Long id);
+    List<AnnouncementVO> listHot(Integer limit);
 }

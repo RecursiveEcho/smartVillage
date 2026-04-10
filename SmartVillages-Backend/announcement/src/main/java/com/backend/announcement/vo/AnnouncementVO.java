@@ -21,6 +21,9 @@ public class AnnouncementVO {
     private Integer isTop;
     private LocalDateTime publishTime;
     private LocalDateTime auditTime;
+    private Integer auditUser;
+    private Integer viewCount;
+    private Integer createUser;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer deleted;
