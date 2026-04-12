@@ -46,5 +46,6 @@ public class AnnouncementEntity {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
     @NotNull(message = "逻辑删除不能为空")
+    @TableLogic
     private Integer deleted;
 }
