@@ -17,6 +17,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -24,196 +25,234 @@ import org.springframework.util.StringUtils;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
 /**
- * @author chenyang
- * {@code @date} 2026/4/8
- * {@code @description} 公告服务实现类
- * {@code @author} chenyang
+ * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
+ * <p>
+ * 状态约定：{@link #STATUS_PUBLISHED} 表示前台可见；{@code updateStatus} 仅接受 0/1。
+ * 详情接口先读缓存；缓存命中时用 SQL 对 {@code view_count} 做原子 +1 并同步 VO，未命中则查库更新后回写缓存。
  */
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, AnnouncementEntity> implements AnnouncementService {
+public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, AnnouncementEntity>
+        implements AnnouncementService {
 
-    private static final String CACHE_KEY_PREFIX = "announcement:detail:";//缓存key前缀命名
-    private static final Duration CACHE_TTL = Duration.ofMinutes(20);//缓存时间20分钟
+    /** Redis 中单条详情 JSON 的 key 前缀 */
+    private static final String CACHE_KEY_PREFIX = "announcement:detail:";
+    private static final Duration CACHE_TTL = Duration.ofMinutes(20);
+
+    /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
+    private static final int STATUS_PUBLISHED = 1;
+    private static final int DELETED_YES = 1;
+    private static final int DEFAULT_HOT_LIMIT = 5;
 
     private final AnnouncementMapper announcementMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
 
-    private String detailCacheKey(Long id) {
-        return CACHE_KEY_PREFIX + id;
-    }
-
-    private void evictDetailCache(Long id) {
-        if (id != null) {
-            stringRedisTemplate.delete(detailCacheKey(id));
-        }
-    }
-
+    /** 新建即发布：写发布时间、浏览量 0、未删除 */
     @Override
     public void create(AnnouncementCreateDTO dto) {
         AnnouncementEntity entity = new AnnouncementEntity();
-        if (!StringUtils.hasText(dto.getTitle())) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
+        /* 设置标题、内容、状态、类型、是否置顶、发布时间、浏览量、是否删除 */
         entity.setTitle(dto.getTitle());
-        if (!StringUtils.hasText(dto.getContent())) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
         entity.setContent(dto.getContent());
-        entity.setStatus(1);
-        if (dto.getType() == null || dto.getType() != 1 && dto.getType() != 2 && dto.getType() != 3) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
+        entity.setStatus(STATUS_PUBLISHED);
         entity.setType(dto.getType());
-        if (dto.getIsTop() == null || dto.getIsTop() != 0 && dto.getIsTop() != 1) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
         entity.setIsTop(dto.getIsTop());
         entity.setPublishTime(LocalDateTime.now());
         entity.setViewCount(0);
         entity.setDeleted(0);
-        this.save(entity);
+        /* 保存实体 */
+        save(entity);
     }
 
+    /// 前台列表：已发布 + 未删除，置顶优先再按发布时间倒序
     @Override
     public IPage<AnnouncementVO> pagePublished(Long current, Long size) {
-        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AnnouncementEntity::getStatus, 1)
+        /* 查询条件：状态为已发布，未删除，置顶优先，再按发布时间倒序 */
+        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
                 .eq(AnnouncementEntity::getDeleted, 0)
                 .orderByDesc(AnnouncementEntity::getIsTop)
                 .orderByDesc(AnnouncementEntity::getPublishTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
-        return page.convert(this::toVO);
+        /* 转换为 VO 并返回 */
+        return page.convert(this::toVo);
     }
 
-
+    /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
     @Override
     public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto) {
-        if (id == null) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
-        AnnouncementEntity entity = this.getById(id);
-        if (entity == null || Integer.valueOf(1).equals(entity.getDeleted())) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
+        /* 构建缓存 key */
+        String cacheKey = CACHE_KEY_PREFIX + id;
+        /* 获取实体并校验 */
+        AnnouncementEntity entity = getActiveOrThrow(id);
+        /* 设置标题、内容、类型、是否置顶 */
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
-        if (!StringUtils.hasText(dto.getTitle()) || !StringUtils.hasText(dto.getContent())
-                || dto.getType() == null || dto.getType() != 1 && dto.getType() != 2 && dto.getType() != 3) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
-        this.updateById(entity);
+        /* 更新实体并清除详情缓存 */
+        updateById(entity);
+        /* 转换为 VO 并写入缓存 */
+        AnnouncementVO vo = toVo(entity);
+        writeDetailCache(cacheKey, vo);
+        /* 清除详情缓存 */
         evictDetailCache(id);
     }
 
+    /**
+     * 上下架：{@code status} 必须为 0 或 1。若为发布且尚无发布时间，则写入当前时间并记录审核时间。
+     */
     @Override
     public void updateStatus(Long id, Integer status) {
-        if (id == null) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
-        AnnouncementEntity entity = this.getById(id);
-        if (entity == null || Integer.valueOf(1).equals(entity.getDeleted())) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-        if (status == null || (status != 0 && status != 1)) {
-            throw new BusinessException(ErrorCode.STATUS_INVALID);
-        }
+        /* 获取实体并校验 */
+        AnnouncementEntity entity = getActiveOrThrow(id);
+        /* 设置状态 */
         entity.setStatus(status);
-        if (Integer.valueOf(1).equals(status)) {
+        /* 如果状态为已发布，则设置发布时间、审核时间 */
+        if (Objects.equals(status, STATUS_PUBLISHED)) {
             if (entity.getPublishTime() == null) {
                 entity.setPublishTime(LocalDateTime.now());
             }
             entity.setAuditTime(LocalDateTime.now());
         }
-        this.updateById(entity);
+        /* 更新实体并清除详情缓存 */
+        updateById(entity);
         evictDetailCache(id);
     }
 
+    /**
+     * 读详情：优先缓存；缓存未命中则查库、浏览量 +1、写缓存。缓存命中路径见 {@link #tryLoadAndBumpFromCache}。
+     */
     @Override
     public AnnouncementVO getAnnouncement(Long id) {
-        if (id == null) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID);
-        }
-        String key = detailCacheKey(id);
-        String cached = stringRedisTemplate.opsForValue().get(key);
-        if (StringUtils.hasText(cached)) {
-            try {
-                AnnouncementVO vo = objectMapper.readValue(cached, AnnouncementVO.class);
-                LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<>();
-                bump.eq(AnnouncementEntity::getId, id.intValue())
-                        .eq(AnnouncementEntity::getDeleted, 0)
-                        .setSql("view_count = IFNULL(view_count,0) + 1");
-                int rows = announcementMapper.update(null, bump);
-                if (rows > 0) {
-                    int vc = vo.getViewCount() == null ? 0 : vo.getViewCount();
-                    vo.setViewCount(vc + 1);
-                    return vo;
-                }
-                stringRedisTemplate.delete(key);
-            } catch (JsonProcessingException e) {
-                log.warn("announcement detail cache corrupt, evicting, id={}", id, e);
-                stringRedisTemplate.delete(key);
-            }
+        /* 构建缓存 key */
+        String cacheKey = CACHE_KEY_PREFIX + id;
+        /* 尝试从缓存中获取 */
+        AnnouncementVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
+        /* 如果缓存命中，则返回 */
+        if (fromCache != null) {
+            return fromCache;
         }
 
-        AnnouncementEntity entity = this.getById(id);
-        if (entity == null || Integer.valueOf(1).equals(entity.getDeleted())) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-        Integer viewCount = entity.getViewCount() == null ? 0 : entity.getViewCount();
-        entity.setViewCount(viewCount + 1);
-        this.updateById(entity);
-        AnnouncementVO vo = toVO(entity);
-        try {
-            stringRedisTemplate.opsForValue().set(
-                    key,
-                    objectMapper.writeValueAsString(vo),
-                    CACHE_TTL.toMillis(),
-                    TimeUnit.MILLISECONDS
-            );
-        } catch (JsonProcessingException e) {
-            log.warn("announcement detail cache write failed, id={}", id, e);
-        }
+        /* 获取实体并累加浏览量 */
+        AnnouncementEntity entity = getActiveOrThrow(id);
+        int nextViews = (entity.getViewCount() == null ? 0 : entity.getViewCount()) + 1;
+        entity.setViewCount(nextViews);
+        updateById(entity);
+        /* 转换为 VO 并写入缓存 */
+        AnnouncementVO vo = toVo(entity);
+        writeDetailCache(cacheKey, vo);
         return vo;
     }
 
+    /** 已发布列表按浏览量降序，浏览量相同时按创建时间升序，限制条数 */
     @Override
     public List<AnnouncementVO> listHot(Integer limit) {
-        if (limit == null || limit <= 0) {
-            limit = 5;
-        }
-        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AnnouncementEntity::getStatus, 1)
+        /* 设置默认条数 */
+        int n = (limit == null || limit <= 0) ? DEFAULT_HOT_LIMIT : limit;
+        /* 查询条件：状态为已发布，未删除，按浏览量降序，按创建时间升序，限制条数 */
+        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
                 .eq(AnnouncementEntity::getDeleted, 0)
                 .orderByDesc(AnnouncementEntity::getViewCount)
                 .orderByAsc(AnnouncementEntity::getCreateTime)
-                .last("limit " + limit);
-        List<AnnouncementEntity> list = announcementMapper.selectList(wrapper);
-        return list.stream().map(this::toVO).toList();
+                .last("limit " + n);
+        /* 转换为 VO 并返回 */
+        return announcementMapper.selectList(wrapper).stream().map(this::toVo).toList();
     }
 
-    private AnnouncementVO toVO(AnnouncementEntity entity) {
+    /* 逻辑删除并清理缓存 */
+    @Override
+    public void deleteAnnouncement(Long id) {
+        /* 获取实体并校验 */
+        AnnouncementEntity entity = getActiveOrThrow(id);
+        /* 设置删除标志 */
+        entity.setDeleted(DELETED_YES);
+        /* 更新实体并清除详情缓存 */
+        updateById(entity);
+        evictDetailCache(id);
+    }
+
+    /**
+     * 缓存命中：反序列化 VO，用 {@code UPDATE ... SET view_count = IFNULL(view_count,0)+1} 原子加浏览量；
+     * 更新失败则删缓存回落到 DB 路径；JSON 损坏亦删缓存。
+     */
+    private AnnouncementVO tryLoadAndBumpFromCache(Long id, String cacheKey) {
+        String cached = stringRedisTemplate.opsForValue().get(cacheKey);
+        /* 如果缓存未命中，则返回 null */
+        if (!StringUtils.hasText(cached)) {
+            return null;
+        }
+        /* 尝试反序列化 VO */
+        try {
+            AnnouncementVO vo = objectMapper.readValue(cached, AnnouncementVO.class);
+            /* 更新条件：主键等于 id，未删除，浏览量原子加 1 */
+            LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
+                    .eq(AnnouncementEntity::getId, id.intValue())
+                    .eq(AnnouncementEntity::getDeleted, 0)
+                    .setSql("view_count = IFNULL(view_count,0) + 1");
+            /* 更新实体并清除详情缓存 */
+            int rows = announcementMapper.update(null, bump);
+            /* 如果更新成功，则累加浏览量 */
+            if (rows > 0) {
+                int vc = vo.getViewCount() == null ? 0 : vo.getViewCount();
+                vo.setViewCount(vc + 1);
+                return vo;
+            }
+            /* 如果更新失败，则删除缓存 */
+            stringRedisTemplate.delete(cacheKey);
+        } catch (JsonProcessingException e) {
+            log.warn("announcement detail cache corrupt, evicting, id={}", id, e);
+            /* 如果反序列化失败，则删除缓存 */
+            stringRedisTemplate.delete(cacheKey);
+        }
+        return null;
+    }
+
+    /** 序列化 VO 写入 Redis，TTL 见 {@link #CACHE_TTL} */
+    private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
+        try {
+            /* 写入缓存 */
+            stringRedisTemplate.opsForValue().set(
+                    cacheKey,
+                    objectMapper.writeValueAsString(vo),
+                    CACHE_TTL.toMillis(),
+                    TimeUnit.MILLISECONDS);
+        } catch (JsonProcessingException e) {
+            log.warn("announcement detail cache write failed, key={}", cacheKey, e);
+        }
+    }
+
+    /** 获取实体并校验 */
+    private AnnouncementEntity getActiveOrThrow(Long id) {
+        /* 获取实体并校验 */
+        AnnouncementEntity entity = getById(id);
+        /* 如果实体不存在或已删除，则抛出业务异常 */
+        if (entity == null || Objects.equals(entity.getDeleted(), DELETED_YES)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        /* 返回实体 */
+        return entity;
+    }
+
+    /** 写操作后删除对应详情缓存，避免脏读 */
+    private void evictDetailCache(Long id) {
+        /* 如果 id 不为空，则删除缓存 */
+        /* 构建缓存 key */
+            stringRedisTemplate.delete(CACHE_KEY_PREFIX + id);
+    }
+
+    /** 实体字段与 VO 同名字段拷贝 */
+    private AnnouncementVO toVo(AnnouncementEntity entity) {
         AnnouncementVO vo = new AnnouncementVO();
-        vo.setId(entity.getId());
-        vo.setTitle(entity.getTitle());
-        vo.setContent(entity.getContent());
-        vo.setStatus(entity.getStatus());
-        vo.setType(entity.getType());
-        vo.setIsTop(entity.getIsTop());
-        vo.setPublishTime(entity.getPublishTime());
-        vo.setAuditTime(entity.getAuditTime());
-        vo.setAuditUser(entity.getAuditUser());
-        vo.setViewCount(entity.getViewCount());
-        vo.setCreateUser(entity.getCreateUser());
-        vo.setCreateTime(entity.getCreateTime());
-        vo.setUpdateTime(entity.getUpdateTime());
-        vo.setDeleted(entity.getDeleted());
+        /* 实体字段与 VO 同名字段拷贝 */
+        BeanUtils.copyProperties(entity, vo);
         return vo;
     }
 }

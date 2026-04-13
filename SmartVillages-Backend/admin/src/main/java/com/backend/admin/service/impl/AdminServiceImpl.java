@@ -1,99 +1,84 @@
 package com.backend.admin.service.impl;
 
 import com.backend.admin.entity.AdminEntity;
-import com.backend.admin.vo.AdminVO;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.springframework.stereotype.Service;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import com.backend.admin.service.AdminService;
 import com.backend.admin.mapper.AdminMapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.backend.admin.service.AdminService;
+import com.backend.admin.vo.AdminVO;
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
-
-import java.util.stream.Collectors;
-
-import org.springframework.util.StringUtils;
-
-import com.backend.common.exception.BusinessException;
 import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 /**
- * @author chenyang
- * @date 2026/4/8
- * @description 管理员服务实现类
+ * 管理员业务实现：继承 MyBatis-Plus 对 {@link AdminEntity} 的基础 CRUD，
+ * 用户列表与状态变更实际读写 {@link AuthEntity}（认证账号表），与管理员扩展信息分离。
  */
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> implements AdminService {
+
     private final AuthMapper authMapper;
 
     /**
-     * 分页查询用户列表
-     *
-     * @param current 当前页
-     * @param size    每页数量
-     * @return 用户列表
+     * 按条件分页查询认证用户，并映射为 {@link AdminVO} 返回给管理端。
+     * <p>
+     * {@code username} 目前仅占位，未参与查询条件；{@code role}、{@code status} 非空时才会过滤。
+     * 排序：优先按状态降序、创建时间降序，再按 id 升序，保证列表相对稳定。
      */
     @Override
     public IPage<AdminVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
         Page<AuthEntity> page = new Page<>(current, size);
-        LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<>();
-        if(StringUtils.hasText(username)){
-            wrapper.like(AuthEntity::getUsername, username);
-        }
-        if(StringUtils.hasText(role)){
-            wrapper.eq(AuthEntity::getRole, role);
-        }
-        if(status != null){
-            wrapper.eq(AuthEntity::getStatus, status);
-        }
-        wrapper.orderByDesc(AuthEntity::getStatus)
+        // 条件为 null 时不拼进 WHERE，实现「可选筛选」
+        LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<AuthEntity>()
+                .eq(role != null, AuthEntity::getRole, role)
+                .eq(status != null, AuthEntity::getStatus, status)
+                .orderByDesc(AuthEntity::getStatus)
                 .orderByDesc(AuthEntity::getCreateTime)
                 .orderByAsc(AuthEntity::getId);
+        // 查询认证账号表
         IPage<AuthEntity> entityPage = authMapper.selectPage(page, wrapper);
+
+        // 保持与原分页对象一致的页码、条数、总数，仅替换记录类型
         Page<AdminVO> voPage = new Page<>(
                 entityPage.getCurrent(),
                 entityPage.getSize(),
-                entityPage.getTotal()
-        );
-        voPage.setRecords(entityPage.getRecords().stream()
-                .map(this::convertToAdminVO)
-                .collect(Collectors.toList())
-        );
-        return  voPage;
-    }
-    private AdminVO convertToAdminVO(AuthEntity entity){
-        AdminVO vo = new AdminVO();
-        vo.setId(entity.getId());
-        vo.setUsername(entity.getUsername());
-        vo.setRole(entity.getRole());
-        vo.setPhone(entity.getPhone());
-        vo.setCreateTime(entity.getCreateTime());
-        vo.setUpdateTime(entity.getUpdateTime());
-        vo.setDeleted(entity.getDeleted());
-        vo.setStatus(entity.getStatus());
-        return vo;
+                entityPage.getTotal());
+        voPage.setRecords(entityPage.getRecords().stream().map(this::toAdminVo).toList());
+        return voPage;
     }
 
+    /**
+     * 校验用户存在且未逻辑删除后，更新其启用状态。
+     */
     @Override
     public void updateUserStatus(Integer id, Integer status) {
-        if(id==null){throw new BusinessException(ErrorCode.PARAM_INVALID);}
-        if(status==null||status!=0&&status!=1){throw new BusinessException(ErrorCode.STATUS_INVALID);}
         AuthEntity entity = authMapper.selectById(id);
-        if(entity == null){throw new BusinessException(ErrorCode.USER_NOT_FOUND);}
-        if(Integer.valueOf(1).equals(entity.getDeleted())){throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);}
-        AuthEntity updateEntity = new AuthEntity();
-        updateEntity.setId(id);
-        updateEntity.setStatus(status);
-        authMapper.updateById(updateEntity);
+        // 用户不存在
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        // 用户已逻辑删除
+        if (Objects.equals(entity.getDeleted(), 1)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        entity.setStatus(status);
+        authMapper.updateById(entity);
     }
 
-
+    /** 认证实体字段与 VO 同名字段拷贝，供列表展示 */
+    private AdminVO toAdminVo(AuthEntity entity) {
+        AdminVO vo = new AdminVO();
+        // 认证实体字段与 VO 同名字段拷贝
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
 }

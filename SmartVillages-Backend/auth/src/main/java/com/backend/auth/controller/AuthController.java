@@ -1,38 +1,39 @@
-package com.backend.auth.contoller;
+package com.backend.auth.controller;
 
-import com.backend.auth.vo.JwtResponse;
 import com.backend.auth.dto.LoginRequest;
 import com.backend.auth.service.AuthService;
+import com.backend.auth.vo.JwtResponse;
 import com.backend.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.DeleteMapping;
+
 /**
+ * 认证相关 HTTP：登录颁发 JWT，登出多为无状态客户端丢弃令牌（此处返回成功文案）。
+ * <p>
+ * 路径前缀 {@code /auth}。
+ *
  * @author chenyang
  * @date 2026/4/2
- * @description 登录控制器
  */
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 @Tag(name = "权限管理", description = "权限管理接口")
-class AuthController {
+public class AuthController {
 
-    @Resource
     private final AuthService authService;
-    
+
     /**
-     * @author chenyang
-     * @date 2026/4/2
-     * @description 登录
-     * @param loginRequest 登录请求
-     * @return 登录响应
+     * 校验账号密码后返回 JWT；哈希规则与错误码见 {@link AuthService#login}。
+     *
+     * @param loginRequest 用户名、密码
+     * @return 用户 id、用户名、access token
      */
     @Operation(summary = "登录")
     @PostMapping("/login")
@@ -41,10 +42,9 @@ class AuthController {
     }
 
     /**
-     * @author chenyang
-     * @date 2026/4/2
-     * @description 登出
-     * @return 登出响应
+     * 无服务端会话时可仅返回成功；若接入令牌黑名单，可在此扩展。
+     *
+     * @return 统一成功提示
      */
     @Operation(summary = "登出")
     @DeleteMapping("/logout")

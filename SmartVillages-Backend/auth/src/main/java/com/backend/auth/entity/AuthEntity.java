@@ -1,53 +1,59 @@
 package com.backend.auth.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
+ * 登录账号表 {@code auth} 对应的实体，承载用户名密码、角色与账号状态。
+ * <p>
+ * 密码存库为 MD5（UTF-8 明文）小写 32 位十六进制；删除走逻辑删除字段 {@link #deleted}。
+ *
  * @author chenyang
  * @date 2026/4/2
- * @description 权限实体类
  */
-@Data 
-@AllArgsConstructor
+@Data
 @NoArgsConstructor
+@AllArgsConstructor
 @TableName("auth")
+@Schema(description = "用户认证实体类")
 public class AuthEntity {
+
     @TableId(type = IdType.AUTO)
-    private Integer id;// 权限 ID
+    @Schema(description = "ID")
+    private Integer id;
 
-    @NotBlank(message = "用户名不能为空")
-    private String username;// 用户名
+    @Schema(description = "用户名")
+    private String username;
 
-    @NotBlank(message = "密码不能为空")
-    @Size(min = 32, max = 32, message = "密码 MD5 必须为 32 位（小写十六进制）")
-    @Pattern(regexp = "^[0-9a-f]{32}$", message = "密码必须是小写 32 位 MD5 十六进制")
-    private String password;// 密码
+    @Schema(description = "密码：MD5(UTF-8 明文) 小写十六进制 32 位")
+    private String password;
 
-    @NotBlank(message = "手机号不能为空")
-    @Pattern(regexp = "^1[3-9]\\d{8}$", message = "手机号格式错误")
-    private String phone;// 手机号
+    @Schema(description = "手机号")
+    private String phone;
 
-    @NotBlank(message = "角色不能为空")
-    private String role;// 角色
+    @Schema(description = "角色：admin-管理员/cadre-村干部/villager-村民")
+    private String role;
 
-    private Integer status;// 状态
+    @Schema(description = "头像 URL")
+    private String avatar;
 
+    @Schema(description = "状态：0-禁用 1-启用")
+    private Integer status;
+
+    @TableField(fill = FieldFill.INSERT)
+    @Schema(description = "创建时间：yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createTime;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @Schema(description = "更新时间：yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updateTime;
+
+    @Schema(description = "逻辑删除：0-否 1-是", defaultValue = "0")
+    @TableLogic(value = "0", delval = "1")
     @TableField("is_deleted")
-    @TableLogic
-    private Integer deleted;// 逻辑删除
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime createTime;// 创建时间
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;// 更新时间
-
+    private Integer deleted;
 }

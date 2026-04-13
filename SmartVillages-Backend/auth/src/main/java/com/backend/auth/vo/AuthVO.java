@@ -1,34 +1,49 @@
 package com.backend.auth.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+
 /**
+ * 用户信息展示 VO。
+ *
  * @author chenyang
  * @date 2026/4/7
- * @description 管理员VO类
+ * @description 用户 VO
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "用户 VO")
 public class AuthVO {
-    private Integer id;// 权限 ID
 
-    private String username;// 用户名
+    @Schema(description = "ID")
+    private Integer id;
 
-    private String role;// 角色
+    @Schema(description = "用户名")
+    private String username;
 
+    @Schema(description = "角色")
+    private String role;
+
+    @Schema(description = "手机号")
     private String phone;
 
-    private LocalDateTime createTime;// 创建时间
+    @Schema(description = "创建时间")
+    private LocalDateTime createTime;
 
-    private String avatar;//头像URL
+    @Schema(description = "头像 URL")
+    private String avatar;
 
-    private LocalDateTime updateTime;// 更新时间
+    @Schema(description = "更新时间")
+    private LocalDateTime updateTime;
 
-    private Integer deleted;// 逻辑删除
+    @Schema(description = "逻辑删除标记")
+    private Integer deleted;
 
-    private Integer status;// 状态
+    @Schema(description = "状态：0-禁用 1-启用")
+    private Integer status;
 }

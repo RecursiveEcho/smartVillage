@@ -1,10 +1,13 @@
 package com.backend.auth.vo;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
+ * 登录成功返回的用户标识与 JWT。
+ *
  * @author chenyang
  * @date 2026/4/2
  * @description JWT 响应
@@ -12,10 +15,15 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Schema(description = "JWT 响应")
 public class JwtResponse {
-    private Integer id;// 权限 ID
 
-    private String username;// 用户名
+    @Schema(description = "用户 ID")
+    private Integer id;
 
-    private String token;// JWT
+    @Schema(description = "用户名")
+    private String username;
+
+    @Schema(description = "访问令牌")
+    private String token;
 }

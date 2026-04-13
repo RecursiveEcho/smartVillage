@@ -5,9 +5,10 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
+ * {@link AuthEntity} 数据访问。
+ *
  * @author chenyang
  * @date 2026/4/2
- * @description 权限 Mapper层
  */
 @Mapper
 public interface AuthMapper extends BaseMapper<AuthEntity> {
