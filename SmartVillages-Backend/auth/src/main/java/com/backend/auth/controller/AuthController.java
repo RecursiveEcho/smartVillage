@@ -6,6 +6,7 @@ import com.backend.auth.vo.JwtResponse;
 import com.backend.common.result.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,7 +38,7 @@ public class AuthController {
      */
     @Operation(summary = "登录")
     @PostMapping("/login")
-    public Result<JwtResponse> login(@RequestBody LoginRequest loginRequest) {
+    public Result<JwtResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         return authService.login(loginRequest.getUsername(), loginRequest.getPassword());
     }
 

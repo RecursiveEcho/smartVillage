@@ -8,25 +8,22 @@ import com.backend.announcement.service.AnnouncementService;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
@@ -35,7 +32,6 @@ import java.util.concurrent.TimeUnit;
  * 详情接口先读缓存；缓存命中时用 SQL 对 {@code view_count} 做原子 +1 并同步 VO，未命中则查库更新后回写缓存。
  */
 @Service
-@Slf4j
 @RequiredArgsConstructor
 public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, AnnouncementEntity>
         implements AnnouncementService {
@@ -50,11 +46,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     private static final int DEFAULT_HOT_LIMIT = 5;
 
     private final AnnouncementMapper announcementMapper;
-    private final StringRedisTemplate stringRedisTemplate;
-    private final ObjectMapper objectMapper;
+    private final RedisJsonCacheTool redisJsonCacheTool;
 
     /** 新建即发布：写发布时间、浏览量 0、未删除 */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void create(AnnouncementCreateDTO dto) {
         AnnouncementEntity entity = new AnnouncementEntity();
         /* 设置标题、内容、状态、类型、是否置顶、发布时间、浏览量、是否删除 */
@@ -81,15 +77,18 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .orderByDesc(AnnouncementEntity::getPublishTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
         /* 转换为 VO 并返回 */
-        return page.convert(this::toVo);
+        return page.convert(entity->{
+            AnnouncementVO vo = new AnnouncementVO();
+            BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+            return vo;
+        });
     }
 
     /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto) {
         /* 构建缓存 key */
-        String cacheKey = CACHE_KEY_PREFIX + id;
-        /* 获取实体并校验 */
         AnnouncementEntity entity = getActiveOrThrow(id);
         /* 设置标题、内容、类型、是否置顶 */
         entity.setTitle(dto.getTitle());
@@ -98,10 +97,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setIsTop(dto.getIsTop());
         /* 更新实体并清除详情缓存 */
         updateById(entity);
-        /* 转换为 VO 并写入缓存 */
-        AnnouncementVO vo = toVo(entity);
-        writeDetailCache(cacheKey, vo);
-        /* 清除详情缓存 */
         evictDetailCache(id);
     }
 
@@ -109,6 +104,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
      * 上下架：{@code status} 必须为 0 或 1。若为发布且尚无发布时间，则写入当前时间并记录审核时间。
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status) {
         /* 获取实体并校验 */
         AnnouncementEntity entity = getActiveOrThrow(id);
@@ -132,7 +128,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Override
     public AnnouncementVO getAnnouncement(Long id) {
         /* 构建缓存 key */
-        String cacheKey = CACHE_KEY_PREFIX + id;
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
         /* 尝试从缓存中获取 */
         AnnouncementVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
         /* 如果缓存命中，则返回 */
@@ -169,6 +165,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /* 逻辑删除并清理缓存 */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void deleteAnnouncement(Long id) {
         /* 获取实体并校验 */
         AnnouncementEntity entity = getActiveOrThrow(id);
@@ -184,49 +181,27 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
      * 更新失败则删缓存回落到 DB 路径；JSON 损坏亦删缓存。
      */
     private AnnouncementVO tryLoadAndBumpFromCache(Long id, String cacheKey) {
-        String cached = stringRedisTemplate.opsForValue().get(cacheKey);
-        /* 如果缓存未命中，则返回 null */
-        if (!StringUtils.hasText(cached)) {
+        AnnouncementVO vo = redisJsonCacheTool.getObject(cacheKey, AnnouncementVO.class);
+        if (vo == null) {
             return null;
         }
-        /* 尝试反序列化 VO */
-        try {
-            AnnouncementVO vo = objectMapper.readValue(cached, AnnouncementVO.class);
-            /* 更新条件：主键等于 id，未删除，浏览量原子加 1 */
-            LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
-                    .eq(AnnouncementEntity::getId, id.intValue())
-                    .eq(AnnouncementEntity::getDeleted, 0)
-                    .setSql("view_count = IFNULL(view_count,0) + 1");
-            /* 更新实体并清除详情缓存 */
-            int rows = announcementMapper.update(null, bump);
-            /* 如果更新成功，则累加浏览量 */
-            if (rows > 0) {
-                int vc = vo.getViewCount() == null ? 0 : vo.getViewCount();
-                vo.setViewCount(vc + 1);
-                return vo;
-            }
-            /* 如果更新失败，则删除缓存 */
-            stringRedisTemplate.delete(cacheKey);
-        } catch (JsonProcessingException e) {
-            log.warn("announcement detail cache corrupt, evicting, id={}", id, e);
-            /* 如果反序列化失败，则删除缓存 */
-            stringRedisTemplate.delete(cacheKey);
+        LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getId, id.intValue())
+                .eq(AnnouncementEntity::getDeleted, 0)
+                .setSql("view_count = IFNULL(view_count,0) + 1");
+        int rows = announcementMapper.update(null, bump);
+        if (rows > 0) {
+            int vc = vo.getViewCount() == null ? 0 : vo.getViewCount();
+            vo.setViewCount(vc + 1);
+            return vo;
         }
+        redisJsonCacheTool.delete(cacheKey);
         return null;
     }
 
     /** 序列化 VO 写入 Redis，TTL 见 {@link #CACHE_TTL} */
     private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
-        try {
-            /* 写入缓存 */
-            stringRedisTemplate.opsForValue().set(
-                    cacheKey,
-                    objectMapper.writeValueAsString(vo),
-                    CACHE_TTL.toMillis(),
-                    TimeUnit.MILLISECONDS);
-        } catch (JsonProcessingException e) {
-            log.warn("announcement detail cache write failed, key={}", cacheKey, e);
-        }
+        redisJsonCacheTool.setObject(cacheKey, vo, CACHE_TTL.toMillis());
     }
 
     /** 获取实体并校验 */
@@ -241,18 +216,14 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         return entity;
     }
 
-    /** 写操作后删除对应详情缓存，避免脏读 */
-    private void evictDetailCache(Long id) {
-        /* 如果 id 不为空，则删除缓存 */
-        /* 构建缓存 key */
-            stringRedisTemplate.delete(CACHE_KEY_PREFIX + id);
-    }
-
-    /** 实体字段与 VO 同名字段拷贝 */
     private AnnouncementVO toVo(AnnouncementEntity entity) {
         AnnouncementVO vo = new AnnouncementVO();
-        /* 实体字段与 VO 同名字段拷贝 */
-        BeanUtils.copyProperties(entity, vo);
+        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
         return vo;
+    }
+
+    /** 写操作后删除对应详情缓存，避免脏读 */
+    private void evictDetailCache(Long id) {
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 }

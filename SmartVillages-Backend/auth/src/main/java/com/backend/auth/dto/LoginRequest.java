@@ -2,7 +2,6 @@ package com.backend.auth.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,9 +28,8 @@ public class LoginRequest {
     @NotBlank(message = "用户名不能为空")
     private String username;
 
-    @Schema(description = "密码（32 位小写 MD5 十六进制）")
+    @Schema(description = "密码（明文）")
     @NotBlank(message = "密码不能为空")
-    @Size(min = 32, max = 32, message = "密码 MD5 必须为 32 位（小写十六进制）")
-    @Pattern(regexp = "^[0-9a-f]{32}$", message = "密码必须是小写 32 位 MD5 十六进制")
+    @Size(min = 6, max = 64, message = "密码长度必须在 6 到 64 位之间")
     private String password;
 }

@@ -8,8 +8,12 @@ import com.backend.common.result.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,6 +36,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "公告接口", description = "公告接口")
 public class AnnouncementController {
 
@@ -46,7 +51,7 @@ public class AnnouncementController {
      */
     @Operation(summary = "管理员新增公告")
     @PostMapping("/admin/announcements")
-    public Result<String> create(@RequestBody AnnouncementCreateDTO dto) {
+    public Result<String> create(@Valid @RequestBody AnnouncementCreateDTO dto) {
         announcementService.create(dto);
         return Result.success("公告创建成功");
     }
@@ -62,8 +67,9 @@ public class AnnouncementController {
     @Operation(summary = "前台分页公告（仅已发布）")
     @GetMapping("/announcements")
     public Result<IPage<AnnouncementVO>> pagePublished(
-            @RequestParam(defaultValue = "1") Long current,
-            @RequestParam(defaultValue = "10") Long size) {
+            @RequestParam(defaultValue = "1") @Min(value = 1, message = "当前页必须大于等于 1") Long current,
+            @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页数量必须大于等于 1")
+            @Max(value = 100, message = "每页数量不能超过 100") Long size) {
         return Result.success(announcementService.pagePublished(current, size));
     }
 
@@ -77,7 +83,7 @@ public class AnnouncementController {
      */
     @Operation(summary = "编辑公告基础信息")
     @PutMapping("/admin/announcements/{id}")
-    public Result<String> update(@PathVariable Long id, @RequestBody AnnouncementUpdateDTO dto) {
+    public Result<String> update(@PathVariable Long id, @Valid @RequestBody AnnouncementUpdateDTO dto) {
         announcementService.updateAnnouncement(id, dto);
         return Result.success("公告编辑成功");
     }
@@ -92,7 +98,9 @@ public class AnnouncementController {
      */
     @Operation(summary = "上架/下架公告")
     @PutMapping("/admin/announcements/{id}/status")
-    public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+    public Result<String> updateStatus(@PathVariable Long id,
+            @RequestParam @Min(value = 0, message = "状态仅支持 0 或 1")
+            @Max(value = 1, message = "状态仅支持 0 或 1") Integer status) {
         announcementService.updateStatus(id, status);
         return Result.success("公告状态更新成功");
     }
@@ -107,7 +115,9 @@ public class AnnouncementController {
     @Operation(summary = "热门公告")
     @GetMapping("/announcements/hot")
     public Result<List<AnnouncementVO>> getHotAnnouncements(
-            @RequestParam(defaultValue = "5") Integer limit) {
+            @RequestParam(defaultValue = "5")
+            @Min(value = 1, message = "热门数量必须大于等于 1")
+            @Max(value = 20, message = "热门数量不能超过 20") Integer limit) {
         return Result.success(announcementService.listHot(limit));
     }
 

@@ -19,9 +19,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Schema(description = "公告更新 DTO")
 public class AnnouncementUpdateDTO {
-    
-    @NotNull(message = "主键不能为空")
-    private Long id;
 
     @Schema(description = "标题")
     @NotBlank(message = "标题不能为空")

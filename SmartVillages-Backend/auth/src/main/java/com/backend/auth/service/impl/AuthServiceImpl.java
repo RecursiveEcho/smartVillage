@@ -10,16 +10,16 @@ import com.backend.common.utils.JwtUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
-import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 /**
- * 认证业务：校验账号状态与密码（MD5），签发 JWT。
+ * 认证业务：校验账号状态与密码（明文入参 -> 服务端 MD5 校验），签发 JWT。
  */
 @Service
 @RequiredArgsConstructor
@@ -27,19 +27,19 @@ import java.util.Objects;
 public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> implements AuthService {
 
     private final AuthMapper authMapper;
-
+    private final JwtUtils jwtUtils;
     /**
      * 登录主流程：非空校验 → 查用户 → 逻辑删除/禁用拦截 → MD5 比对 → 生成 token。
      */
     @Override
     public Result<JwtResponse> login(String username, String password) {
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
-            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), "账号或密码为空");
+            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
         }
 
         AuthEntity user = findByUsername(username);
         if (user == null) {
-            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), "用户不存在");
+            return Result.fail(ErrorCode.USER_NOT_FOUND.getCode(), ErrorCode.USER_NOT_FOUND.getMessage());
         }
         /** 用户已逻辑删除 */
         if (Objects.equals(user.getDeleted(), 1)) {
@@ -50,21 +50,19 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
             return Result.fail(ErrorCode.ACCOUNT_DISABLED.getCode(), ErrorCode.ACCOUNT_DISABLED.getMessage());
         }
 
-        String hashedInput = DigestUtils.md5DigestAsHex(password.getBytes(StandardCharsets.UTF_8));
-        if (!hashedInput.equals(user.getPassword())) {
-            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), "密码错误");
+        if (!passwordMatches(password, user.getPassword())) {
+            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
         }
 
-        String token = JwtUtils.generateToken(
-                String.valueOf(user.getId()),
-                user.getUsername(),
-                user.getRole());
+        String token = jwtUtils.generateToken(String.valueOf(user.getId()), 
+                                             user.getUsername(), 
+                                            user.getRole());
         return Result.success(new JwtResponse(user.getId(), user.getUsername(), token));
     }
 
     @Override
     public Result<String> logout() {
-        return Result.success("退出登录成功");
+        return Result.success(Result.SUCCESS_MESSAGE);
     }
 
     /** 按用户名取一条记录；依赖库侧唯一约束或业务保证不重复 */
@@ -73,5 +71,10 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
                 new LambdaQueryWrapper<AuthEntity>()
                         .eq(AuthEntity::getUsername, username)
                         .last("LIMIT 1"));
+    }
+
+    private boolean passwordMatches(String rawPassword, String storedMd5) {
+          String hashedInput= DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8));
+          return hashedInput.equals(storedMd5);
     }
 }
