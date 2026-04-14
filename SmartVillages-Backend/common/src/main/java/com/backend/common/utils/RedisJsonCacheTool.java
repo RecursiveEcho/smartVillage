@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -17,8 +18,7 @@ public class RedisJsonCacheTool {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
-    private static final long DEFAULT_TTL = 20 * 60 * 1000; // 20分钟
-    private static final String DEFAULT_PREFIX = "smartVillages:";
+    private static final Duration CACHE_TTL = Duration.ofMinutes(20);
     public <T> T getObject(String key, Class<T> type) {
         String cached = stringRedisTemplate.opsForValue().get(key);
         if (!StringUtils.hasText(cached)) {
@@ -33,12 +33,12 @@ public class RedisJsonCacheTool {
         }
     }
 
-    public void setObject(String key, Object value, long ttlMillis) {
+    public void setObject(String key, Object value) {
         try {
             stringRedisTemplate.opsForValue().set(
                     key,
                     objectMapper.writeValueAsString(value),
-                    ttlMillis,
+                    CACHE_TTL.toMillis(),
                     TimeUnit.MILLISECONDS);
         } catch (JsonProcessingException e) {
             log.warn("redis cache json write failed, key={}", key, e);

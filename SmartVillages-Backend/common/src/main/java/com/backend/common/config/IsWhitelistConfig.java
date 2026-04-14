@@ -12,10 +12,11 @@ public class IsWhitelistConfig {
     /** 白名单 */
     private static final List<String> WHITELIST = Arrays.asList(
         "/auth/login",
-        "/v3/api-docs",
+        "/v3/api-docs/**",
         "/doc.html",
         "/swagger-ui/**",
-        "/webjars/**"
+        "/webjars/**",
+        "/swagger-resources/**"
     );
 /**
  * 获取白名单

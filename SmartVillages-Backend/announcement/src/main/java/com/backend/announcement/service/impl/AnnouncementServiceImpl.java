@@ -38,7 +38,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /** Redis 中单条详情 JSON 的 key 前缀 */
     private static final String CACHE_KEY_PREFIX = "announcement:detail:";
-    private static final Duration CACHE_TTL = Duration.ofMinutes(20);
+
 
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
     private static final int STATUS_PUBLISHED = 1;
@@ -176,6 +176,18 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         evictDetailCache(id);
     }
 
+
+    /* 管理员分页查询公告 */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status) {
+        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getDeleted, 0)
+                .eq(status != null, AnnouncementEntity::getStatus, status)
+                .orderByDesc(AnnouncementEntity::getUpdateTime);
+        Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
+        return page.convert(this::toVo);
+    }
     /**
      * 缓存命中：反序列化 VO，用 {@code UPDATE ... SET view_count = IFNULL(view_count,0)+1} 原子加浏览量；
      * 更新失败则删缓存回落到 DB 路径；JSON 损坏亦删缓存。
@@ -201,7 +213,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /** 序列化 VO 写入 Redis，TTL 见 {@link #CACHE_TTL} */
     private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
-        redisJsonCacheTool.setObject(cacheKey, vo, CACHE_TTL.toMillis());
+        redisJsonCacheTool.setObject(cacheKey, vo);
     }
 
     /** 获取实体并校验 */

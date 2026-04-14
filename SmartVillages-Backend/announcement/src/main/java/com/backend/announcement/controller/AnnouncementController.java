@@ -147,4 +147,22 @@ public class AnnouncementController {
         announcementService.deleteAnnouncement(id);
         return Result.success("公告删除成功");
     }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/14
+     * @description 管理员分页查询公告
+     * @param current 当前页
+     * @param size    每页数量
+     * @param status  状态
+     * @return 分页结果
+     */
+    @Operation(summary = "管理员分页查询公告")
+    @GetMapping("/admin/announcements")
+    public Result<IPage<AnnouncementVO>> pageAdmin(
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size,
+            @RequestParam(required = false) Integer status) {
+        return Result.success(announcementService.pageAdmin(current, size, status));
+    }
 }
