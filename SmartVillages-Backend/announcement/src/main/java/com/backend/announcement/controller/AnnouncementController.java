@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -163,8 +164,12 @@ public class AnnouncementController {
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
             @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String title
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) Integer type,
+            @RequestParam(required = false) Integer isTop,
+            @RequestParam(required = false) LocalDateTime startTime,
+            @RequestParam(required = false) LocalDateTime endTime
         ) {
-        return Result.success(announcementService.pageAdmin(current, size, status, title));
+        return Result.success(announcementService.pageAdmin(current, size, status, title,type,isTop,startTime,endTime));
     }
 }

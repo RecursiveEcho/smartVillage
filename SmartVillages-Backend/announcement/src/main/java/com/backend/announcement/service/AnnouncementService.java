@@ -7,6 +7,7 @@ import com.backend.announcement.vo.AnnouncementVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AnnouncementService extends IService<AnnouncementEntity> {
@@ -32,5 +33,5 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     // 删除公告
     void deleteAnnouncement(Long id);
 
-    IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title);
+    IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
 }

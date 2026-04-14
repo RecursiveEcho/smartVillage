@@ -179,11 +179,15 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /* 管理员分页查询公告 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title) {
+    public IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getDeleted, 0)
                 .eq(status != null, AnnouncementEntity::getStatus, status)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
+                .eq(type != null, AnnouncementEntity::getType, type)
+                .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
+                .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
+                .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
                 .orderByDesc(AnnouncementEntity::getUpdateTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
         return page.convert(this::toVo);
@@ -211,7 +215,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         return null;
     }
 
-    /** 序列化 VO 写入 Redis，TTL 见 {@link #CACHE_TTL} */
+    /** 序列化 VO 写入 Redis */
     private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
         redisJsonCacheTool.setObject(cacheKey, vo);
     }
