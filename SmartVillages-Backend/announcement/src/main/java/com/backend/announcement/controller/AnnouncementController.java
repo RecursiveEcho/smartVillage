@@ -162,7 +162,9 @@ public class AnnouncementController {
     public Result<IPage<AnnouncementVO>> pageAdmin(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
-            @RequestParam(required = false) Integer status) {
-        return Result.success(announcementService.pageAdmin(current, size, status));
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String title
+        ) {
+        return Result.success(announcementService.pageAdmin(current, size, status, title));
     }
 }

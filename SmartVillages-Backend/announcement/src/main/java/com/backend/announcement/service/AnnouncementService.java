@@ -32,5 +32,5 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     // 删除公告
     void deleteAnnouncement(Long id);
 
-    IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status);
+    IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title);
 }

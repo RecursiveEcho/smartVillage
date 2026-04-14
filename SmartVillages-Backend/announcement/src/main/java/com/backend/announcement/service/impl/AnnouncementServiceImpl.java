@@ -19,11 +19,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import org.springframework.util.StringUtils;
 
 /**
  * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
@@ -180,10 +179,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /* 管理员分页查询公告 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status) {
+    public IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getDeleted, 0)
                 .eq(status != null, AnnouncementEntity::getStatus, status)
+                .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
                 .orderByDesc(AnnouncementEntity::getUpdateTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
         return page.convert(this::toVo);
