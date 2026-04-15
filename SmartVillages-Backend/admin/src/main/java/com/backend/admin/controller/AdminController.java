@@ -46,13 +46,13 @@ public class AdminController {
     @GetMapping("/me")
     public Result<Map<String, String>> me(HttpServletRequest request) {
         // 从登录上下文解析
-        String authId = LoginUserContext.getAuthId(request);
+        Integer authId = LoginUserContext.getAuthId(request);
         String username = LoginUserContext.getUsername(request);
         String role = LoginUserContext.getRole(request);
         // 返回
         log.info("当前用户：authId={}, username={}, role={}", authId, username, role);
         return Result.success(Map.of(
-                "authId", authId,
+                "authId", String.valueOf(authId),
                 "username", username,
                 "role", role
         ));

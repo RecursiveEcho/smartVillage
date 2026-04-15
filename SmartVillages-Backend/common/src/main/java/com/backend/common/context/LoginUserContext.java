@@ -15,9 +15,9 @@ public final class LoginUserContext {
 
     private LoginUserContext() {}
 
-    public static String getAuthId(HttpServletRequest request) {
+    public static Integer getAuthId(HttpServletRequest request) {
         Object value = request.getAttribute("authId");
-        return value == null ? null : String.valueOf(value);
+        return value == null ? null : Integer.valueOf(String.valueOf(value));
     }
 
     public static String getUsername(HttpServletRequest request) {
