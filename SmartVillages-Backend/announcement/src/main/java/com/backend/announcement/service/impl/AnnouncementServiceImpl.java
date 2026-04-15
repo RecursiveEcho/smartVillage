@@ -6,6 +6,7 @@ import com.backend.announcement.entity.AnnouncementEntity;
 import com.backend.announcement.mapper.AnnouncementMapper;
 import com.backend.announcement.service.AnnouncementService;
 import com.backend.announcement.vo.AnnouncementVO;
+import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
@@ -15,16 +16,17 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.util.StringUtils;
-import com.backend.common.context.LoginUserContext;
+
 /**
  * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
  * <p>
@@ -38,7 +40,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /** Redis 中单条详情 JSON 的 key 前缀 */
     private static final String CACHE_KEY_PREFIX = "announcement:detail:";
-
 
     private static final int STATUS_PENDING = 0;
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
@@ -80,7 +81,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .orderByDesc(AnnouncementEntity::getPublishTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
         /* 转换为 VO 并返回 */
-        return page.convert(entity->{
+        return page.convert(entity -> {
             AnnouncementVO vo = new AnnouncementVO();
             BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
             return vo;
@@ -118,8 +119,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             entity.setPublishTime(LocalDateTime.now());
             entity.setAuditTime(LocalDateTime.now());
         }
-
-
         /* 如果状态为已下架，则设置下架时间、下架人 */
         if (Objects.equals(status, STATUS_OFFLINE)) {
             entity.setAuditTime(LocalDateTime.now());
@@ -154,7 +153,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         return vo;
     }
 
-    /** 管理员公告详情*/
+    /** 管理员公告详情 */
     @Override
     public AnnouncementVO getAdminAnnouncement(Long id) {
         return toVo(getActiveOrThrow(id));
@@ -192,7 +191,15 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /* 管理员分页查询公告 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime) {
+    public IPage<AnnouncementVO> pageAdmin(
+            Long current,
+            Long size,
+            Integer status,
+            String title,
+            Integer type,
+            Integer isTop,
+            LocalDateTime startTime,
+            LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getDeleted, 0)
                 .eq(status != null, AnnouncementEntity::getStatus, status)
@@ -208,7 +215,14 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /* 管理员待审核公告 */
     @Override
-    public IPage<AnnouncementVO> pagePending(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime) {
+    public IPage<AnnouncementVO> pagePending(
+            Long current,
+            Long size,
+            String title,
+            Integer type,
+            Integer isTop,
+            LocalDateTime startTime,
+            LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getDeleted, 0)
                 .eq(AnnouncementEntity::getStatus, STATUS_PENDING)
@@ -226,28 +240,36 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
-   AnnouncementEntity entity = getActiveOrThrow(id);
-   entity.setAuditTime(LocalDateTime.now());
-   entity.setAuditUser(LoginUserContext.getAuthId(request));
-   if(status==1){
-    entity.setPublishTime(LocalDateTime.now());
-   }
-   entity.setStatus(status);
-   updateById(entity);
-   evictDetailCache(id);
-    }   
+        AnnouncementEntity entity = getActiveOrThrow(id);
+        entity.setAuditTime(LocalDateTime.now());
+        entity.setAuditUser(LoginUserContext.getAuthId(request));
+        if (status == 1) {
+            entity.setPublishTime(LocalDateTime.now());
+        }
+        entity.setStatus(status);
+        updateById(entity);
+        evictDetailCache(id);
+    }
 
     /* 管理员审核历史列表 */
     @Override
-    public IPage<AnnouncementVO> pageAudited(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime) {
+    public IPage<AnnouncementVO> pageAudited(
+            Long current,
+            Long size,
+            String title,
+            Integer type,
+            Integer isTop,
+            LocalDateTime startTime,
+            LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getDeleted, 0)
-                .in(AnnouncementEntity::getStatus, 1,2)
+                .in(AnnouncementEntity::getStatus, 1, 2)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
                 .eq(type != null, AnnouncementEntity::getType, type)
                 .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
                 .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
                 .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
+                .orderByDesc(AnnouncementEntity::getAuditTime)
                 .orderByDesc(AnnouncementEntity::getUpdateTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
         return page.convert(this::toVo);

@@ -8,6 +8,7 @@ import com.backend.common.result.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -25,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 公告 REST：前台读已发布列表/详情/热门；{@code /admin/announcements} 下为后台增删改与上下架。
@@ -180,8 +180,9 @@ public class AnnouncementController {
             @RequestParam(required = false) Integer isTop,
             @RequestParam(required = false) LocalDateTime startTime,
             @RequestParam(required = false) LocalDateTime endTime
-        ) {
-        return Result.success(announcementService.pageAdmin(current, size, status, title,type,isTop,startTime,endTime));
+    ) {
+        return Result.success(
+                announcementService.pageAdmin(current, size, status, title, type, isTop, startTime, endTime));
     }
 
     /**
@@ -193,13 +194,13 @@ public class AnnouncementController {
     @Operation(summary = "管理员待审核公告")
     @GetMapping("/admin/announcements/pending")
     public Result<IPage<AnnouncementVO>> pagePending(
-        @RequestParam(defaultValue = "1") Long current,
-        @RequestParam(defaultValue = "10") Long size,
-        @RequestParam(required = false) String title,
-        @RequestParam(required = false) Integer type,
-        @RequestParam(required = false) Integer isTop,
-        @RequestParam(required = false) LocalDateTime startTime,
-        @RequestParam(required = false) LocalDateTime endTime
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) Integer type,
+            @RequestParam(required = false) Integer isTop,
+            @RequestParam(required = false) LocalDateTime startTime,
+            @RequestParam(required = false) LocalDateTime endTime
     ) {
         return Result.success(announcementService.pagePending(current, size, title, type, isTop, startTime, endTime));
     }
@@ -214,7 +215,8 @@ public class AnnouncementController {
      */
     @Operation(summary = "管理员审核公告")
     @PutMapping("/admin/announcements/{id}/audit")
-    public Result<String> auditAnnouncement(@PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
+    public Result<String> auditAnnouncement(
+            @PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
         announcementService.auditAnnouncement(id, status, request);
         return Result.success("公告审核成功");
     }
@@ -235,13 +237,13 @@ public class AnnouncementController {
     @Operation(summary = "审核历史列表")
     @GetMapping("/admin/announcements/audited")
     public Result<IPage<AnnouncementVO>> pageAudited(
-        @RequestParam(defaultValue = "1") Long current,
-        @RequestParam(defaultValue = "10") Long size,
-        @RequestParam(required = false) String title,
-        @RequestParam(required = false) Integer type,
-        @RequestParam(required = false) Integer isTop,
-        @RequestParam(required = false) LocalDateTime startTime,
-        @RequestParam(required = false) LocalDateTime endTime
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) Integer type,
+            @RequestParam(required = false) Integer isTop,
+            @RequestParam(required = false) LocalDateTime startTime,
+            @RequestParam(required = false) LocalDateTime endTime
     ) {
         return Result.success(announcementService.pageAudited(current, size, title, type, isTop, startTime, endTime));
     }

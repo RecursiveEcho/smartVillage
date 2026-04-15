@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AnnouncementService extends IService<AnnouncementEntity> {
-    
+
     // 管理员新增公告
     void createAnnouncement(AnnouncementCreateDTO dto, HttpServletRequest request);
 
@@ -27,7 +27,7 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
 
     // 管理员审核公告
     void auditAnnouncement(Long id, Integer status, HttpServletRequest request);
-    
+
     // 公告详情
     AnnouncementVO getAnnouncement(Long id);
 
@@ -41,11 +41,33 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     void deleteAnnouncement(Long id);
 
     // 管理员分页查询公告
-    IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
+    IPage<AnnouncementVO> pageAdmin(
+            Long current,
+            Long size,
+            Integer status,
+            String title,
+            Integer type,
+            Integer isTop,
+            LocalDateTime startTime,
+            LocalDateTime endTime);
 
     // 管理员待审核公告
-    IPage<AnnouncementVO> pagePending(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
+    IPage<AnnouncementVO> pagePending(
+            Long current,
+            Long size,
+            String title,
+            Integer type,
+            Integer isTop,
+            LocalDateTime startTime,
+            LocalDateTime endTime);
 
     // 管理员审核历史列表
-    IPage<AnnouncementVO> pageAudited(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
+    IPage<AnnouncementVO> pageAudited(
+            Long current,
+            Long size,
+            String title,
+            Integer type,
+            Integer isTop,
+            LocalDateTime startTime,
+            LocalDateTime endTime);
 }

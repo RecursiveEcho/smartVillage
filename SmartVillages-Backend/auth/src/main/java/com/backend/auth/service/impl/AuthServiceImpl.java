@@ -28,6 +28,7 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
 
     private final AuthMapper authMapper;
     private final JwtUtils jwtUtils;
+
     /**
      * 登录主流程：非空校验 → 查用户 → 逻辑删除/禁用拦截 → MD5 比对 → 生成 token。
      */
@@ -54,9 +55,10 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
             return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
         }
 
-        String token = jwtUtils.generateToken(String.valueOf(user.getId()), 
-                                             user.getUsername(), 
-                                            user.getRole());
+        String token = jwtUtils.generateToken(
+                String.valueOf(user.getId()),
+                user.getUsername(),
+                user.getRole());
         return Result.success(new JwtResponse(user.getId(), user.getUsername(), token));
     }
 
