@@ -6,6 +6,7 @@ import com.backend.announcement.entity.AnnouncementEntity;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.List;
 public interface AnnouncementService extends IService<AnnouncementEntity> {
     
     // 管理员新增公告
-    void create(AnnouncementCreateDTO dto);
+    void createAnnouncement(AnnouncementCreateDTO dto, HttpServletRequest request);
 
     // 前台分页公告（仅已发布）
     IPage<AnnouncementVO> pagePublished(Long current, Long size);
@@ -22,8 +23,11 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     void updateAnnouncement(Long id, AnnouncementUpdateDTO dto);
 
     // 上架/下架公告
-    void updateStatus(Long id, Integer status);
+    void updateStatus(Long id, Integer status, HttpServletRequest request);
 
+    // 管理员审核公告
+    void auditAnnouncement(Long id, Integer status, HttpServletRequest request);
+    
     // 公告详情
     AnnouncementVO getAnnouncement(Long id);
 
@@ -33,5 +37,10 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     // 删除公告
     void deleteAnnouncement(Long id);
 
+    // 管理员分页查询公告
     IPage<AnnouncementVO> pageAdmin(Long current, Long size,Integer status, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
+
+    // 管理员待审核公告
+    IPage<AnnouncementVO> pagePending(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
+
 }

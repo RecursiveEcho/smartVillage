@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.util.StringUtils;
-
+import com.backend.common.context.LoginUserContext;
 /**
  * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
  * <p>
- * 状态约定：{@link #STATUS_PUBLISHED} 表示前台可见；{@code updateStatus} 仅接受 0/1。
+ * 状态约定：0-待审核 1-已通过(发布) 2-已拒绝 3-已下架。
  * 详情接口先读缓存；缓存命中时用 SQL 对 {@code view_count} 做原子 +1 并同步 VO，未命中则查库更新后回写缓存。
  */
 @Service
@@ -39,28 +40,31 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     private static final String CACHE_KEY_PREFIX = "announcement:detail:";
 
 
+    private static final int STATUS_PENDING = 0;
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
     private static final int STATUS_PUBLISHED = 1;
+    private static final int STATUS_OFFLINE = 3;
     private static final int DELETED_YES = 1;
     private static final int DEFAULT_HOT_LIMIT = 5;
 
     private final AnnouncementMapper announcementMapper;
     private final RedisJsonCacheTool redisJsonCacheTool;
 
-    /** 新建即发布：写发布时间、浏览量 0、未删除 */
+    /** 新建默认待审核：浏览量 0、未删除 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(AnnouncementCreateDTO dto) {
+    public void createAnnouncement(AnnouncementCreateDTO dto, HttpServletRequest request) {
         AnnouncementEntity entity = new AnnouncementEntity();
         /* 设置标题、内容、状态、类型、是否置顶、发布时间、浏览量、是否删除 */
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
-        entity.setStatus(STATUS_PUBLISHED);
+        entity.setStatus(STATUS_PENDING);
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
         entity.setPublishTime(LocalDateTime.now());
         entity.setViewCount(0);
         entity.setDeleted(0);
+        entity.setCreateUser(LoginUserContext.getAuthId(request));
         /* 保存实体 */
         save(entity);
     }
@@ -99,21 +103,25 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         evictDetailCache(id);
     }
 
-    /**
-     * 上下架：{@code status} 必须为 0 或 1。若为发布且尚无发布时间，则写入当前时间并记录审核时间。
-     */
+    /** 上下架状态更新 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateStatus(Long id, Integer status) {
+    public void updateStatus(Long id, Integer status, HttpServletRequest request) {
         /* 获取实体并校验 */
         AnnouncementEntity entity = getActiveOrThrow(id);
         /* 设置状态 */
         entity.setStatus(status);
+        entity.setUpdateTime(LocalDateTime.now());
+        entity.setAuditUser(LoginUserContext.getAuthId(request));
         /* 如果状态为已发布，则设置发布时间、审核时间 */
         if (Objects.equals(status, STATUS_PUBLISHED)) {
-            if (entity.getPublishTime() == null) {
-                entity.setPublishTime(LocalDateTime.now());
-            }
+            entity.setPublishTime(LocalDateTime.now());
+            entity.setAuditTime(LocalDateTime.now());
+        }
+
+
+        /* 如果状态为已下架，则设置下架时间、下架人 */
+        if (Objects.equals(status, STATUS_OFFLINE)) {
             entity.setAuditTime(LocalDateTime.now());
         }
         /* 更新实体并清除详情缓存 */
@@ -175,7 +183,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         evictDetailCache(id);
     }
 
-
     /* 管理员分页查询公告 */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -192,6 +199,34 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
         return page.convert(this::toVo);
     }
+
+    /* 管理员待审核公告 */
+    @Override
+    public IPage<AnnouncementVO> pagePending(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime) {
+        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getDeleted, 0)
+                .eq(AnnouncementEntity::getStatus, STATUS_PENDING)
+                .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
+                .eq(type != null, AnnouncementEntity::getType, type)
+                .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
+                .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
+                .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
+                .orderByDesc(AnnouncementEntity::getUpdateTime);
+        Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
+        return page.convert(this::toVo);
+    }
+
+    /* 管理员审核公告 */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
+   AnnouncementEntity entity = getActiveOrThrow(id);
+   entity.setAuditTime(LocalDateTime.now());
+   entity.setAuditUser(LoginUserContext.getAuthId(request));
+   entity.setStatus(status);
+   updateById(entity);
+   evictDetailCache(id);
+    }   
     /**
      * 缓存命中：反序列化 VO，用 {@code UPDATE ... SET view_count = IFNULL(view_count,0)+1} 原子加浏览量；
      * 更新失败则删缓存回落到 DB 路径；JSON 损坏亦删缓存。

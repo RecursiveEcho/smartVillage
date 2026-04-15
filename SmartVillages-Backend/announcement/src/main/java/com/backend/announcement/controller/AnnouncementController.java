@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 公告 REST：前台读已发布列表/详情/热门；{@code /admin/announcements} 下为后台增删改与上下架。
@@ -52,8 +53,8 @@ public class AnnouncementController {
      */
     @Operation(summary = "管理员新增公告")
     @PostMapping("/admin/announcements")
-    public Result<String> create(@Valid @RequestBody AnnouncementCreateDTO dto) {
-        announcementService.create(dto);
+    public Result<String> create(@Valid @RequestBody AnnouncementCreateDTO dto, HttpServletRequest request) {
+        announcementService.createAnnouncement(dto, request);
         return Result.success("公告创建成功");
     }
 
@@ -100,9 +101,8 @@ public class AnnouncementController {
     @Operation(summary = "上架/下架公告")
     @PutMapping("/admin/announcements/{id}/status")
     public Result<String> updateStatus(@PathVariable Long id,
-            @RequestParam @Min(value = 0, message = "状态仅支持 0 或 1")
-            @Max(value = 1, message = "状态仅支持 0 或 1") Integer status) {
-        announcementService.updateStatus(id, status);
+            @RequestParam Integer status, HttpServletRequest request) {
+        announcementService.updateStatus(id, status, request);
         return Result.success("公告状态更新成功");
     }
 
@@ -116,9 +116,7 @@ public class AnnouncementController {
     @Operation(summary = "热门公告")
     @GetMapping("/announcements/hot")
     public Result<List<AnnouncementVO>> getHotAnnouncements(
-            @RequestParam(defaultValue = "5")
-            @Min(value = 1, message = "热门数量必须大于等于 1")
-            @Max(value = 20, message = "热门数量不能超过 20") Integer limit) {
+            @RequestParam(defaultValue = "5") Integer limit) {
         return Result.success(announcementService.listHot(limit));
     }
 
@@ -171,5 +169,40 @@ public class AnnouncementController {
             @RequestParam(required = false) LocalDateTime endTime
         ) {
         return Result.success(announcementService.pageAdmin(current, size, status, title,type,isTop,startTime,endTime));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/14
+     * @description 管理员待审核公告
+     * @return 待审核公告列表
+     */
+    @Operation(summary = "管理员待审核公告")
+    @GetMapping("/admin/announcements/pending")
+    public Result<IPage<AnnouncementVO>> pagePending(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String title,
+        @RequestParam(required = false) Integer type,
+        @RequestParam(required = false) Integer isTop,
+        @RequestParam(required = false) LocalDateTime startTime,
+        @RequestParam(required = false) LocalDateTime endTime
+    ) {
+        return Result.success(announcementService.pagePending(current, size, title, type, isTop, startTime, endTime));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/14
+     * @description 管理员审核公告
+     * @param id 公告 ID
+     * @param status 状态
+     * @return 操作结果文案
+     */
+    @Operation(summary = "管理员审核公告")
+    @PutMapping("/admin/announcements/{id}/audit")
+    public Result<String> auditAnnouncement(@PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
+        announcementService.auditAnnouncement(id, status, request);
+        return Result.success("公告审核成功");
     }
 }
