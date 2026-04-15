@@ -218,4 +218,31 @@ public class AnnouncementController {
         announcementService.auditAnnouncement(id, status, request);
         return Result.success("公告审核成功");
     }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/15
+     * @description 审核历史列表
+     * @param current 当前页
+     * @param size    每页数量
+     * @param title   标题
+     * @param type    类型
+     * @param isTop   是否置顶
+     * @param startTime 开始时间
+     * @param endTime   结束时间
+     * @return 审核历史列表
+     */
+    @Operation(summary = "审核历史列表")
+    @GetMapping("/admin/announcements/audited")
+    public Result<IPage<AnnouncementVO>> pageAudited(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String title,
+        @RequestParam(required = false) Integer type,
+        @RequestParam(required = false) Integer isTop,
+        @RequestParam(required = false) LocalDateTime startTime,
+        @RequestParam(required = false) LocalDateTime endTime
+    ) {
+        return Result.success(announcementService.pageAudited(current, size, title, type, isTop, startTime, endTime));
+    }
 }

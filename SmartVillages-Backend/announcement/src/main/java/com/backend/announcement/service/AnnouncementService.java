@@ -46,4 +46,6 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     // 管理员待审核公告
     IPage<AnnouncementVO> pagePending(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
 
+    // 管理员审核历史列表
+    IPage<AnnouncementVO> pageAudited(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime);
 }

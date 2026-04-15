@@ -236,6 +236,23 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
    updateById(entity);
    evictDetailCache(id);
     }   
+
+    /* 管理员审核历史列表 */
+    @Override
+    public IPage<AnnouncementVO> pageAudited(Long current, Long size, String title,Integer type,Integer isTop,LocalDateTime startTime,LocalDateTime endTime) {
+        LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getDeleted, 0)
+                .in(AnnouncementEntity::getStatus, 1,2)
+                .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
+                .eq(type != null, AnnouncementEntity::getType, type)
+                .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
+                .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
+                .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
+                .orderByDesc(AnnouncementEntity::getUpdateTime);
+        Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
+        return page.convert(this::toVo);
+    }
+
     /**
      * 缓存命中：反序列化 VO，用 {@code UPDATE ... SET view_count = IFNULL(view_count,0)+1} 原子加浏览量；
      * 更新失败则删缓存回落到 DB 路径；JSON 损坏亦删缓存。
