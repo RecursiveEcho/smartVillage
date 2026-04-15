@@ -154,6 +154,12 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         return vo;
     }
 
+    /** 管理员公告详情*/
+    @Override
+    public AnnouncementVO getAdminAnnouncement(Long id) {
+        return toVo(getActiveOrThrow(id));
+    }
+
     /** 已发布列表按浏览量降序，浏览量相同时按创建时间升序，限制条数 */
     @Override
     public List<AnnouncementVO> listHot(Integer limit) {
@@ -223,6 +229,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
    AnnouncementEntity entity = getActiveOrThrow(id);
    entity.setAuditTime(LocalDateTime.now());
    entity.setAuditUser(LoginUserContext.getAuthId(request));
+   if(status==1){
+    entity.setPublishTime(LocalDateTime.now());
+   }
    entity.setStatus(status);
    updateById(entity);
    evictDetailCache(id);

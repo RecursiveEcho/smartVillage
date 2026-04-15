@@ -135,6 +135,19 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
+     * @date 2026/4/15
+     * @description 管理员公告详情（审核回显）
+     * @param id 公告 ID
+     * @return 公告详情
+     */
+    @Operation(summary = "管理员公告详情（审核回显）")
+    @GetMapping("/admin/announcements/{id}")
+    public Result<AnnouncementVO> getAdminAnnouncement(@PathVariable Long id) {
+        return Result.success(announcementService.getAdminAnnouncement(id));
+    }
+
+    /**
+     * @author chenyang
      * @date 2026/4/12
      * @description 删除公告
      * @param id 公告 ID

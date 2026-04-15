@@ -31,6 +31,9 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     // 公告详情
     AnnouncementVO getAnnouncement(Long id);
 
+    // 管理员公告详情（审核回显）
+    AnnouncementVO getAdminAnnouncement(Long id);
+
     // 热门公告（静态路径，避免与 /{id} 冲突）
     List<AnnouncementVO> listHot(Integer limit);
 
