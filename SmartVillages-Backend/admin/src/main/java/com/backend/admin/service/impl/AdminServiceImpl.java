@@ -67,7 +67,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
         // 用户已逻辑删除
-        if (Objects.equals(entity.getDeleted(), 1)) {
+        if (Objects.equals(entity.getIsDeleted(), 1)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
         }
         entity.setStatus(status);

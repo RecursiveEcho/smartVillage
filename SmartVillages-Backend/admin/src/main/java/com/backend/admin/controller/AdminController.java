@@ -18,7 +18,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
-
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.GrantedAuthority;
+import java.util.stream.Collectors;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -44,18 +47,18 @@ public class AdminController {
      * @return 当前用户 authId、username、role
      */
     @GetMapping("/me")
-    public Result<Map<String, String>> me(HttpServletRequest request) {
-        // 从登录上下文解析
-        Integer authId = LoginUserContext.getAuthId(request);
-        String username = LoginUserContext.getUsername(request);
-        String role = LoginUserContext.getRole(request);
+    public Result<Map<String, Object>> me(HttpServletRequest request) {
+        //获取上下文
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         // 返回
-        log.info("当前用户：authId={}, username={}, role={}", authId, username, role);
+        log.info("当前用户：authId={}, username={}, role={}", authentication.getPrincipal(), authentication.getName(), authentication.getAuthorities());
         return Result.success(Map.of(
-                "authId", String.valueOf(authId),
-                "username", username,
-                "role", role
-        ));
+                "id", String.valueOf(authentication.getPrincipal()),
+                "username", authentication.getName(),
+                "role", authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.joining(","))
+        )); 
     }
 
     /**

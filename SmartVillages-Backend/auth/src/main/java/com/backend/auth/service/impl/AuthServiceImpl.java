@@ -43,7 +43,7 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
             return Result.fail(ErrorCode.USER_NOT_FOUND.getCode(), ErrorCode.USER_NOT_FOUND.getMessage());
         }
         /** 用户已逻辑删除 */
-        if (Objects.equals(user.getDeleted(), 1)) {
+        if (Objects.equals(user.getIsDeleted(), 1)) {
             return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
         }
         /** 用户已禁用 */
