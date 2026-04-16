@@ -64,7 +64,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setIsTop(dto.getIsTop());
         entity.setPublishTime(LocalDateTime.now());
         entity.setViewCount(0);
-        entity.setDeleted(0);
         entity.setCreateUser(LoginUserContext.getAuthId(request));
         /* 保存实体 */
         save(entity);

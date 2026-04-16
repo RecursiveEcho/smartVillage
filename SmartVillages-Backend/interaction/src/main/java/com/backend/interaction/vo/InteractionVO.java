@@ -1,30 +1,17 @@
-package com.backend.interaction.entity;
+package com.backend.interaction.vo;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
-/**
- * @author chenyang
- * @date 2026/3/27
- * @description 村民留言实体类
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("interaction")
-@Tag(name = "留言",description = "村民留言")
-public class InteractionEntity {
-
-    @TableId(type = IdType.AUTO)
+@Schema(description = "留言VO")
+public class InteractionVO {
+    
     @Schema(description = "留言id")
     private Integer id;
 
@@ -33,7 +20,7 @@ public class InteractionEntity {
 
     @Schema(description = "留言内容")
     private String content;
-
+    
     @Schema(description = "类型：consult-咨询/complaint-投诉/suggest-建议")
     private String type;
 
@@ -42,7 +29,7 @@ public class InteractionEntity {
 
     @Schema(description = "状态：0-待处理 1-处理中 2-已回复 3-已关闭")
     private Integer status;
-
+    
     @Schema(description = "回复时间")
     private LocalDateTime replyTime;
 
@@ -51,15 +38,11 @@ public class InteractionEntity {
 
     @Schema(description = "满意度：1-满意 2-一般 3-不满意")
     private Integer satisfaction;
-
+    
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
-
-    @Schema(description = "删除状态")
-    @TableLogic
-    private Integer deleted;
 
 }

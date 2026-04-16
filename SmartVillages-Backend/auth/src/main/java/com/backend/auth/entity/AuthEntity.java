@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 /**
  * 登录账号表 {@code auth} 对应的实体，承载用户名密码、角色与账号状态。
  * <p>
- * 密码存库为 MD5（UTF-8 明文）小写 32 位十六进制；删除走逻辑删除字段 {@link #deleted}。
+ * 密码存库为 MD5（UTF-8 明文）小写 32 位十六进制；删除走逻辑删除字段。
  *
  * @author chenyang
  * @date 2026/4/2
@@ -51,15 +51,13 @@ public class AuthEntity {
     private Integer status;
 
     @TableField(fill = FieldFill.INSERT)
-    @Schema(description = "创建时间：yyyy-MM-dd HH:mm:ss")
+    @Schema(description = "创建时间")
     private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    @Schema(description = "更新时间：yyyy-MM-dd HH:mm:ss")
+    @Schema(description = "更新时间")
     private LocalDateTime updateTime;
 
     @Schema(description = "逻辑删除：0-否 1-是", defaultValue = "0")
-    @TableLogic(value = "0", delval = "1")
-    @TableField("is_deleted")
-    private Integer deleted;
+    private Integer isDeleted;
 }

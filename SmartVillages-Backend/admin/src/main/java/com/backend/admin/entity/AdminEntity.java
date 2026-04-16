@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -33,20 +34,19 @@ public class AdminEntity {
     @Schema(description = "管理员ID")
     private Integer id;
 
-    @Schema(description = "管理员的权限ID")
+    @Schema(description = "关联 auth 表 ID")
     private Integer authId;
 
-    @Schema(description = "管理员姓名")
+    @Schema(description = "真实姓名")
     private String realName;
 
-    @Schema(description = "权限列表")
+    @Schema(description = "权限列表 (JSON)")
     private List<String> permissions;
 
-    @TableField(fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "最后登录时间")
     private LocalDateTime lastLoginTime;
 
-    @Schema(description = "最后登录IP")
+    @Schema(description = "最后登录 IP")
     private String lastLoginIp;
 
     @TableField(fill = FieldFill.INSERT)
@@ -56,4 +56,8 @@ public class AdminEntity {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
+
+    @TableLogic
+    @Schema(description = "逻辑删除：0-未删除 1-已删除")
+    private Integer deleted;
 }
