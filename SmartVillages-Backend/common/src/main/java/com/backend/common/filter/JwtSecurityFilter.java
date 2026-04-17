@@ -54,17 +54,27 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
         }
 
         try{
+            
             String subject = jwtUtils.parseToken(token);
             String[] parts = subject.split(":");
-            String userId= parts[0];
+            
+            String authId= parts[0];
             String username= parts[1];
-            String role= parts[2];
-            UsernamePasswordAuthenticationToken authentication= new
-                    UsernamePasswordAuthenticationToken(username,null,
-                    List.of(new SimpleGrantedAuthority(normalizeRole(role))));
-            authentication.setDetails(userId);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String role= parts[2];            
+            
+            request.setAttribute("authId", authId);//写入请求上下文
+            request.setAttribute("username", username);//写入请求上下文
+            request.setAttribute("role", role);//写入请求上下文
+            
+            //创建认证对象
+            UsernamePasswordAuthenticationToken authentication= new UsernamePasswordAuthenticationToken(username,null,
+                List.of(new SimpleGrantedAuthority(normalizeRole(role))));
+
+            authentication.setDetails(authId);//写入请求上下文
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);//设置认证
         }catch(Exception e){
+            //写入错误信息
             writeError(response, ErrorCode.INVALID_TOKEN);
             return;
         }

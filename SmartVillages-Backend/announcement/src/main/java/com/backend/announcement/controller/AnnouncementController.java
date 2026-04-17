@@ -28,7 +28,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 公告 REST：前台读已发布列表/详情/热门；{@code /admin/announcements} 下为后台增删改与上下架。
+ * 公告 REST：前台读已发布列表/详情/热门；{@code /cadre/announcements} 下为村干部业务操作。
  * <p>
  * 热门接口使用静态子路径 {@code /announcements/hot}，避免与 {@code /announcements/{id}} 路由冲突。
  *
@@ -47,12 +47,12 @@ public class AnnouncementController {
     /**
      * @author chenyang
      * @date 2026/4/8
-     * @description 管理员新增公告
+     * @description 村干部新增公告
      * @param dto 创建参数
      * @return 操作结果文案
      */
-    @Operation(summary = "管理员新增公告")
-    @PostMapping("/admin/announcements")
+    @Operation(summary = "村干部新增公告")
+    @PostMapping("/cadre/announcements")
     public Result<String> create(@Valid @RequestBody AnnouncementCreateDTO dto, HttpServletRequest request) {
         announcementService.createAnnouncement(dto, request);
         return Result.success("公告创建成功");
@@ -84,9 +84,9 @@ public class AnnouncementController {
      * @return 操作结果文案
      */
     @Operation(summary = "编辑公告基础信息")
-    @PutMapping("/admin/announcements/{id}")
-    public Result<String> update(@PathVariable Long id, @Valid @RequestBody AnnouncementUpdateDTO dto) {
-        announcementService.updateAnnouncement(id, dto);
+    @PutMapping("/cadre/announcements/{id}")
+    public Result<String> update(@PathVariable Long id, @Valid @RequestBody AnnouncementUpdateDTO dto, HttpServletRequest request) {
+        announcementService.updateAnnouncement(id, dto, request);
         return Result.success("公告编辑成功");
     }
 
@@ -99,7 +99,7 @@ public class AnnouncementController {
      * @return 操作结果文案
      */
     @Operation(summary = "上架/下架公告")
-    @PutMapping("/admin/announcements/{id}/status")
+    @PutMapping("/cadre/announcements/{id}/status")
     public Result<String> updateStatus(@PathVariable Long id,
             @RequestParam Integer status, HttpServletRequest request) {
         announcementService.updateStatus(id, status, request);
@@ -136,12 +136,12 @@ public class AnnouncementController {
     /**
      * @author chenyang
      * @date 2026/4/15
-     * @description 管理员公告详情（审核回显）
+     * @description 村干部公告详情
      * @param id 公告 ID
      * @return 公告详情
      */
-    @Operation(summary = "管理员公告详情（审核回显）")
-    @GetMapping("/admin/announcements/{id}")
+    @Operation(summary = "村干部公告详情")
+    @GetMapping("/cadre/announcements/{id}")
     public Result<AnnouncementVO> getAdminAnnouncement(@PathVariable Long id) {
         return Result.success(announcementService.getAdminAnnouncement(id));
     }
@@ -154,7 +154,7 @@ public class AnnouncementController {
      * @return 操作结果文案
      */
     @Operation(summary = "删除公告")
-    @DeleteMapping("/admin/announcements/{id}")
+    @DeleteMapping("/cadre/announcements/{id}")
     public Result<String> deleteAnnouncement(@PathVariable Long id) {
         announcementService.deleteAnnouncement(id);
         return Result.success("公告删除成功");
@@ -163,14 +163,14 @@ public class AnnouncementController {
     /**
      * @author chenyang
      * @date 2026/4/14
-     * @description 管理员分页查询公告
+     * @description 村干部分页查询公告
      * @param current 当前页
      * @param size    每页数量
      * @param status  状态
      * @return 分页结果
      */
-    @Operation(summary = "管理员分页查询公告")
-    @GetMapping("/admin/announcements")
+    @Operation(summary = "村干部分页查询公告")
+    @GetMapping("/cadre/announcements")
     public Result<IPage<AnnouncementVO>> pageAdmin(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
@@ -188,11 +188,11 @@ public class AnnouncementController {
     /**
      * @author chenyang
      * @date 2026/4/14
-     * @description 管理员待审核公告
+     * @description 村干部待审核公告
      * @return 待审核公告列表
      */
-    @Operation(summary = "管理员待审核公告")
-    @GetMapping("/admin/announcements/pending")
+    @Operation(summary = "村干部待审核公告")
+    @GetMapping("/cadre/announcements/pending")
     public Result<IPage<AnnouncementVO>> pagePending(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
@@ -208,13 +208,13 @@ public class AnnouncementController {
     /**
      * @author chenyang
      * @date 2026/4/14
-     * @description 管理员审核公告
+     * @description 村干部审核公告
      * @param id 公告 ID
      * @param status 状态
      * @return 操作结果文案
      */
-    @Operation(summary = "管理员审核公告")
-    @PutMapping("/admin/announcements/{id}/audit")
+    @Operation(summary = "村干部审核公告")
+    @PutMapping("/cadre/announcements/{id}/audit")
     public Result<String> auditAnnouncement(
             @PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
         announcementService.auditAnnouncement(id, status, request);
@@ -235,7 +235,7 @@ public class AnnouncementController {
      * @return 审核历史列表
      */
     @Operation(summary = "审核历史列表")
-    @GetMapping("/admin/announcements/audited")
+    @GetMapping("/cadre/announcements/audited")
     public Result<IPage<AnnouncementVO>> pageAudited(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,

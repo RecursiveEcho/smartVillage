@@ -20,10 +20,6 @@ import lombok.NoArgsConstructor;
 @Schema(description = "登录请求")
 public class LoginRequest {
 
-    /** 预留字段，服务端未参与校验逻辑。 */
-    @Schema(description = "预留 ID，可选")
-    private String id;
-
     @Schema(description = "用户名")
     @NotBlank(message = "用户名不能为空")
     private String username;

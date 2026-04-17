@@ -2,7 +2,6 @@ package com.backend.admin.controller;
 
 import com.backend.admin.service.AdminService;
 import com.backend.admin.vo.AdminVO;
-import com.backend.common.context.LoginUserContext;
 import com.backend.common.result.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -53,7 +51,7 @@ public class AdminController {
         // 返回
         log.info("当前用户：authId={}, username={}, role={}", authentication.getPrincipal(), authentication.getName(), authentication.getAuthorities());
         return Result.success(Map.of(
-                "id", String.valueOf(authentication.getPrincipal()),
+                "id", String.valueOf(authentication.getDetails()),
                 "username", authentication.getName(),
                 "role", authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)

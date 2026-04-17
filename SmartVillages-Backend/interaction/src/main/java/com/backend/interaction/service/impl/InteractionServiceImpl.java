@@ -13,7 +13,7 @@ import com.backend.common.context.LoginUserContext;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
 import jakarta.servlet.http.HttpServletRequest;
-
+import com.backend.interaction.vo.InteractionCreateVO;
 /**
  * @author chenyang
  * @date 2026/4/15
@@ -24,14 +24,16 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequiredArgsConstructor
 @Transactional(rollbackFor = Exception.class)
 public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, InteractionEntity> implements InteractionService {
-    private final InteractionMapper interactionMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void createMessage(InteractionCreateDTO dto, HttpServletRequest request) {
+    public InteractionCreateVO createMessage(InteractionCreateDTO dto, HttpServletRequest request) {
         InteractionEntity entity = new InteractionEntity();
-        BeanUtils.copyProperties(dto, entity);
         entity.setUserId(LoginUserContext.getAuthId(request));
+        BeanUtils.copyProperties(dto, entity);
         save(entity);
+        InteractionCreateVO vo = new InteractionCreateVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 }

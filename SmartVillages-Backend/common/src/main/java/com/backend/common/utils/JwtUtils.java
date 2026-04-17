@@ -25,9 +25,9 @@ public class JwtUtils {
     @Value("${jwt.expiration-ms:86400000}")
     private  long expirationMs;
 
-    public String generateToken(String userId,String username,String role) {
+    public String generateToken(String Id,String username,String role) {
         return Jwts.builder()
-                .setSubject(userId + ":" + username + ":" + role)
+                .setSubject(Id + ":" + username + ":" + role)
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(SignatureAlgorithm.HS256, secretKey.getBytes(StandardCharsets.UTF_8))
                 .compact();

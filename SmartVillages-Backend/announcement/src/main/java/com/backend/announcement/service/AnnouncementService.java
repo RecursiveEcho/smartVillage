@@ -20,7 +20,7 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
     IPage<AnnouncementVO> pagePublished(Long current, Long size);
 
     // 编辑公告基础信息
-    void updateAnnouncement(Long id, AnnouncementUpdateDTO dto);
+    void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request);
 
     // 上架/下架公告
     void updateStatus(Long id, Integer status, HttpServletRequest request);

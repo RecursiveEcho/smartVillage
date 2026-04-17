@@ -1,8 +1,10 @@
 package com.backend.common.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -14,26 +16,36 @@ import com.backend.common.filter.JwtSecurityFilter;
  */
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
     private final JwtSecurityFilter jwtSecurityFilter;
-    public SecurityConfig(JwtSecurityFilter jwtSecurityFilter) {
-        this.jwtSecurityFilter = jwtSecurityFilter;
-    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
+        http.csrf(AbstractHttpConfigurer::disable)//禁用CSRF保护
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))//禁用会话管理
+            .authorizeHttpRequests(auth -> auth//授权请求
             .requestMatchers(
                 "/auth/login",
+                "/auth/logout",
                 "/v3/api-docs/**",
                 "/doc.html",
                 "/swagger-ui/**",
                 "/webjars/**",
-                "/swagger-resources/**"
-            ).permitAll()
-            .anyRequest().authenticated()
+                "/swagger-resources/**",
+                "/announcements/**",
+                "/interactions/**",
+                "/guest/**"
+            ).permitAll()//白名单请求放行
+            // 管理员仅负责账号管理
+            .requestMatchers("/admin/users/**", "/admin/me").hasAuthority("ROLE_ADMIN")
+            // 村干部负责业务处理（公告、留言）
+            .requestMatchers("/cadre/announcements/**", "/cadre/interactions/**").hasAuthority("ROLE_CADRE")//村干部请求需要认证
+            .requestMatchers("/villager/**").hasAnyAuthority("ROLE_VILLAGER")//村民请求需要认证
+            .anyRequest().authenticated()//任何请求都需要认证
         )
+        //在UsernamePasswordAuthenticationFilter之前添加JwtSecurityFilter
             .addFilterBefore(jwtSecurityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

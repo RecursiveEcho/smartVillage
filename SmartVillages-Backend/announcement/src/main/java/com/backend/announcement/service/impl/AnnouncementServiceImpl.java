@@ -90,7 +90,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto) {
+    public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
         /* 构建缓存 key */
         AnnouncementEntity entity = getActiveOrThrow(id);
         /* 设置标题、内容、类型、是否置顶 */
@@ -98,6 +98,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
+        entity.setUpdateTime(LocalDateTime.now());
+        entity.setCreateUser(LoginUserContext.getAuthId(request));
         /* 更新实体并清除详情缓存 */
         updateById(entity);
         evictDetailCache(id);

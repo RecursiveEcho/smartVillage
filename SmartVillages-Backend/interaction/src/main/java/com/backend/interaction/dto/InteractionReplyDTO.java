@@ -7,6 +7,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 官方回复DTO
+ * @author chenyang
+ * @date 2026/4/15
+ * @description 官方回复DTO
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,7 +20,7 @@ import lombok.NoArgsConstructor;
 public class InteractionReplyDTO {
     @Schema(description = "留言id")
     @NotNull(message = "留言id不能为空")
-    private Integer id;
+    private Integer userId;
 
     @Schema(description = "回复内容")
     @NotBlank(message = "回复内容不能为空")
