@@ -16,7 +16,6 @@ import jakarta.servlet.ServletException;
 import java.io.IOException;
 import com.backend.common.utils.JwtUtils;
 import com.backend.common.enums.ErrorCode;
-import com.backend.common.config.IsWhitelistConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.backend.common.result.Result;
 import java.nio.charset.StandardCharsets;
@@ -40,52 +39,32 @@ public class JwtSecurityFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
      throws ServletException, IOException {
-        String uri = request.getRequestURI();
-        boolean isWhitelist = IsWhitelistConfig.getWhitelist().stream()
-                .anyMatch(pattern -> pathMatcher.match(pattern, uri));
-        if (isWhitelist|| "OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            filterChain.doFilter(request,response);
-            return;
-        }
         String token = request.getHeader("token");
-        if (!StringUtils.hasText(token)) {
-            writeError(response, ErrorCode.INVALID_AUTH_HEADER);
-            return;
+        
+        if (StringUtils.hasText(token)) {
+            try {
+                String subject = jwtUtils.parseToken(token);
+                String[] parts = subject.split(":");
+                
+                String authId = parts[0];
+                String username = parts[1];
+                String role = parts[2];
+                
+                request.setAttribute("authId", authId);
+                request.setAttribute("username", username);
+                request.setAttribute("role", role);
+                
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    username, null, List.of(new SimpleGrantedAuthority(normalizeRole(role))));
+                
+                authentication.setDetails(authId);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (Exception e) {
+                // token 无效时不清除认证，让 Spring Security 处理
+            }
         }
-
-        try{
-            
-            String subject = jwtUtils.parseToken(token);
-            String[] parts = subject.split(":");
-            
-            String authId= parts[0];
-            String username= parts[1];
-            String role= parts[2];            
-            
-            request.setAttribute("authId", authId);//写入请求上下文
-            request.setAttribute("username", username);//写入请求上下文
-            request.setAttribute("role", role);//写入请求上下文
-            
-            //创建认证对象
-            UsernamePasswordAuthenticationToken authentication= new UsernamePasswordAuthenticationToken(username,null,
-                List.of(new SimpleGrantedAuthority(normalizeRole(role))));
-
-            authentication.setDetails(authId);//写入请求上下文
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);//设置认证
-        }catch(Exception e){
-            //写入错误信息
-            writeError(response, ErrorCode.INVALID_TOKEN);
-            return;
-        }
-        filterChain.doFilter(request,response);
-    }
-
-    private void writeError(HttpServletResponse response, ErrorCode errorCode) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write(objectMapper.writeValueAsString(Result.error(errorCode.getCode(), errorCode.getMessage())));
+        
+        filterChain.doFilter(request, response);
     }
 
     private String normalizeRole(String role) {

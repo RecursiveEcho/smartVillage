@@ -28,7 +28,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth//授权请求
             .requestMatchers(
                 "/auth/login",
-                "/auth/logout",
                 "/v3/api-docs/**",
                 "/doc.html",
                 "/swagger-ui/**",
