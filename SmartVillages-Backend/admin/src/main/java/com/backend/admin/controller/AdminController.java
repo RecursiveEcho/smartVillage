@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +22,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.GrantedAuthority;
 import java.util.stream.Collectors;
+import jakarta.validation.Valid;
+import com.backend.auth.dto.AuthDTO;
+import com.backend.auth.service.AuthService;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -97,4 +102,25 @@ public class AdminController {
         adminService.updateUserStatus(id, status);
         return Result.success("更新用户状态成功");
     }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/18
+     * @description 创建村干部账号
+     * @param username 用户名
+     * @param password 密码
+     * @param phone 手机号
+     * @param role 角色
+     * @param avatar 头像
+     * @param status 状态
+     * @param isDeleted 是否删除
+     * @return 操作结果文案
+     */
+    @Operation(summary = "创建村干部")
+    @PostMapping("/cadre")
+    public Result<String> createCadre(@Valid @RequestBody AuthDTO authDTO)  {
+        adminService.createCadre(authDTO);
+        return Result.success("创建村干部成功");
+    }
+
 }

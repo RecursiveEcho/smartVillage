@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import com.backend.auth.dto.AuthDTO;
+
 import java.util.Objects;
 
 /**
@@ -74,6 +76,21 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         authMapper.updateById(entity);
     }
 
+    /**
+     * 创建村干部账号
+     * @param authDTO 用户认证DTO
+     */
+    @Override
+    public void createCadre(AuthDTO authDTO) {
+        AuthEntity entity = new AuthEntity();
+        BeanUtils.copyProperties(authDTO, entity);
+        entity.setRole("cadre");
+        entity.setStatus(1);
+        entity.setIsDeleted(0);
+        authMapper.insert(entity);
+    }
+    
+
     /** 认证实体字段与 VO 同名字段拷贝，供列表展示 */
     private AdminVO toAdminVo(AuthEntity entity) {
         AdminVO vo = new AdminVO();
@@ -81,4 +98,5 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         BeanUtils.copyProperties(entity, vo);
         return vo;
     }
+
 }

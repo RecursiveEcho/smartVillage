@@ -28,7 +28,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth//授权请求
             .requestMatchers(
                 "/auth/login",
-                "/auth/logout",
                 "/v3/api-docs/**",
                 "/doc.html",
                 "/swagger-ui/**",
@@ -41,7 +40,7 @@ public class SecurityConfig {
             // 管理员仅负责账号管理
             .requestMatchers("/admin/users/**", "/admin/me").hasAuthority("ROLE_ADMIN")
             // 村干部负责业务处理（公告、留言）
-            .requestMatchers("/cadre/announcements/**", "/cadre/interactions/**").hasAuthority("ROLE_CADRE")//村干部请求需要认证
+            .requestMatchers("/cadre/announcements/**", "/cadre/interactions/**").hasAuthority("ROLE_CADRE")
             .requestMatchers("/villager/**").hasAnyAuthority("ROLE_VILLAGER")//村民请求需要认证
             .anyRequest().authenticated()//任何请求都需要认证
         )

@@ -59,7 +59,7 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
                 String.valueOf(user.getId()),
                 user.getUsername(),
                 user.getRole());
-        return Result.success(new JwtResponse(user.getId(), user.getUsername(), token));
+        return Result.success(new JwtResponse(token));
     }
 
     @Override
