@@ -18,12 +18,7 @@ import lombok.NoArgsConstructor;
 @Schema(description = "JWT 响应")
 public class JwtResponse {
 
-    @Schema(description = "用户 ID")
-    private Integer id;
-
-    @Schema(description = "用户名")
-    private String username;
-
     @Schema(description = "访问令牌")
     private String token;
+
 }
