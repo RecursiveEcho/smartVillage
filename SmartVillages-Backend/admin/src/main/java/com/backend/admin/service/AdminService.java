@@ -5,6 +5,8 @@ import com.backend.admin.vo.AdminVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.backend.auth.dto.AuthDTO;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface AdminService extends IService<AdminEntity> {
 
@@ -16,4 +18,7 @@ public interface AdminService extends IService<AdminEntity> {
 
     // 创建村干部
     void createCadre(AuthDTO authDTO);
+
+    // 上传头像
+    void uploadCadreAvatar(Integer id, MultipartFile file, HttpServletRequest request);
 }

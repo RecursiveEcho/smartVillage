@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -58,6 +59,7 @@ public class AuthEntity {
     @Schema(description = "更新时间")
     private LocalDateTime updateTime;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "逻辑删除：0-否 1-是", defaultValue = "0")
     private Integer isDeleted;
 }

@@ -1,5 +1,7 @@
 package com.backend.media.service.impl;
 
+import com.backend.common.context.LoginUserContext;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.backend.media.service.MediaService;
@@ -13,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import com.backend.media.mapper.MediaMapper;
 import com.backend.media.entity.MediaEntity;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-
 @Slf4j
 /**
  * @author chenyang
@@ -26,16 +27,27 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
     private final OssUploadTool ossUploadTool;
 
     @Override
-    public UploadVO upload(MultipartFile file, String fileType) {
+    public UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request) {
         try {
+            // 获取当前用户ID
             // 上传文件到OSS
-            OssUploadTool.UploadResult uploadResult = ossUploadTool.uploadImage(
+            OssUploadTool.UploadResult uploadResult = ossUploadTool.uploadFile(
                     file.getInputStream(),
                     fileType,
                     file.getOriginalFilename(),
                     file.getContentType()
             );
+            
             // 保存媒体资源到数据库
+            MediaEntity mediaEntity = new MediaEntity();
+            mediaEntity.setFileName(file.getOriginalFilename());
+            mediaEntity.setFileUrl(uploadResult.url());
+            mediaEntity.setFileType(fileType);
+            mediaEntity.setFileSize(file.getSize());
+            mediaEntity.setCategory(category);
+            mediaEntity.setUploadUser(LoginUserContext.getAuthId(request));
+            this.save(mediaEntity);
+            
             return new UploadVO(
                 uploadResult.url(),
                 uploadResult.objectKey()

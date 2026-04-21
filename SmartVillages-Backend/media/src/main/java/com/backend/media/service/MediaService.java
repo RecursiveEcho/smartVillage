@@ -1,5 +1,6 @@
 package com.backend.media.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.multipart.MultipartFile;
 import com.backend.media.vo.UploadVO;
 import com.backend.media.entity.MediaEntity;
@@ -17,6 +18,6 @@ public interface MediaService extends IService<MediaEntity> {
      * @param fileType 文件类型
      * @return 上传结果
      */
-    UploadVO upload(MultipartFile file, String fileType);
+    UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request);
 
 }

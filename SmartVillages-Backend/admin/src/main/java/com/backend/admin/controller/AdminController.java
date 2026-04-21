@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -107,20 +109,28 @@ public class AdminController {
      * @author chenyang
      * @date 2026/4/18
      * @description 创建村干部账号
-     * @param username 用户名
-     * @param password 密码
-     * @param phone 手机号
-     * @param role 角色
-     * @param avatar 头像
-     * @param status 状态
-     * @param isDeleted 是否删除
+     * @param authDTO 账号信息
      * @return 操作结果文案
      */
     @Operation(summary = "创建村干部")
-    @PostMapping("/cadre")
+    @PostMapping("users/cadre")
     public Result<String> createCadre(@Valid @RequestBody AuthDTO authDTO)  {
         adminService.createCadre(authDTO);
         return Result.success("创建村干部成功");
     }
 
+    /**
+     * @author chenyang
+     * @date 2026/4/21
+     * @description 上传头像
+     * @param avatar 头像文件
+     * @param request HTTP 请求
+     * @return 上传结果
+     */
+    @Operation(summary = "上传头像")
+    @PostMapping("/users/cadre/avatar/{id}")
+    public Result<String> uploadCadreAvatar(@PathVariable Integer id ,MultipartFile avatar,HttpServletRequest request) {
+        adminService.uploadCadreAvatar(id,avatar,request);
+        return Result.success("上传头像成功");
+    }
 }

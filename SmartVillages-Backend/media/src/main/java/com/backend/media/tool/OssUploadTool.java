@@ -27,6 +27,7 @@ public class OssUploadTool {
 
     @Value("${aliyun.oss.access-key-secret}")
     private String accessKeySecret;
+
     // 文档类型
     private static final Set<String> DOCUMENT_CONTENT_TYPES = Set.of(
             "application/pdf",
@@ -40,24 +41,23 @@ public class OssUploadTool {
     );
 
     /**
-     * 上传图片
+     * 上传文件
      * @param inputStream 输入流
      * @param fileType 文件类型
      * @param originalFileName 原始文件名
      * @param contentType 内容类型
      * @return 上传结果
      */
-    public UploadResult uploadImage(InputStream inputStream, String bizType, String originalFileName, String contentType) {
-        if (!isAllowedType(bizType, contentType)) {
-            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件类型与bizType不匹配，仅支持image/video/document");
+    public UploadResult uploadFile(InputStream inputStream, String fileType, String originalFileName, String contentType) {
+        // 判断文件类型是否允许
+        if (!isAllowedType(fileType, contentType)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件类型与fileType不匹配，仅支持image/video/document");
         }
-        OSS ossClient = null;
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
         try {
-            // 创建OSS客户端
-            ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
             // 生成对象键（同名文件自动追加(1)、(2)）
-            String objectKey = buildObjectKey(ossClient, bizType, originalFileName);
-            // 创建对象元数据
+            String objectKey = buildObjectKey(ossClient, fileType, originalFileName);
+            // 设置文件元数据
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentType(contentType);
             // 上传文件到OSS
@@ -66,28 +66,32 @@ public class OssUploadTool {
             String normalizedEndpoint = endpoint.replace("https://", "").replace("http://", "");
             String url = "https://" + bucketName + "." + normalizedEndpoint + "/" + objectKey;
             // 返回上传结果
-            log.info("OSS上传成功，bizType={}, objectKey={}", bizType, objectKey);
+            log.info("OSS上传成功，fileType={}, objectKey={}", fileType, objectKey);
             return new UploadResult(objectKey, url);
+        } catch (Exception e) {
+            log.error("OSS上传失败，fileType={}, originalFileName={}", fileType, originalFileName, e);
+            throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
         } finally {
-            if (ossClient != null) {
-                ossClient.shutdown();
-            }
+            ossClient.shutdown();
         }
     }
 
     /**
      * 判断文件类型是否允许
-     * @param bizType 业务类型
+     * @param fileType 文件类型
      * @param contentType 内容类型
      * @return 是否允许
      */
-    private boolean isAllowedType(String bizType, String contentType) {
+    private boolean isAllowedType(String fileType, String contentType) {
+        if (!StringUtils.hasText(contentType)) {
+            return false;
+        }
         // 判断文件类型是否允许
-        if (bizType.equals("image")) {
+        if ("image".equals(fileType)) {
             return contentType.startsWith("image/");
-        } else if ("video".equals(bizType)) {
+        } else if ("video".equals(fileType)) {
             return contentType.startsWith("video/");
-        } else if ("document".equals(bizType)) {
+        } else if ("document".equals(fileType)) {
             return DOCUMENT_CONTENT_TYPES.contains(contentType);
         }
         return false;
@@ -96,29 +100,23 @@ public class OssUploadTool {
     /**
      * 按原始文件名生成对象键，若已存在则追加(1)、(2)...
      */
-    private String buildObjectKey(OSS ossClient, String bizType, String originalFileName) {
-        // 判断原始文件名是否为空
-        String safeFileName = StringUtils.hasText(originalFileName) ? originalFileName.trim() : "file.bin";
-        // 获取文件名中的点
-        int dotIndex = safeFileName.lastIndexOf('.');
-        // 获取文件名中的扩展名
-        String baseName = dotIndex > 0 ? safeFileName.substring(0, dotIndex) : safeFileName;
-        // 获取文件名中的扩展名
-        String suffix = dotIndex > 0 ? safeFileName.substring(dotIndex) : ".bin";
-        // 如果文件名中没有扩展名，则设置为file.bin
-        if (!StringUtils.hasText(baseName)) {
-            baseName = "file";
-        }
-        // 生成对象键
-        String objectKey = bizType + "/" + baseName + suffix;
+    private String buildObjectKey(OSS ossClient, String fileType, String originalFileName) {
+        // 获取点的位置
+        int dotIndex = originalFileName.lastIndexOf('.');
+        // 文件名无后缀
+        String baseName = originalFileName.substring(0, dotIndex);
+        // 文件名后缀
+        String suffix = originalFileName.substring(dotIndex);
+
+        String objectPrefix = fileType + "/";
+        String objectKey = objectPrefix + baseName + suffix;
         int copyIndex = 1;
-        // 如果对象键已存在，则追加(1)、(2)...
+
+        // 判断对象是否存在，存在则追加(1)、(2)...
         while (ossClient.doesObjectExist(bucketName, objectKey)) {
-            // 生成对象键
-            objectKey = bizType + "/" + baseName + "(" + copyIndex + ")" + suffix;
+            objectKey = objectPrefix + baseName + "(" + copyIndex + ")" + suffix;
             copyIndex++;
         }
-        // 返回对象键
         return objectKey;
     }
 

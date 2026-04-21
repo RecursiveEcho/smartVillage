@@ -1,5 +1,6 @@
 package com.backend.admin.service.impl;
 
+import ch.qos.logback.core.util.MD5Util;
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.mapper.AdminMapper;
 import com.backend.admin.service.AdminService;
@@ -8,18 +9,23 @@ import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.media.vo.UploadVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-
+import com.backend.media.service.MediaService;
 import com.backend.auth.dto.AuthDTO;
+import org.springframework.util.DigestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-
+import com.backend.common.context.LoginUserContext;
 /**
  * 管理员业务实现：继承 MyBatis-Plus 对 {@link AdminEntity} 的基础 CRUD，
  * 用户列表与状态变更实际读写 {@link AuthEntity}（认证账号表），与管理员扩展信息分离。
@@ -29,6 +35,8 @@ import java.util.Objects;
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> implements AdminService {
 
     private final AuthMapper authMapper;
+
+    private final MediaService mediaService;
 
     /**
      * 按条件分页查询认证用户，并映射为 {@link AdminVO} 返回给管理端。
@@ -83,6 +91,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     @Override
     public void createCadre(AuthDTO authDTO) {
         AuthEntity entity = new AuthEntity();
+        String password = DigestUtils.md5DigestAsHex(authDTO.getPassword().getBytes(StandardCharsets.UTF_8));
+        entity.setPassword(password);
         BeanUtils.copyProperties(authDTO, entity);
         entity.setRole("cadre");
         entity.setStatus(1);
@@ -90,6 +100,20 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         authMapper.insert(entity);
     }
     
+    /**
+     * 上传头像
+     * @param id 用户ID
+     * @param avatar 头像文件
+     * @param request 请求
+     * @return 上传结果
+     */
+    @Override
+    public void uploadCadreAvatar(Integer id, MultipartFile avatar, HttpServletRequest request) {
+        UploadVO uploadVo = mediaService.upload(avatar, "image", "other", request);
+        AuthEntity entity = authMapper.selectById(LoginUserContext.getAuthId(request));
+        entity.setAvatar(uploadVo.getFileUrl());
+        authMapper.updateById(entity);
+    }
 
     /** 认证实体字段与 VO 同名字段拷贝，供列表展示 */
     private AdminVO toAdminVo(AuthEntity entity) {
