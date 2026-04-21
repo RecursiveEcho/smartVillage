@@ -7,8 +7,6 @@ import com.backend.announcement.mapper.AnnouncementMapper;
 import com.backend.announcement.service.AnnouncementService;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.backend.common.context.LoginUserContext;
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -45,7 +43,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
     private static final int STATUS_PUBLISHED = 1;
     private static final int STATUS_OFFLINE = 3;
-    private static final int DELETED_YES = 1;
     private static final int DEFAULT_HOT_LIMIT = 5;
 
     private final AnnouncementMapper announcementMapper;
@@ -62,7 +59,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setStatus(STATUS_PENDING);
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
-        entity.setPublishTime(LocalDateTime.now());
         entity.setViewCount(0);
         entity.setCreateUser(LoginUserContext.getAuthId(request));
         /* 保存实体 */
@@ -75,7 +71,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         /* 查询条件：状态为已发布，未删除，置顶优先，再按发布时间倒序 */
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
-                .eq(AnnouncementEntity::getDeleted, 0)
                 .orderByDesc(AnnouncementEntity::getIsTop)
                 .orderByDesc(AnnouncementEntity::getPublishTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
@@ -92,13 +87,12 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
         /* 构建缓存 key */
-        AnnouncementEntity entity = getActiveOrThrow(id);
+        AnnouncementEntity entity = getById(id);
         /* 设置标题、内容、类型、是否置顶 */
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
-        entity.setUpdateTime(LocalDateTime.now());
         entity.setCreateUser(LoginUserContext.getAuthId(request));
         /* 更新实体并清除详情缓存 */
         updateById(entity);
@@ -110,10 +104,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status, HttpServletRequest request) {
         /* 获取实体并校验 */
-        AnnouncementEntity entity = getActiveOrThrow(id);
+        AnnouncementEntity entity = getById(id);
         /* 设置状态 */
         entity.setStatus(status);
-        entity.setUpdateTime(LocalDateTime.now());
         entity.setAuditUser(LoginUserContext.getAuthId(request));
         /* 如果状态为已发布，则设置发布时间、审核时间 */
         if (Objects.equals(status, STATUS_PUBLISHED)) {
@@ -144,7 +137,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         }
 
         /* 获取实体并累加浏览量 */
-        AnnouncementEntity entity = getActiveOrThrow(id);
+        AnnouncementEntity entity = getById(id);
         int nextViews = (entity.getViewCount() == null ? 0 : entity.getViewCount()) + 1;
         entity.setViewCount(nextViews);
         updateById(entity);
@@ -157,7 +150,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /** 管理员公告详情 */
     @Override
     public AnnouncementVO getAdminAnnouncement(Long id) {
-        return toVo(getActiveOrThrow(id));
+        return toVo(getById(id));
     }
 
     /** 已发布列表按浏览量降序，浏览量相同时按创建时间升序，限制条数 */
@@ -168,7 +161,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         /* 查询条件：状态为已发布，未删除，按浏览量降序，按创建时间升序，限制条数 */
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
-                .eq(AnnouncementEntity::getDeleted, 0)
                 .orderByDesc(AnnouncementEntity::getViewCount)
                 .orderByAsc(AnnouncementEntity::getCreateTime)
                 .last("limit " + n);
@@ -180,12 +172,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAnnouncement(Long id) {
-        /* 获取实体并校验 */
-        AnnouncementEntity entity = getActiveOrThrow(id);
-        /* 设置删除标志 */
-        entity.setDeleted(DELETED_YES);
-        /* 更新实体并清除详情缓存 */
-        updateById(entity);
+        /* 删除实体并清除详情缓存 */
+        removeById(id);
         evictDetailCache(id);
     }
 
@@ -202,7 +190,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             LocalDateTime startTime,
             LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
-                .eq(AnnouncementEntity::getDeleted, 0)
                 .eq(status != null, AnnouncementEntity::getStatus, status)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
                 .eq(type != null, AnnouncementEntity::getType, type)
@@ -225,7 +212,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             LocalDateTime startTime,
             LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
-                .eq(AnnouncementEntity::getDeleted, 0)
                 .eq(AnnouncementEntity::getStatus, STATUS_PENDING)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
                 .eq(type != null, AnnouncementEntity::getType, type)
@@ -241,7 +227,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
-        AnnouncementEntity entity = getActiveOrThrow(id);
+        AnnouncementEntity entity = getById(id);
         entity.setAuditTime(LocalDateTime.now());
         entity.setAuditUser(LoginUserContext.getAuthId(request));
         if (status == 1) {
@@ -263,7 +249,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             LocalDateTime startTime,
             LocalDateTime endTime) {
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
-                .eq(AnnouncementEntity::getDeleted, 0)
                 .in(AnnouncementEntity::getStatus, 1, 2)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
                 .eq(type != null, AnnouncementEntity::getType, type)
@@ -287,7 +272,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         }
         LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getId, id.intValue())
-                .eq(AnnouncementEntity::getDeleted, 0)
                 .setSql("view_count = IFNULL(view_count,0) + 1");
         int rows = announcementMapper.update(null, bump);
         if (rows > 0) {
@@ -302,18 +286,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /** 序列化 VO 写入 Redis */
     private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
         redisJsonCacheTool.setObject(cacheKey, vo);
-    }
-
-    /** 获取实体并校验 */
-    private AnnouncementEntity getActiveOrThrow(Long id) {
-        /* 获取实体并校验 */
-        AnnouncementEntity entity = getById(id);
-        /* 如果实体不存在或已删除，则抛出业务异常 */
-        if (entity == null || Objects.equals(entity.getDeleted(), DELETED_YES)) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-        /* 返回实体 */
-        return entity;
     }
 
     private AnnouncementVO toVo(AnnouncementEntity entity) {

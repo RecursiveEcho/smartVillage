@@ -24,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.time.LocalDateTime;
 /**
  * 管理员业务实现：继承 MyBatis-Plus 对 {@link AdminEntity} 的基础 CRUD，
  * 用户列表与状态变更实际读写 {@link AuthEntity}（认证账号表），与管理员扩展信息分离。
@@ -96,7 +95,6 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         entity.setPassword(password);
         entity.setRole("cadre");
         entity.setStatus(1);
-        entity.setIsDeleted(0);
         authMapper.insert(entity);
     }
     
@@ -112,7 +110,6 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         UploadVO uploadVo = mediaService.upload(avatar, "image", "other", request);
         AuthEntity entity = authMapper.selectById(id);
         entity.setAvatar(uploadVo.getFileUrl());
-        entity.setUpdateTime(LocalDateTime.now());
         authMapper.updateById(entity);
         return uploadVo;
     }
@@ -121,7 +118,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     private AdminVO toAdminVo(AuthEntity entity) {
         AdminVO vo = new AdminVO();
         // 认证实体字段与 VO 同名字段拷贝
-        BeanUtils.copyProperties(entity, vo);
+        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
         return vo;
     }
 
