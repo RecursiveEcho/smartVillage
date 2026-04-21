@@ -1,0 +1,42 @@
+# 配置文件（敏感信息）
+service/src/main/resources/application.yml
+**/application-local.yml
+**/application-dev.yml
+**/application-prod.yml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# 编译输出
+target/
+build/
+out/
+*.class
+
+# Maven
+*.jar
+*.war
+*.ear
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 日志
+logs/
+*.log
+
+# Git
+.gitignore
