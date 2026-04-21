@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +27,7 @@ import org.springframework.security.core.GrantedAuthority;
 import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 import com.backend.auth.dto.AuthDTO;
-import com.backend.auth.service.AuthService;
+import com.backend.media.vo.UploadVO;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -128,9 +129,13 @@ public class AdminController {
      * @return 上传结果
      */
     @Operation(summary = "上传头像")
-    @PostMapping("/users/cadre/avatar/{id}")
-    public Result<String> uploadCadreAvatar(@PathVariable Integer id ,MultipartFile avatar,HttpServletRequest request) {
-        adminService.uploadCadreAvatar(id,avatar,request);
-        return Result.success("上传头像成功");
+    @PostMapping(value = "/users/cadre/avatar/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<String> uploadCadreAvatar(
+            @PathVariable Integer id,
+            MultipartFile avatar,
+            HttpServletRequest request
+    ) {
+        UploadVO uploadVO = adminService.uploadCadreAvatar(id, avatar, request);
+        return Result.success(uploadVO.getFileUrl());
     }
 }

@@ -6,6 +6,8 @@ import com.backend.media.vo.UploadVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -15,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.Valid;
 /**
  * @author chenyang
  * @date 2026/4/20
@@ -40,9 +41,9 @@ public class MediaController {
     @Operation(summary = "上传图片")
     @PostMapping(value = "/images/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<UploadVO> upload(
-        @Valid  MultipartFile file,
-        @Valid  String fileType,
-        @Valid  String category,
+        @RequestParam("file") @NotNull MultipartFile file,
+        @RequestParam("fileType") @NotBlank String fileType,
+        @RequestParam("category") @NotBlank String category,
         HttpServletRequest request
     ) {
         UploadVO uploadVO = mediaService.upload(file, fileType,category, request);

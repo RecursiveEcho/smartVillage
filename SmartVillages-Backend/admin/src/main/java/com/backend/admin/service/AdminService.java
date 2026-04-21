@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.backend.auth.dto.AuthDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.multipart.MultipartFile;
+import com.backend.media.vo.UploadVO;
 
 public interface AdminService extends IService<AdminEntity> {
 
@@ -20,5 +21,5 @@ public interface AdminService extends IService<AdminEntity> {
     void createCadre(AuthDTO authDTO);
 
     // 上传头像
-    void uploadCadreAvatar(Integer id, MultipartFile file, HttpServletRequest request);
+    UploadVO uploadCadreAvatar(Integer id, MultipartFile file, HttpServletRequest request);
 }
