@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
  * 后台创建公告入参。
  *
  * @author chenyang
- * @date 2026/4/8
- * @description 公告创建 DTO
+ * &#064;date 2026/4/8
+ * &#064;description 公告创建 DTO
  */
 @Data
 @NoArgsConstructor

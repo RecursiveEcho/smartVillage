@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 
 /**
  * @author chenyang
- * @date 2026/3/27
- * @description 村民留言实体类
+ * &#064;date 2026/3/27
+ * &#064;description 村民留言实体类
  */
 @Data
 @NoArgsConstructor

@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
  * {@link AnnouncementEntity} 数据访问。
  *
  * @author chenyang
- * @date 2026/4/8
+ * &#064;date 2026/4/8
  */
 @Mapper
 public interface AnnouncementMapper extends BaseMapper<AnnouncementEntity> {

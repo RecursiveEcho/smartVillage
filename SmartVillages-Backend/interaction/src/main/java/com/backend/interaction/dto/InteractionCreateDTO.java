@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 /**
  * 村民留言创建DTO
  * @author chenyang
- * @date 2026/4/15
- * @description 村民留言创建DTO
+ * &#064;date 2026/4/15
+ * &#064;description 村民留言创建DTO
  */
 @Data
 @NoArgsConstructor

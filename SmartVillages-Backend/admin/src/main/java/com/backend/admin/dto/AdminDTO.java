@@ -15,8 +15,8 @@ import java.util.List;
  * 管理员入参 DTO。
  *
  * @author chenyang
- * @date 2026/4/7
- * @description 管理员 DTO
+ * &#064;date 2026/4/7
+ * &#064;description 管理员 DTO
  */
 @Data
 @NoArgsConstructor

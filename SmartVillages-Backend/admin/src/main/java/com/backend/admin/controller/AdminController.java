@@ -35,7 +35,7 @@ import com.backend.auth.vo.AuthVO;
  * 路径统一前缀 {@code /admin}；用户列表与状态实际作用于认证表数据，经 {@link AdminService} 编排。
  *
  * @author chenyang
- * @date 2026/4/2
+ * &#064;date 2026/4/2
  */
 @Slf4j
 @RestController
@@ -48,8 +48,8 @@ public class AdminController {
 
     /**
      * @author chenyang
-     * @date 2026/4/2
-     * @description 获取当前用户信息
+     * &#064;date 2026/4/2
+     * &#064;description 获取当前用户信息
      * @param request HTTP 请求（解析登录上下文）
      * @return 当前用户 authId、username、role
      */
@@ -70,8 +70,8 @@ public class AdminController {
 
     /**
      * @author chenyang
-     * @date 2026/4/7
-     * @description 分页查询用户
+     * &#064;date 2026/4/7
+     * &#064;description 分页查询用户
      * @param username 用户名（可选，预留查询条件）
      * @param role     角色（可选）
      * @param status   状态（可选）
@@ -92,8 +92,8 @@ public class AdminController {
 
     /**
      * @author chenyang
-     * @date 2026/4/8
-     * @description 启用/禁用用户
+     * &#064;date 2026/4/8
+     * &#064;description 启用/禁用用户
      * @param id     用户 ID
      * @param status 状态
      * @return 操作结果文案
@@ -109,8 +109,8 @@ public class AdminController {
 
     /**
      * @author chenyang
-     * @date 2026/4/18
-     * @description 创建村干部账号
+     * &#064;date 2026/4/18
+     * &#064;description 创建村干部账号
      * @param authDTO 账号信息
      * @return 操作结果文案
      */
@@ -123,8 +123,8 @@ public class AdminController {
 
     /**
      * @author chenyang
-     * @date 2026/4/21
-     * @description 上传头像
+     * &#064;date 2026/4/21
+     * &#064;description 上传头像
      * @param avatar 头像文件
      * @param request HTTP 请求
      * @return 上传结果

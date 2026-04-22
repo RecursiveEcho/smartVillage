@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
  * {@code status} 在库表注释中可扩展为多状态；当前业务实现里前台「已发布」与上下架以 Service 层常量为准。
  *
  * @author chenyang
- * @date 2026/4/8
+ * &#064;date 2026/4/8
  */
 @Data
 @NoArgsConstructor

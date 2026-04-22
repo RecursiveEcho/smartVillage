@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  * 用户信息展示 VO。
  *
  * @author chenyang
- * @date 2026/4/7
- * @description 用户 VO
+ * &#064;date 2026/4/7
+ * &#064;description 用户 VO
  */
 @Data
 @NoArgsConstructor

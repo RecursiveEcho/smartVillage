@@ -20,8 +20,8 @@ import java.util.List;
  * 与认证用户（{@code auth} 表）通过 {@link #authId} 关联；权限展示等字段与业务扩展在此维护。
  *
  * @author chenyang
- * @date 2026/4/7
- * @description 管理员实体类
+ * &#064;date 2026/4/7
+ * &#064;description 管理员实体类
  */
 @Data
 @NoArgsConstructor

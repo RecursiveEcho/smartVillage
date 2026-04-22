@@ -22,8 +22,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * @author chenyang
- * @date 2026/4/2
- * @description 全局异常处理
+ * &#064;date 2026/4/2
+ * &#064;description 全局异常处理
  */
 @Slf4j
 @RestControllerAdvice

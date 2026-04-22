@@ -16,8 +16,8 @@ import java.util.TimeZone;
 
 /**
  * @author chenyang
- * @date 2026/4/14
- * @description Jackson 配置类
+ * &#064;date 2026/4/14
+ * &#064;description Jackson 配置类
  */
 @Configuration
 public class JacksonConfig  {

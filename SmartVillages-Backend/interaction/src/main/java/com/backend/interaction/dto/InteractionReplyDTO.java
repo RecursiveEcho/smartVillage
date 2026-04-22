@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 /**
  * 官方回复DTO
  * @author chenyang
- * @date 2026/4/15
- * @description 官方回复DTO
+ * &#064;date 2026/4/15
+ * &#064;description 官方回复DTO
  */
 @Data
 @NoArgsConstructor

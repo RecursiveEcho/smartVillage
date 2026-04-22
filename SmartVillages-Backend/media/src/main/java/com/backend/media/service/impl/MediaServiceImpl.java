@@ -18,8 +18,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 @Slf4j
 /**
  * @author chenyang
- * @date 2026/4/20
- * @description 媒体资源服务实现
+ * &#064;date 2026/4/20
+ * &#064;description 媒体资源服务实现
  */
 @Service
 @RequiredArgsConstructor

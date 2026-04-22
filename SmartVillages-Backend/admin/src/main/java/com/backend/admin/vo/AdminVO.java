@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  * 后台用户列表展示 VO（字段与 auth 表对齐部分由服务层填充）。
  *
  * @author chenyang
- * @date 2026/4/7
- * @description 管理员 VO
+ * &#064;date 2026/4/7
+ * &#064;description 管理员 VO
  */
 @Data
 @NoArgsConstructor

@@ -33,7 +33,7 @@ import java.util.List;
  * 热门接口使用静态子路径 {@code /announcements/hot}，避免与 {@code /announcements/{id}} 路由冲突。
  *
  * @author chenyang
- * @date 2026/4/8
+ * &#064;date 2026/4/8
  */
 @Slf4j
 @RestController
@@ -46,8 +46,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/8
-     * @description 村干部新增公告
+     * &#064;date 2026/4/8
+     * &#064;description 村干部新增公告
      * @param dto 创建参数
      * @return 操作结果文案
      */
@@ -60,8 +60,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/8
-     * @description 前台分页公告（仅已发布）
+     * &#064;date 2026/4/8
+     * &#064;description 前台分页公告（仅已发布）
      * @param current 当前页
      * @param size    每页数量
      * @return 分页结果
@@ -77,8 +77,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/9
-     * @description 编辑公告基础信息
+     * &#064;date 2026/4/9
+     * &#064;description 编辑公告基础信息
      * @param id  公告 ID
      * @param dto 更新参数
      * @return 操作结果文案
@@ -92,8 +92,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/9
-     * @description 上架/下架公告
+     * &#064;date 2026/4/9
+     * &#064;description 上架/下架公告
      * @param id     公告 ID
      * @param status 目标状态
      * @return 操作结果文案
@@ -108,8 +108,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/10
-     * @description 热门公告（静态路径，避免与 /{id} 冲突）
+     * &#064;date 2026/4/10
+     * &#064;description 热门公告（静态路径，避免与 /{id} 冲突）
      * @param limit 条数上限
      * @return 热门列表
      */
@@ -122,8 +122,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/9
-     * @description 公告详情
+     * &#064;date 2026/4/9
+     * &#064;description 公告详情
      * @param id 公告 ID
      * @return 公告详情
      */
@@ -135,8 +135,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/15
-     * @description 村干部公告详情
+     * &#064;date 2026/4/15
+     * &#064;description 村干部公告详情
      * @param id 公告 ID
      * @return 公告详情
      */
@@ -148,8 +148,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/12
-     * @description 删除公告
+     * &#064;date 2026/4/12
+     * &#064;description 删除公告
      * @param id 公告 ID
      * @return 操作结果文案
      */
@@ -162,8 +162,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/14
-     * @description 村干部分页查询公告
+     * &#064;date 2026/4/14
+     * &#064;description 村干部分页查询公告
      * @param current 当前页
      * @param size    每页数量
      * @param status  状态
@@ -187,8 +187,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/14
-     * @description 村干部待审核公告
+     * &#064;date 2026/4/14
+     * &#064;description 村干部待审核公告
      * @return 待审核公告列表
      */
     @Operation(summary = "村干部待审核公告")
@@ -207,8 +207,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/14
-     * @description 村干部审核公告
+     * &#064;date 2026/4/14
+     * &#064;description 村干部审核公告
      * @param id 公告 ID
      * @param status 状态
      * @return 操作结果文案
@@ -223,8 +223,8 @@ public class AnnouncementController {
 
     /**
      * @author chenyang
-     * @date 2026/4/15
-     * @description 审核历史列表
+     * &#064;date 2026/4/15
+     * &#064;description 审核历史列表
      * @param current 当前页
      * @param size    每页数量
      * @param title   标题

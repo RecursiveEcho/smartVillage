@@ -7,8 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 /**
  * @author chenyang
- * @date 2026/4/2
- * @description 登录用户上下文，避免每个接口重复写 attribute key。
+ * &#064;date 2026/4/2
+ * &#064;description 登录用户上下文，避免每个接口重复写 attribute key。
  */
 
 public final class LoginUserContext {

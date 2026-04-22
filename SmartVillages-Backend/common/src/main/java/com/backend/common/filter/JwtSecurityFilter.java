@@ -18,8 +18,8 @@ import java.util.Locale;
 
 /**
  * @author chenyang
- * @date 2026/4/16
- * @description JwtSecurityFilter
+ * &#064;date 2026/4/16
+ * &#064;description JwtSecurityFilter
  */
 @Component
 @RequiredArgsConstructor

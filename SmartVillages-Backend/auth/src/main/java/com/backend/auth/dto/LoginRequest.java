@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
  * 登录请求体（当前登录逻辑仅使用用户名与密码）。
  *
  * @author chenyang
- * @date 2026/4/2
- * @description 登录请求
+ * &#064;date 2026/4/2
+ * &#064;description 登录请求
  */
 @Data
 @NoArgsConstructor

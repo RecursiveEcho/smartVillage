@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  * 公告对外展示字段。
  *
  * @author chenyang
- * @date 2026/4/8
- * @description 公告 VO
+ * &#064;date 2026/4/8
+ * &#064;description 公告 VO
  */
 @Data
 @NoArgsConstructor

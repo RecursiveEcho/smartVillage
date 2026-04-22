@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
  * 登录成功返回的用户标识与 JWT。
  *
  * @author chenyang
- * @date 2026/4/2
- * @description JWT 响应
+ * &#064;date 2026/4/2
+ * &#064;description JWT 响应
  */
 @Data
 @NoArgsConstructor

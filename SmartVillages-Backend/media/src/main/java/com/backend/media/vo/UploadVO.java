@@ -8,8 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /**
  * 上传VO
  * @author chenyang
- * @date 2026/4/20
- * @description 上传VO
+ * &#064;date 2026/4/20
+ * &#064;description 上传VO
  */
 @Data
 @NoArgsConstructor

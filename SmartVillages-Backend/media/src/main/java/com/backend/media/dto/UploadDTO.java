@@ -9,8 +9,8 @@ import jakarta.validation.constraints.NotBlank;
 /**
  * 上传DTO
  * @author chenyang
- * @date 2026/4/20
- * @description 上传DTO
+ * &#064;date 2026/4/20
+ * &#064;description 上传DTO
  */
 @Data
 @NoArgsConstructor

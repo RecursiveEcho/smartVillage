@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 路径前缀 {@code /auth}。
  *
  * @author chenyang
- * @date 2026/4/2
+ * &#064;date 2026/4/2
  */
 @RestController
 @RequestMapping("/auth")

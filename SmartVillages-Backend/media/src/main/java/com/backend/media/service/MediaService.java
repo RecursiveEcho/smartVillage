@@ -8,8 +8,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * @author chenyang
- * @date 2026/4/20
- * @description 媒体资源服务
+ * &#064;date 2026/4/20
+ * &#064;description 媒体资源服务
  */
 public interface MediaService extends IService<MediaEntity> {
     /**

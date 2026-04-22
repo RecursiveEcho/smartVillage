@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
  * 后台更新公告正文与展示属性（路径参数携带 id）。
  *
  * @author chenyang
- * @date 2026/4/9
- * @description 公告更新 DTO
+ * &#064;date 2026/4/9
+ * &#064;description 公告更新 DTO
  */
 @Data
 @NoArgsConstructor

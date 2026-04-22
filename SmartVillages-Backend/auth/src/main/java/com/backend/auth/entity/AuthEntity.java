@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
  * 密码存库为 MD5（UTF-8 明文）小写 32 位十六进制；删除走逻辑删除字段。
  *
  * @author chenyang
- * @date 2026/4/2
+ * &#064;date 2026/4/2
  */
 @Data
 @NoArgsConstructor
