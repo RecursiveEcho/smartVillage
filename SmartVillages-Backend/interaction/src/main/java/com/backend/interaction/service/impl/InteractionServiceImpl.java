@@ -123,6 +123,9 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         .eq(InteractionEntity::getUserId, LoginUserContext.getAuthId(request))
         .eq(InteractionEntity::getId, id);
         InteractionEntity entity = getOne(wrapper);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "留言不存在");
+        }
         InteractionDetailVO vo = new InteractionDetailVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
@@ -135,6 +138,9 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         .eq(InteractionEntity::getUserId, LoginUserContext.getAuthId(request))
         .eq(InteractionEntity::getId, id);
         InteractionEntity entity = getOne(wrapper);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "留言不存在");
+        }
         entity.setStatus(3);
         updateById(entity);
         return "撤回成功";   
@@ -144,6 +150,9 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     @Override
     public String processingMessage(Long id, HttpServletRequest request) {
         InteractionEntity entity = requireById(id);
+        if (entity.getStatus() != null && entity.getStatus() == 3) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "留言已关闭，无法处理");
+        }
         entity.setStatus(1);
         updateById(entity);
         return "处理成功";

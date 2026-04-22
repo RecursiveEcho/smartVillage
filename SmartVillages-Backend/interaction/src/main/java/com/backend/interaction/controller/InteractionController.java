@@ -21,6 +21,7 @@ import com.backend.interaction.dto.ReplyInteractionDTO;
 import com.backend.interaction.vo.InteractionDetailVO;
 import org.springframework.validation.annotation.Validated;
 import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 /**
  * @author chenyang
  * &#064;date 2026/4/15
@@ -111,8 +112,12 @@ public class InteractionController {
             @RequestParam(defaultValue = "10") Long size,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) LocalDateTime startTime,
-            @RequestParam(required = false) LocalDateTime endTime
+            @RequestParam(required = false) 
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+            LocalDateTime startTime,
+            @RequestParam(required = false) 
+            @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+            LocalDateTime endTime
         ) {
         return Result.success(interactionService.getMessageListByCadre(current, size, status, type, startTime, endTime));
     }
