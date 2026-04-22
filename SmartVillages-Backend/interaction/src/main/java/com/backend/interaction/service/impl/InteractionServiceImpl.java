@@ -14,6 +14,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.BeanUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import com.backend.interaction.vo.InteractionCreateVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
+import java.time.LocalDateTime;
+import com.backend.interaction.dto.ReplyInteractionDTO;
 /**
  * @author chenyang
  * @date 2026/4/15
@@ -25,6 +32,7 @@ import com.backend.interaction.vo.InteractionCreateVO;
 @Transactional(rollbackFor = Exception.class)
 public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, InteractionEntity> implements InteractionService {
 
+    /* 新增村民留言 */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InteractionCreateVO createMessage(InteractionCreateDTO dto, HttpServletRequest request) {
@@ -35,5 +43,30 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         InteractionCreateVO vo = new InteractionCreateVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
+    }
+
+    /* 获取村民留言列表 */
+    @Override
+    public IPage<InteractionCreateVO> getMessageList(Long current, Long size) {
+        LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
+        .orderByDesc(InteractionEntity::getCreateTime);
+        IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
+        return entityPage.convert(entity -> {
+            InteractionCreateVO vo = new InteractionCreateVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
+    }
+
+    /* 回复村民留言 */
+    @Override
+    public String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request) {
+        InteractionEntity entity = getById(id);
+        entity.setReply(dto.getReply());
+        entity.setReplyTime(LocalDateTime.now());
+        entity.setReplyUser(LoginUserContext.getAuthId(request));
+        entity.setStatus(2);
+        updateById(entity);
+        return "回复成功";
     }
 }
