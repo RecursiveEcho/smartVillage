@@ -31,4 +31,7 @@ public interface InteractionService extends IService<InteractionEntity> {
 
     /* 管理端获取村民留言列表 */
     IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type);
+
+    /* 我的留言 */
+    IPage<InteractionDetailVO> getMyMessageList(HttpServletRequest request, Long current, Long size);
 }

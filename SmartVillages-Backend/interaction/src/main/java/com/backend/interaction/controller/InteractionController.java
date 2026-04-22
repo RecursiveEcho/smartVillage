@@ -105,4 +105,22 @@ public class InteractionController {
     @RequestParam(required = false) String type) {
         return Result.success(interactionService.getMessageListByCadre(current, size, status, type));
     }
+
+
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 我的留言
+     * @param current 当前页
+     * @param size 每页数量
+     * @return 我的留言
+     */
+    @Operation(summary="我的留言")
+    @GetMapping("/interactions/messages/my")
+    public Result<IPage<InteractionDetailVO>> getMyMessageList(
+    HttpServletRequest request,
+    @RequestParam(defaultValue = "1") Long current,
+    @RequestParam(defaultValue = "10") Long size) {
+        return Result.success(interactionService.getMyMessageList(request, current, size));
+    }
 }

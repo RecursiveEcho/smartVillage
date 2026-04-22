@@ -92,4 +92,18 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
             return vo;
         });
     }
+
+    /* 我的留言 */
+    @Override
+    public IPage<InteractionDetailVO> getMyMessageList(HttpServletRequest request, Long current, Long size) {
+        LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
+        .eq(InteractionEntity::getUserId, LoginUserContext.getAuthId(request))
+        .orderByDesc(InteractionEntity::getCreateTime);
+        IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
+        return entityPage.convert(entity -> {
+            InteractionDetailVO vo = new InteractionDetailVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
+    }
 }
