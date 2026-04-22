@@ -18,11 +18,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.backend.interaction.dto.ReplyInteractionDTO;
 import com.backend.interaction.vo.InteractionDetailVO;
+import org.springframework.validation.annotation.Validated;
 /**
  * @author chenyang
  * @date 2026/4/15
  * @description 村民留言控制器
  */
+@Validated
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "村民留言", description = "村民留言接口")
@@ -53,7 +55,8 @@ public class InteractionController {
      */
     @Operation(summary="获取村民留言列表")
     @GetMapping("/interactions/messages")
-    public Result<IPage<InteractionCreateVO>> getMessageList(@RequestParam(defaultValue = "1") Long current,
+    public Result<IPage<InteractionCreateVO>> getMessageList(
+    @RequestParam(defaultValue = "1") Long current,
     @RequestParam(defaultValue = "10") Long size) {
         return Result.success(interactionService.getMessageList(current, size));
     }
@@ -70,7 +73,9 @@ public class InteractionController {
      */
     @Operation(summary="回复村民留言")
     @PostMapping("/cadre/interactions/messages/{id}/replies")
-    public Result<String> replyMessage(@PathVariable Long id, @RequestBody @Valid ReplyInteractionDTO dto, HttpServletRequest request) {
+    public Result<String> replyMessage(
+        @PathVariable Long id, 
+        @RequestBody @Valid ReplyInteractionDTO dto, HttpServletRequest request) {
         return Result.success(interactionService.replyMessage(id, dto, request));
     }
 
@@ -99,10 +104,11 @@ public class InteractionController {
      */
     @Operation(summary="管理端获取村民留言列表")
     @GetMapping("/cadre/interactions/messages")
-    public Result<IPage<InteractionDetailVO>> getMessageListByCadre(@RequestParam(defaultValue = "1") Long current,
-    @RequestParam(defaultValue = "10") Long size,
-    @RequestParam(required = false) Integer status, 
-    @RequestParam(required = false) String type) {
+    public Result<IPage<InteractionDetailVO>> getMessageListByCadre(
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String type) {
         return Result.success(interactionService.getMessageListByCadre(current, size, status, type));
     }
 
@@ -122,5 +128,20 @@ public class InteractionController {
     @RequestParam(defaultValue = "1") Long current,
     @RequestParam(defaultValue = "10") Long size) {
         return Result.success(interactionService.getMyMessageList(request, current, size));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 我的留言详细
+     * @param request HTTP请求
+     * @param id 留言id
+     * @return 我的留言详细
+     */
+    @Operation(summary="我的留言详细")
+    @GetMapping("/interactions/messages/my/{id}")
+    public Result<InteractionDetailVO> getMyMessageDetail(HttpServletRequest request,
+                                                         @PathVariable Long id) {
+        return Result.success(interactionService.getMyMessageDetail(request, id));
     }
 }

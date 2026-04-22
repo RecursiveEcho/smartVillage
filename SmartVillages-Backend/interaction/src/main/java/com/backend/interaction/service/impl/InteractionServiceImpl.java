@@ -1,5 +1,7 @@
 package com.backend.interaction.service.impl;
 
+import com.backend.common.exception.BusinessException;
+import com.backend.common.enums.ErrorCode;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,8 @@ import com.backend.interaction.vo.InteractionDetailVO;
 @Transactional(rollbackFor = Exception.class)
 public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, InteractionEntity> implements InteractionService {
 
+    
+
     /* 新增村民留言 */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -60,7 +64,10 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     /* 回复村民留言 */
     @Override
     public String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request) {
-        InteractionEntity entity = getById(id);
+        InteractionEntity entity = requireById(id);
+        if (entity.getStatus() != null && entity.getStatus() == 3) {
+            throw new BusinessException(ErrorCode.INTERACTION_CLOSED);
+        }
         entity.setReply(dto.getReply());
         entity.setReplyTime(LocalDateTime.now());
         entity.setReplyUser(LoginUserContext.getAuthId(request));
@@ -72,7 +79,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     /* 获取村民留言详情 */
     @Override
     public InteractionDetailVO getMessageDetail(Long id) {
-        InteractionEntity entity = getById(id);
+        InteractionEntity entity = requireById(id);
         InteractionDetailVO vo = new InteractionDetailVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
@@ -105,5 +112,36 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
             BeanUtils.copyProperties(entity, vo);
             return vo;
         });
+    }
+
+    /*我的留言详细 */
+    @Override
+    public InteractionDetailVO getMyMessageDetail(HttpServletRequest request, Long id) {
+        LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
+        .eq(InteractionEntity::getUserId, LoginUserContext.getAuthId(request))
+        .eq(InteractionEntity::getId, id);
+        InteractionEntity entity = getOne(wrapper);
+        InteractionDetailVO vo = new InteractionDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
+
+    /*村民撤回留言 */
+    @Override
+    public String withdrawMessage(HttpServletRequest request, Long id) {
+        LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
+        .eq(InteractionEntity::getUserId, LoginUserContext.getAuthId(request))
+        .eq(InteractionEntity::getId, id);
+        InteractionEntity entity = getOne(wrapper);
+        entity.setDeleted(1);
+        updateById(entity);
+        return "撤回成功";   
+    }
+    private InteractionEntity requireById(Long id) {
+        InteractionEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "留言不存在");
+        }
+        return entity;
     }
 }

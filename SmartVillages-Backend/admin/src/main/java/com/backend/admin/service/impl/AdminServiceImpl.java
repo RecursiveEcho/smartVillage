@@ -37,7 +37,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     private final MediaService mediaService;
 
     /**
-     * 按条件分页查询认证用户，并映射为 {@link AdminVO} 返回给管理端。
+     * 按条件分页查询认证用户，并映射为 {@link AuthVO 返回给管理端。
      * <p>
      * {@code username} 目前仅占位，未参与查询条件；{@code role}、{@code status} 非空时才会过滤。
      * 排序：优先按状态降序、创建时间降序，再按 id 升序，保证列表相对稳定。
@@ -115,6 +115,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     public UploadVO uploadCadreAvatar(Integer id, MultipartFile avatar, HttpServletRequest request) {
         UploadVO uploadVo = mediaService.upload(avatar, "image", "other", request);
         AuthEntity entity = authMapper.selectById(id);
+        if (entity == null || Objects.equals(entity.getIsDeleted(), 1)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
         entity.setAvatar(uploadVo.getFileUrl());
         authMapper.updateById(entity);
         return uploadVo;

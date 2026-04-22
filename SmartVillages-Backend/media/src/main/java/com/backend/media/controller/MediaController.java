@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.validation.annotation.Validated;
 
 /**
  * @author chenyang
@@ -27,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/media")
 @RequiredArgsConstructor
 @Tag(name = "媒体资源", description = "媒体资源接口")
+@Validated
 public class MediaController {
 
 

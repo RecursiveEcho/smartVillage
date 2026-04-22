@@ -34,4 +34,10 @@ public interface InteractionService extends IService<InteractionEntity> {
 
     /* 我的留言 */
     IPage<InteractionDetailVO> getMyMessageList(HttpServletRequest request, Long current, Long size);
+
+    /*我的留言详细 */
+    InteractionDetailVO getMyMessageDetail(HttpServletRequest request, Long id);
+
+    /*村民撤回留言 */
+    String withdrawMessage(HttpServletRequest request, Long id);
 }

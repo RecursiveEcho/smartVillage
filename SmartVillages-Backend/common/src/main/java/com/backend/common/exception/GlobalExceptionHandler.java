@@ -36,6 +36,14 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Result.error(ErrorCode.NO_PERMISSION.getCode(), ErrorCode.NO_PERMISSION.getMessage()));
         }
+        if (e.getCode() == ErrorCode.RESOURCE_NOT_FOUND.getCode()
+                || e.getCode() == ErrorCode.USER_NOT_FOUND.getCode()
+                || e.getCode() == ErrorCode.ANNOUNCEMENT_NOT_FOUND.getCode()
+                || e.getCode() == ErrorCode.VILLAGE_AFFAIR_NOT_FOUND.getCode()
+                || e.getCode() == ErrorCode.MEDIA_NOT_FOUND.getCode()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Result.fail(e.getCode(), e.getMessage()));
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Result.fail(e.getCode(), e.getMessage()));
     }
