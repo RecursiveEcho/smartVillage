@@ -18,7 +18,7 @@ public class RedisJsonCacheTool {
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
-    private static final Duration CACHE_TTL = Duration.ofMinutes(20);
+    private static final Duration CACHE_TTL = Duration.ofMinutes(30);
     public <T> T getObject(String key, Class<T> type) {
         //获取缓存
         String cached = stringRedisTemplate.opsForValue().get(key);

@@ -93,6 +93,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         /* 构建缓存 key */
         AnnouncementEntity entity = mustGetEntity(id);
         /* 设置标题、内容、类型、是否置顶 */
+        if(Objects.equals(entity.getAuditUser(), LoginUserContext.getAuthId(request))) {
+            throw new BusinessException(ErrorCode.NO_PERMISSION);
+        }
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());

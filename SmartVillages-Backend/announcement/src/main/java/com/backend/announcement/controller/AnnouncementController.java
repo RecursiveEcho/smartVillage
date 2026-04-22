@@ -10,11 +10,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +36,6 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@Validated
 @Tag(name = "公告接口", description = "公告接口")
 public class AnnouncementController {
 
@@ -69,9 +66,8 @@ public class AnnouncementController {
     @Operation(summary = "前台分页公告（仅已发布）")
     @GetMapping("/announcements")
     public Result<IPage<AnnouncementVO>> pagePublished(
-            @RequestParam(defaultValue = "1") @Min(value = 1, message = "当前页必须大于等于 1") Long current,
-            @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页数量必须大于等于 1")
-            @Max(value = 100, message = "每页数量不能超过 100") Long size) {
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size) {
         return Result.success(announcementService.pagePublished(current, size));
     }
 
@@ -178,8 +174,8 @@ public class AnnouncementController {
             @RequestParam(required = false) String title,
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) Integer isTop,
-            @RequestParam(required = false) LocalDateTime startTime,
-            @RequestParam(required = false) LocalDateTime endTime
+            @RequestParam(required = false)@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false)@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
     ) {
         return Result.success(
                 announcementService.pageAdmin(current, size, status, title, type, isTop, startTime, endTime));
@@ -199,8 +195,8 @@ public class AnnouncementController {
             @RequestParam(required = false) String title,
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) Integer isTop,
-            @RequestParam(required = false) LocalDateTime startTime,
-            @RequestParam(required = false) LocalDateTime endTime
+            @RequestParam(required = false)@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false)@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
     ) {
         return Result.success(announcementService.pagePending(current, size, title, type, isTop, startTime, endTime));
     }
