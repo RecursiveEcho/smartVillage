@@ -69,4 +69,13 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         updateById(entity);
         return "回复成功";
     }
+
+    /* 获取村民留言详情 */
+    @Override
+    public InteractionCreateVO getMessageDetail(Long id) {
+        InteractionEntity entity = getById(id);
+        InteractionCreateVO vo = new InteractionCreateVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
 }

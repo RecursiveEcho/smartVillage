@@ -58,9 +58,31 @@ public class InteractionController {
     }
 
 
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 回复村民留言
+     * @param id 留言id
+     * @param dto 回复村民留言DTO
+     * @param request HTTP请求
+     * @return 操作结果文案
+     */
     @Operation(summary="回复村民留言")
-    @PostMapping("/cadres/interactions/messages/{id}/replies")
+    @PostMapping("/cadre/interactions/messages/{id}/replies")
     public Result<String> replyMessage(@PathVariable Long id, @RequestBody @Valid ReplyInteractionDTO dto, HttpServletRequest request) {
         return Result.success(interactionService.replyMessage(id, dto, request));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 获取村民留言详情
+     * @param id 留言id
+     * @return 村民留言详情
+     */
+    @Operation(summary="获取村民留言详情")
+    @GetMapping("/cadre/interactions/messages/{id}")
+    public Result<InteractionCreateVO> getMessageDetail(@PathVariable Long id) {
+        return Result.success(interactionService.getMessageDetail(id));
     }
 }

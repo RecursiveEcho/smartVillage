@@ -24,4 +24,7 @@ public interface InteractionService extends IService<InteractionEntity> {
 
     // 回复村民留言
     String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request);
+
+    // 获取村民留言详情
+    InteractionCreateVO getMessageDetail(Long id);
 }
