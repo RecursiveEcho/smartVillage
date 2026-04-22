@@ -31,3 +31,10 @@ knife4j:
 jwt:
   secret: smartVillages
   expiration-ms: 86400000 # 24 小时（毫秒）
+
+aliyun:
+  oss:
+    endpoint:你的域名
+    bucket-name:你的存储空间
+    access-key-id:你的密钥id
+    access-key-secret:你的密钥密码
