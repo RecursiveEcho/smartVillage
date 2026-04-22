@@ -40,4 +40,7 @@ public interface InteractionService extends IService<InteractionEntity> {
 
     /*村民撤回留言 */
     String withdrawMessage(HttpServletRequest request, Long id);
+
+    /*管理端处理村民留言 */
+    String processingMessage(Long id, HttpServletRequest request);
 }

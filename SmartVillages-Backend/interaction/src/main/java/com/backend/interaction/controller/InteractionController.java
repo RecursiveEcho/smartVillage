@@ -112,7 +112,6 @@ public class InteractionController {
         return Result.success(interactionService.getMessageListByCadre(current, size, status, type));
     }
 
-
     /**
      * @author chenyang
      * @date 2026/4/22
@@ -144,4 +143,34 @@ public class InteractionController {
                                                          @PathVariable Long id) {
         return Result.success(interactionService.getMyMessageDetail(request, id));
     }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 村民撤回留言
+     * @param request HTTP请求
+     * @param id 留言id
+     * @return 操作结果文案
+     */
+    @Operation(summary="村民撤回留言")
+    @PostMapping("/interactions/messages/my/{id}/withdraw")
+    public Result<String> withdrawMessage(HttpServletRequest request, @PathVariable Long id) {
+        return Result.success(interactionService.withdrawMessage(request, id));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 管理端处理村民留言
+     * @param id 留言id
+     * @param request HTTP请求
+     * @return 操作结果文案
+     */
+    @Operation(summary="管理端处理村民留言")
+    @PostMapping("/cadre/interactions/messages/{id}/processing")
+    public Result<String> processingMessage(@PathVariable Long id, HttpServletRequest request) {
+        return Result.success(interactionService.processingMessage(id, request));
+    }
+
+
 }

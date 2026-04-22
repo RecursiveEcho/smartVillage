@@ -133,10 +133,21 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         .eq(InteractionEntity::getUserId, LoginUserContext.getAuthId(request))
         .eq(InteractionEntity::getId, id);
         InteractionEntity entity = getOne(wrapper);
-        entity.setDeleted(1);
+        entity.setStatus(3);
         updateById(entity);
         return "撤回成功";   
     }
+
+    /*管理端处理村民留言 */
+    @Override
+    public String processingMessage(Long id, HttpServletRequest request) {
+        InteractionEntity entity = requireById(id);
+        entity.setStatus(1);
+        updateById(entity);
+        return "处理成功";
+    }
+
+    /* 获取实体 */
     private InteractionEntity requireById(Long id) {
         InteractionEntity entity = getById(id);
         if (entity == null) {
