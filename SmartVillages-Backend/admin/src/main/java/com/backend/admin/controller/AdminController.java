@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +28,7 @@ import jakarta.validation.Valid;
 import com.backend.auth.dto.AuthDTO;
 import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
+import com.backend.auth.vo.CreateCaderVO;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -116,9 +116,9 @@ public class AdminController {
      */
     @Operation(summary = "创建村干部")
     @PostMapping("users/cadre")
-    public Result<Integer> createCadre(@Valid @RequestBody AuthDTO authDTO)  {
-        Integer id = adminService.createCadre(authDTO);
-        return Result.success(id);
+    public Result<CreateCaderVO> createCadre(@Valid @RequestBody AuthDTO authDTO)  {
+        CreateCaderVO createCaderVO = adminService.createCadre(authDTO);
+        return Result.success(createCaderVO);
     }
 
     /**
@@ -130,13 +130,9 @@ public class AdminController {
      * @return 上传结果
      */
     @Operation(summary = "上传头像")
-    @PostMapping(value = "/users/cadre/avatar/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Result<String> uploadCadreAvatar(
-            @PathVariable Integer id,
-            MultipartFile avatar,
-            HttpServletRequest request
-    ) {
-        UploadVO uploadVO = adminService.uploadCadreAvatar(id, avatar, request);
+    @PostMapping(value = "/users/cadre/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<String> uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request) {
+        UploadVO uploadVO = adminService.uploadCadreAvatar(avatar, request);
         return Result.success(uploadVO.getFileUrl());
     }
 }

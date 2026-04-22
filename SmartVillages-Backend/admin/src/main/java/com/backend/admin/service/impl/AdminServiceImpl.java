@@ -9,6 +9,7 @@ import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
+import com.backend.auth.vo.CreateCaderVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -92,7 +93,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      */
     @Override
     @SuppressWarnings("null")
-    public Integer createCadre(AuthDTO authDTO) {
+    public CreateCaderVO createCadre(AuthDTO authDTO) {
         AuthEntity entity = new AuthEntity();
         String password = DigestUtils.md5DigestAsHex(authDTO.getPassword().getBytes(StandardCharsets.UTF_8));
         BeanUtils.copyProperties(authDTO, entity);
@@ -101,27 +102,19 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         entity.setStatus(1);
         entity.setAvatar(authDTO.getAvatar());
         authMapper.insert(entity);
-        return entity.getId();
+        CreateCaderVO createCaderVO = new CreateCaderVO();
+        BeanUtils.copyProperties(entity, createCaderVO);
+        return createCaderVO;
     }
     
     /**
      * 上传头像
-     * @param id 用户ID
      * @param avatar 头像文件
-     * @param request 请求
      * @return 上传结果
      */
     @Override
-    public UploadVO uploadCadreAvatar(Integer id, MultipartFile avatar, HttpServletRequest request) {
-        UploadVO uploadVo = mediaService.upload(avatar, "image", "other", request);
-        AuthEntity entity = authMapper.selectById(id);
-        if (entity == null || Objects.equals(entity.getIsDeleted(), 1)) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-        }
-        entity.setAvatar(uploadVo.getFileUrl());
-        authMapper.updateById(entity);
-        return uploadVo;
+    public UploadVO uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request) {
+        UploadVO uploadVO = mediaService.upload(avatar, "image", "other", request);
+        return uploadVO;
     }
-
-
 }
