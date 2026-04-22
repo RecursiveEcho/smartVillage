@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
-
+import com.backend.common.exception.BusinessException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
@@ -33,38 +33,38 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
      * 登录主流程：非空校验 → 查用户 → 逻辑删除/禁用拦截 → MD5 比对 → 生成 token。
      */
     @Override
-    public Result<JwtResponse> login(String username, String password) {
+    public JwtResponse login(String username, String password) {
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
-            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
         AuthEntity user = findByUsername(username);
         if (user == null) {
-            return Result.fail(ErrorCode.USER_NOT_FOUND.getCode(), ErrorCode.USER_NOT_FOUND.getMessage());
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
         /** 用户已逻辑删除 */
         if (Objects.equals(user.getIsDeleted(), 1)) {
-            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
         /** 用户已禁用 */
         if (Objects.equals(user.getStatus(), 0)) {
-            return Result.fail(ErrorCode.ACCOUNT_DISABLED.getCode(), ErrorCode.ACCOUNT_DISABLED.getMessage());
+            throw new BusinessException(ErrorCode.ACCOUNT_DISABLED);
         }
 
         if (!passwordMatches(password, user.getPassword())) {
-            return Result.fail(ErrorCode.LOGIN_FAILED.getCode(), ErrorCode.LOGIN_FAILED.getMessage());
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
         String token = jwtUtils.generateToken(
                 String.valueOf(user.getId()),
                 user.getUsername(),
                 user.getRole());
-        return Result.success(new JwtResponse(token));
+        return new JwtResponse(user.getId(), user.getUsername(), user.getRole(), user.getAvatar(), token);
     }
 
     @Override
-    public Result<String> logout() {
-        return Result.success(Result.SUCCESS_MESSAGE);
+    public String logout() {
+        return Result.SUCCESS_MESSAGE;
     }
 
     /** 按用户名取一条记录；依赖库侧唯一约束或业务保证不重复 */

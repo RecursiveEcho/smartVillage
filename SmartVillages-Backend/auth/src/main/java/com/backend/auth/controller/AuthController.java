@@ -39,7 +39,7 @@ public class AuthController {
     @Operation(summary = "登录")
     @PostMapping("/login")
     public Result<JwtResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-        return authService.login(loginRequest.getUsername(), loginRequest.getPassword());
+        return Result.success(authService.login(loginRequest.getUsername(), loginRequest.getPassword()));
     }
 
     /**
@@ -50,6 +50,6 @@ public class AuthController {
     @Operation(summary = "登出")
     @DeleteMapping("/logout")
     public Result<String> logout() {
-        return authService.logout();
+        return Result.success(authService.logout());
     }
 }
