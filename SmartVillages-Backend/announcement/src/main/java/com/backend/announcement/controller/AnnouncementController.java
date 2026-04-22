@@ -238,8 +238,8 @@ public class AnnouncementController {
             @RequestParam(required = false) String title,
             @RequestParam(required = false) Integer type,
             @RequestParam(required = false) Integer isTop,
-            @RequestParam(required = false) LocalDateTime startTime,
-            @RequestParam(required = false) LocalDateTime endTime
+            @RequestParam(required = false)@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false)@DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
     ) {
         return Result.success(announcementService.pageAudited(current, size, title, type, isTop, startTime, endTime));
     }
