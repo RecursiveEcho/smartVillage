@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InteractionCreateVO {
-    @Schema(description = "留言id")
+    @Schema(description = "留言者id")
     private Integer userId;
 
     @Schema(description = "留言内容")

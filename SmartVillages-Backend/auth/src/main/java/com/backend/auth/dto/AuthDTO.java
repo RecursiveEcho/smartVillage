@@ -25,4 +25,8 @@ public class AuthDTO {
     @Schema(description = "手机号")
     @NotBlank(message = "手机号不能为空")
     private String phone;
+
+    @Schema(description = "头像")
+    @NotBlank(message = "头像URL不能为空")
+    private String avatar;
 }

@@ -38,12 +38,9 @@ public class AuthVO {
     @Schema(description = "头像 URL")
     private String avatar;
 
-    @Schema(description = "更新时间")
-    private LocalDateTime updateTime;
-
-    @Schema(description = "逻辑删除标记")
-    private Integer deleted;
-
     @Schema(description = "状态：0-禁用 1-启用")
     private Integer status;
+
+    @Schema(description = "更新时间")
+    private LocalDateTime updateTime;
 }

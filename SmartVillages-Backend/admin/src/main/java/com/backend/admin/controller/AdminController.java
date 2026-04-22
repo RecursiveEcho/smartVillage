@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 import com.backend.auth.dto.AuthDTO;
 import com.backend.media.vo.UploadVO;
+import com.backend.auth.vo.AuthVO;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -80,7 +81,7 @@ public class AdminController {
      */
     @Operation(summary = "分页查询用户")
     @GetMapping("/users")
-    public Result<IPage<AdminVO>> pageUser(
+    public Result<IPage<AuthVO>> pageUser(
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Integer status,
@@ -115,9 +116,9 @@ public class AdminController {
      */
     @Operation(summary = "创建村干部")
     @PostMapping("users/cadre")
-    public Result<String> createCadre(@Valid @RequestBody AuthDTO authDTO)  {
-        adminService.createCadre(authDTO);
-        return Result.success("创建村干部成功");
+    public Result<Integer> createCadre(@Valid @RequestBody AuthDTO authDTO)  {
+        Integer id = adminService.createCadre(authDTO);
+        return Result.success(id);
     }
 
     /**

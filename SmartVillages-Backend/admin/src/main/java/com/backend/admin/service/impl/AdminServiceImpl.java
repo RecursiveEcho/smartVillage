@@ -3,12 +3,12 @@ package com.backend.admin.service.impl;
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.mapper.AdminMapper;
 import com.backend.admin.service.AdminService;
-import com.backend.admin.vo.AdminVO;
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.media.vo.UploadVO;
+import com.backend.auth.vo.AuthVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -43,7 +43,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      * 排序：优先按状态降序、创建时间降序，再按 id 升序，保证列表相对稳定。
      */
     @Override
-    public IPage<AdminVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
+    public IPage<AuthVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
         Page<AuthEntity> page = new Page<>(current, size);
         // 条件为 null 时不拼进 WHERE，实现「可选筛选」
         LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<AuthEntity>()
@@ -56,11 +56,15 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         IPage<AuthEntity> entityPage = authMapper.selectPage(page, wrapper);
 
         // 保持与原分页对象一致的页码、条数、总数，仅替换记录类型
-        Page<AdminVO> voPage = new Page<>(
+        Page<AuthVO> voPage = new Page<>(
                 entityPage.getCurrent(),
                 entityPage.getSize(),
                 entityPage.getTotal());
-        voPage.setRecords(entityPage.getRecords().stream().map(this::toAdminVo).toList());
+        voPage.setRecords(entityPage.getRecords().stream().map(entity -> {
+            AuthVO vo = new AuthVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        }).toList());
         return voPage;
     }
 
@@ -88,14 +92,16 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      */
     @Override
     @SuppressWarnings("null")
-    public void createCadre(AuthDTO authDTO) {
+    public Integer createCadre(AuthDTO authDTO) {
         AuthEntity entity = new AuthEntity();
         String password = DigestUtils.md5DigestAsHex(authDTO.getPassword().getBytes(StandardCharsets.UTF_8));
         BeanUtils.copyProperties(authDTO, entity);
         entity.setPassword(password);
         entity.setRole("cadre");
         entity.setStatus(1);
+        entity.setAvatar(authDTO.getAvatar());
         authMapper.insert(entity);
+        return entity.getId();
     }
     
     /**
@@ -114,12 +120,5 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         return uploadVo;
     }
 
-    /** 认证实体字段与 VO 同名字段拷贝，供列表展示 */
-    private AdminVO toAdminVo(AuthEntity entity) {
-        AdminVO vo = new AdminVO();
-        // 认证实体字段与 VO 同名字段拷贝
-        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-        return vo;
-    }
 
 }
