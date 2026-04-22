@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 /**
  * MyBatis-Plus 自动填充处理器：
- * - insert: createTime / updateTime / publishTime(若存在) / deleted(or isDeleted)
+ * - insert: createTime / updateTime / deleted(or isDeleted)
  * - update: updateTime
  */
 @Component
@@ -23,7 +23,6 @@ public class MybatisPlusMetaObjectHandler implements MetaObjectHandler {
         LocalDateTime now = LocalDateTime.now();
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
-        this.strictInsertFill(metaObject, "publishTime", LocalDateTime.class, now);
 
         // 设置逻辑删除
         Integer notDeleted = NOT_DELETED;

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.backend.interaction.dto.ReplyInteractionDTO;
+import com.backend.interaction.vo.InteractionDetailVO;
 /**
  * @author chenyang
  * @date 2026/4/15
@@ -82,7 +83,26 @@ public class InteractionController {
      */
     @Operation(summary="获取村民留言详情")
     @GetMapping("/cadre/interactions/messages/{id}")
-    public Result<InteractionCreateVO> getMessageDetail(@PathVariable Long id) {
+    public Result<InteractionDetailVO> getMessageDetail(@PathVariable Long id) {
         return Result.success(interactionService.getMessageDetail(id));
+    }
+
+    /**
+     * @author chenyang
+     * @date 2026/4/22
+     * @description 管理端获取村民留言列表
+     * @param current 当前页
+     * @param size 每页数量
+     * @param status 状态
+     * @param type 类型
+     * @return 管理端村民留言列表
+     */
+    @Operation(summary="管理端获取村民留言列表")
+    @GetMapping("/cadre/interactions/messages")
+    public Result<IPage<InteractionDetailVO>> getMessageListByCadre(@RequestParam(defaultValue = "1") Long current,
+    @RequestParam(defaultValue = "10") Long size,
+    @RequestParam(required = false) Integer status, 
+    @RequestParam(required = false) String type) {
+        return Result.success(interactionService.getMessageListByCadre(current, size, status, type));
     }
 }

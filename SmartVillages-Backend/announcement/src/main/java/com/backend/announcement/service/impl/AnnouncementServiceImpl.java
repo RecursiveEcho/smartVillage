@@ -7,6 +7,8 @@ import com.backend.announcement.mapper.AnnouncementMapper;
 import com.backend.announcement.service.AnnouncementService;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.backend.common.context.LoginUserContext;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -42,6 +44,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     private static final int STATUS_PENDING = 0;
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
     private static final int STATUS_PUBLISHED = 1;
+    private static final int STATUS_REJECTED = 2;
     private static final int STATUS_OFFLINE = 3;
     private static final int DEFAULT_HOT_LIMIT = 5;
 
@@ -53,7 +56,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     public void createAnnouncement(AnnouncementCreateDTO dto, HttpServletRequest request) {
         AnnouncementEntity entity = new AnnouncementEntity();
-        /* 设置标题、内容、状态、类型、是否置顶、发布时间、浏览量、是否删除 */
+        /* 设置标题、内容、状态、类型、是否置顶、浏览量（发布时间在“通过/上架”时写入） */
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setStatus(STATUS_PENDING);
@@ -61,6 +64,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setIsTop(dto.getIsTop());
         entity.setViewCount(0);
         entity.setCreateUser(LoginUserContext.getAuthId(request));
+        entity.setCreateTime(null);
         /* 保存实体 */
         save(entity);
     }
@@ -87,13 +91,12 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
         /* 构建缓存 key */
-        AnnouncementEntity entity = getById(id);
+        AnnouncementEntity entity = mustGetEntity(id);
         /* 设置标题、内容、类型、是否置顶 */
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
-        entity.setCreateUser(LoginUserContext.getAuthId(request));
         /* 更新实体并清除详情缓存 */
         updateById(entity);
         evictDetailCache(id);
@@ -104,7 +107,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Long id, Integer status, HttpServletRequest request) {
         /* 获取实体并校验 */
-        AnnouncementEntity entity = getById(id);
+        validateStatus(status);
+        AnnouncementEntity entity = mustGetEntity(id);
         /* 设置状态 */
         entity.setStatus(status);
         entity.setAuditUser(LoginUserContext.getAuthId(request));
@@ -136,8 +140,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             return fromCache;
         }
 
-        /* 获取实体并累加浏览量 */
-        AnnouncementEntity entity = getById(id);
+        /* 获取实体并累加浏览量（仅已发布可看） */
+        AnnouncementEntity entity = mustGetEntity(id);
+        if (!Objects.equals(entity.getStatus(), STATUS_PUBLISHED)) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
         int nextViews = (entity.getViewCount() == null ? 0 : entity.getViewCount()) + 1;
         entity.setViewCount(nextViews);
         updateById(entity);
@@ -150,7 +157,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /** 管理员公告详情 */
     @Override
     public AnnouncementVO getAdminAnnouncement(Long id) {
-        return toVo(getById(id));
+        return toVo(mustGetEntity(id));
     }
 
     /** 已发布列表按浏览量降序，浏览量相同时按创建时间升序，限制条数 */
@@ -173,7 +180,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     public void deleteAnnouncement(Long id) {
         /* 删除实体并清除详情缓存 */
-        removeById(id);
+        if (!removeById(id)) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
         evictDetailCache(id);
     }
 
@@ -227,10 +236,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
-        AnnouncementEntity entity = getById(id);
+        validateStatus(status);
+        AnnouncementEntity entity = mustGetEntity(id);
         entity.setAuditTime(LocalDateTime.now());
         entity.setAuditUser(LoginUserContext.getAuthId(request));
-        if (status == 1) {
+        if (Objects.equals(status, STATUS_PUBLISHED)) {
             entity.setPublishTime(LocalDateTime.now());
         }
         entity.setStatus(status);
@@ -270,6 +280,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         if (vo == null) {
             return null;
         }
+        // 仅前台已发布公告才允许读缓存与刷浏览量
+        if (!Objects.equals(vo.getStatus(), STATUS_PUBLISHED)) {
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
+        }
         LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getId, id.intValue())
                 .setSql("view_count = IFNULL(view_count,0) + 1");
@@ -297,5 +312,28 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /** 写操作后删除对应详情缓存，避免脏读 */
     private void evictDetailCache(Long id) {
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
+
+
+    /** 获取实体并校验是否存在 */
+    private AnnouncementEntity mustGetEntity(Long id) {
+        AnnouncementEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
+        return entity;
+    }
+
+    /** 校验状态 */
+    private void validateStatus(Integer status) {
+        if (status == null) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少必要参数：status");
+        }
+        if (!Objects.equals(status, STATUS_PENDING)
+                && !Objects.equals(status, STATUS_PUBLISHED)
+                && !Objects.equals(status, STATUS_REJECTED)
+                && !Objects.equals(status, STATUS_OFFLINE)) {
+            throw new BusinessException(ErrorCode.STATUS_INVALID);
+        }
     }
 }

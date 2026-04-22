@@ -17,10 +17,9 @@ import com.backend.interaction.vo.InteractionCreateVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.exception.BusinessException;
 import java.time.LocalDateTime;
 import com.backend.interaction.dto.ReplyInteractionDTO;
+import com.backend.interaction.vo.InteractionDetailVO;
 /**
  * @author chenyang
  * @date 2026/4/15
@@ -72,10 +71,25 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
 
     /* 获取村民留言详情 */
     @Override
-    public InteractionCreateVO getMessageDetail(Long id) {
+    public InteractionDetailVO getMessageDetail(Long id) {
         InteractionEntity entity = getById(id);
-        InteractionCreateVO vo = new InteractionCreateVO();
+        InteractionDetailVO vo = new InteractionDetailVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
+    }
+
+    /* 管理端获取村民留言列表 */
+    @Override
+    public IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type) {
+        LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
+        .eq(status != null, InteractionEntity::getStatus, status)
+        .eq(type != null, InteractionEntity::getType, type)
+        .orderByDesc(InteractionEntity::getCreateTime);
+        IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
+        return entityPage.convert(entity -> {
+            InteractionDetailVO vo = new InteractionDetailVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
     }
 }

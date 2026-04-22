@@ -8,6 +8,7 @@ import com.backend.interaction.vo.InteractionCreateVO;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.backend.interaction.dto.ReplyInteractionDTO;
+import com.backend.interaction.vo.InteractionDetailVO;
 /**
  * @author chenyang
  * @date 2026/4/15
@@ -25,6 +26,9 @@ public interface InteractionService extends IService<InteractionEntity> {
     // 回复村民留言
     String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request);
 
-    // 获取村民留言详情
-    InteractionCreateVO getMessageDetail(Long id);
+    /* 获取村民留言详情 */
+    InteractionDetailVO getMessageDetail(Long id);
+
+    /* 管理端获取村民留言列表 */
+    IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type);
 }
