@@ -86,7 +86,8 @@ public class AdminController {
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") long current,
-            @RequestParam(defaultValue = "10") long size) {
+            @RequestParam(defaultValue = "10") long size
+        ) {
         return Result.success(adminService.pageUsers(username, role, status, current, size));
     }
 

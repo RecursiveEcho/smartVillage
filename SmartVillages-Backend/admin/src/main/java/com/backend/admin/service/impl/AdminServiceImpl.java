@@ -22,7 +22,7 @@ import com.backend.media.service.MediaService;
 import com.backend.auth.dto.AuthDTO;
 import org.springframework.util.DigestUtils;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 /**
@@ -48,6 +48,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         Page<AuthEntity> page = new Page<>(current, size);
         // 条件为 null 时不拼进 WHERE，实现「可选筛选」
         LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<AuthEntity>()
+                .like(StringUtils.hasText(username), AuthEntity::getUsername, username)
                 .eq(role != null, AuthEntity::getRole, role)
                 .eq(status != null, AuthEntity::getStatus, status)
                 .orderByDesc(AuthEntity::getStatus)
