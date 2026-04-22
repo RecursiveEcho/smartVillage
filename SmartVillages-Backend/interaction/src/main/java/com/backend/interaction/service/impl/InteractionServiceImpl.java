@@ -24,8 +24,8 @@ import com.backend.interaction.dto.ReplyInteractionDTO;
 import com.backend.interaction.vo.InteractionDetailVO;
 /**
  * @author chenyang
- * @date 2026/4/15
- * @description 村民留言业务实现
+ * &#064;date  2026/4/15
+ * &#064;description  村民留言业务实现
  */
 @Slf4j
 @Service
@@ -87,10 +87,12 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
 
     /* 管理端获取村民留言列表 */
     @Override
-    public IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type) {
+    public IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type, LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
         .eq(status != null, InteractionEntity::getStatus, status)
         .eq(type != null, InteractionEntity::getType, type)
+        .ge(startTime != null, InteractionEntity::getCreateTime, startTime)
+        .le(endTime != null, InteractionEntity::getCreateTime, endTime)
         .orderByDesc(InteractionEntity::getCreateTime);
         IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
         return entityPage.convert(entity -> {

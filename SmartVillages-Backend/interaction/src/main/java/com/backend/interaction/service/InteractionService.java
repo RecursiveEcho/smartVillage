@@ -9,10 +9,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.backend.interaction.dto.ReplyInteractionDTO;
 import com.backend.interaction.vo.InteractionDetailVO;
+import java.time.LocalDateTime;
 /**
  * @author chenyang
- * @date 2026/4/15
- * @description 村民留言业务接口
+ * &#064;date 2026/4/15
+ * &#064;description 村民留言业务接口
  */
 @Tag(name = "村民留言", description = "村民留言接口")
 public interface InteractionService extends IService<InteractionEntity> {
@@ -30,7 +31,7 @@ public interface InteractionService extends IService<InteractionEntity> {
     InteractionDetailVO getMessageDetail(Long id);
 
     /* 管理端获取村民留言列表 */
-    IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type);
+    IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type, LocalDateTime startTime, LocalDateTime endTime);
 
     /* 我的留言 */
     IPage<InteractionDetailVO> getMyMessageList(HttpServletRequest request, Long current, Long size);

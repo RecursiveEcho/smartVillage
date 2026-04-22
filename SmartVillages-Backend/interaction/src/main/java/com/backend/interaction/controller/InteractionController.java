@@ -15,14 +15,16 @@ import com.backend.interaction.vo.InteractionCreateVO;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import com.backend.interaction.dto.ReplyInteractionDTO;
 import com.backend.interaction.vo.InteractionDetailVO;
 import org.springframework.validation.annotation.Validated;
+import java.time.LocalDateTime;
 /**
  * @author chenyang
- * @date 2026/4/15
- * @description 村民留言控制器
+ * &#064;date 2026/4/15
+ * &#064;description 村民留言控制器
  */
 @Validated
 @RestController
@@ -34,8 +36,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/15
-     * @description 新增村民留言
+     * &#064;date 2026/4/15
+     * &#064;description 新增村民留言
      * @param dto 村民留言创建DTO
      * @return 操作结果文案
      */
@@ -47,8 +49,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/15
-     * @description 获取村民留言列表
+     * &#064;date 2026/4/15
+     * &#064;description 获取村民留言列表
      * @param current 当前页
      * @param size 每页数量
      * @return 村民留言列表
@@ -64,15 +66,15 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 回复村民留言
+     * &#064;date 2026/4/22
+     * &#064;description 回复村民留言
      * @param id 留言id
      * @param dto 回复村民留言DTO
      * @param request HTTP请求
      * @return 操作结果文案
      */
     @Operation(summary="回复村民留言")
-    @PostMapping("/cadre/interactions/messages/{id}/replies")
+    @PutMapping("/cadre/interactions/messages/{id}/replies")
     public Result<String> replyMessage(
         @PathVariable Long id, 
         @RequestBody @Valid ReplyInteractionDTO dto, HttpServletRequest request) {
@@ -81,8 +83,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 获取村民留言详情
+     * &#064;date 2026/4/22
+     * &#064;description 获取村民留言详情
      * @param id 留言id
      * @return 村民留言详情
      */
@@ -94,8 +96,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 管理端获取村民留言列表
+     * &#064;date 2026/4/22
+     * &#064;description 管理端获取村民留言列表
      * @param current 当前页
      * @param size 每页数量
      * @param status 状态
@@ -108,14 +110,17 @@ public class InteractionController {
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
             @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String type) {
-        return Result.success(interactionService.getMessageListByCadre(current, size, status, type));
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) LocalDateTime startTime,
+            @RequestParam(required = false) LocalDateTime endTime
+        ) {
+        return Result.success(interactionService.getMessageListByCadre(current, size, status, type, startTime, endTime));
     }
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 我的留言
+     * &#064;date 2026/4/22
+     * &#064;description 我的留言
      * @param current 当前页
      * @param size 每页数量
      * @return 我的留言
@@ -131,8 +136,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 我的留言详细
+     * &#064;date 2026/4/22
+     * &#064;description 我的留言详细
      * @param request HTTP请求
      * @param id 留言id
      * @return 我的留言详细
@@ -146,8 +151,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 村民撤回留言
+     * &#064;date 2026/4/22
+     * &#064;description 村民撤回留言
      * @param request HTTP请求
      * @param id 留言id
      * @return 操作结果文案
@@ -160,8 +165,8 @@ public class InteractionController {
 
     /**
      * @author chenyang
-     * @date 2026/4/22
-     * @description 管理端处理村民留言
+     * &#064;date 2026/4/22
+     * &#064;description 管理端处理村民留言
      * @param id 留言id
      * @param request HTTP请求
      * @return 操作结果文案
@@ -171,6 +176,7 @@ public class InteractionController {
     public Result<String> processingMessage(@PathVariable Long id, HttpServletRequest request) {
         return Result.success(interactionService.processingMessage(id, request));
     }
+
 
 
 }
