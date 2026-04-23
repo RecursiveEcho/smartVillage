@@ -3,6 +3,8 @@ CREATE TABLE `feature` (
   `title` VARCHAR(200) NOT NULL COMMENT '标题',
   `content` TEXT COMMENT '内容',
   `type` VARCHAR(50) NOT NULL COMMENT '类型：scenery-风景/product-农产品/culture-文化/history-历史',
+  `cover` VARCHAR(300) COMMENT '封面URL',
+  `video` VARCHAR(300) COMMENT '视频URL',
   `images` TEXT COMMENT '图片列表 (JSON 数组)',
   `sort` INT DEFAULT 0 COMMENT '排序值 (越大越靠前)',
   `status` TINYINT DEFAULT 1 COMMENT '状态：0-隐藏 1-显示',
