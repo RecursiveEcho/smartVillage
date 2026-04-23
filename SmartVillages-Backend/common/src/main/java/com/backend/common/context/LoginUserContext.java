@@ -29,4 +29,9 @@ public final class LoginUserContext {
         Object value = request.getAttribute("role");
         return value == null ? null : String.valueOf(value);
     }
+
+    public static String getAvatar(HttpServletRequest request) {
+        Object value = request.getAttribute("avatar");
+        return value == null ? null : String.valueOf(value);
+    }
 }

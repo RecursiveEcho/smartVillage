@@ -29,6 +29,8 @@ import com.backend.auth.dto.AuthDTO;
 import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
+import com.backend.admin.vo.MeVO;
+import com.backend.common.context.LoginUserContext;;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -54,17 +56,13 @@ public class AdminController {
      * @return 当前用户 authId、username、role
      */
     @GetMapping("/me")
-    public Result<Map<String, Object>> me(HttpServletRequest request) {
-        //获取上下文
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        // 返回
-        log.info("当前用户：authId={}, username={}, role={}", authentication.getPrincipal(), authentication.getName(), authentication.getAuthorities());
-        return Result.success(Map.of(
-                "id", String.valueOf(authentication.getDetails()),
-                "username", authentication.getName(),
-                "role", authentication.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .collect(Collectors.joining(","))
+    public Result<MeVO> me(HttpServletRequest request) {
+        // 返回当前用户信息VO
+        return Result.success(new MeVO(
+                LoginUserContext.getAuthId(request),
+                LoginUserContext.getUsername(request),
+                LoginUserContext.getRole(request),
+                LoginUserContext.getAvatar(request)
         )); 
     }
 
