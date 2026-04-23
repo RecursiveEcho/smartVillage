@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 /**
  * 乡村风采创建DTO
  * @author chenyang
@@ -17,10 +16,6 @@ import jakarta.validation.constraints.NotNull;
 @AllArgsConstructor
 @Schema(description = "乡村风采创建DTO")
 public class HighlightCreateDTO {
-
-    @NotNull(message = "创建用户不能为空")
-    @Schema(description = "创建用户")
-    private Integer createUser;
 
     @NotBlank(message = "标题不能为空")
     @Schema(description = "标题")

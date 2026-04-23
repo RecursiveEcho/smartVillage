@@ -28,4 +28,7 @@ public interface FeatureService extends IService<FeatureEntity> {
 
     /* 管理端获取乡村风采列表 */
     IPage<FeatureVO> getFeatureListByAdmin(Long current, Long size, Integer status, String title, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request);
+
+    /* 修改乡村风采 */
+    void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request);
 }

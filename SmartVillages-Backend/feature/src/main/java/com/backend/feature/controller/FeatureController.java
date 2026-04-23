@@ -137,4 +137,11 @@ public class FeatureController {
         HttpServletRequest request) {
         return Result.success(featureService.getFeatureListByAdmin(current, size, status, title, type, getSort, getCreateTime, startTime, endTime, request));
     }
+
+    @Operation(summary = "修改乡村风采")
+    @PutMapping("/cadre/features/{id}")
+    public Result<String> updateFeature(@PathVariable Long id, @Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
+        featureService.updateFeature(id, dto, request);
+        return Result.success("乡村风采修改成功");
+    }
 }
