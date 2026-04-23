@@ -34,6 +34,7 @@ public class SecurityConfig {
                 "/swagger-ui/**",
                 "/webjars/**",
                 "/swagger-resources/**",
+                "/features/**",
                 "/announcements/**",
                 "/guest/**"
             ).permitAll()//白名单请求放行
@@ -47,7 +48,7 @@ public class SecurityConfig {
             // 管理员仅负责账号管理
             .requestMatchers("/admin/users/**", "/media/images/upload").hasAuthority("ROLE_ADMIN")
             // 村干部负责业务处理（公告、留言）
-            .requestMatchers("/cadre/announcements/**", "/cadre/interactions/**", "/media/images/upload").hasAuthority("ROLE_CADRE")
+            .requestMatchers("/cadre/announcements/**", "/cadre/interactions/**", "/media/images/upload", "/cadre/features/**").hasAuthority("ROLE_CADRE")
             .requestMatchers("/villager/**").hasAnyAuthority("ROLE_VILLAGER")//村民请求需要认证
             .anyRequest().authenticated()//任何请求都需要认证
         )
