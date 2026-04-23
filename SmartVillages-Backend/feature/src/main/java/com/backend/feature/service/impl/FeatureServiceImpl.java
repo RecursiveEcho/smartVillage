@@ -78,18 +78,32 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     /* 获取乡村风采详情 */
     @Override
     public FeatureVO getFeatureDetail(Long id){
+        /* 构建缓存 key */
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
         FeatureVO fromCache =redisJsonCacheTool.getObject(cacheKey, FeatureVO.class);
-        if(fromCache != null) {
-            return fromCache;
-        }
+        /* 获取实体 */
         FeatureEntity entity = getById(id);
+        /* 如果实体不存在，则抛出异常 */
         if(entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
+        /* 如果缓存命中，则累加浏览量 */
+        if(fromCache != null) {
+            int nextSort = entity.getSort() + 1;
+            entity.setSort(nextSort);
+            updateById(entity);
+            return fromCache;
+        }
+        /* 转换为 VO */
         FeatureVO vo = new FeatureVO();
+        /* 累加浏览量 */
+        int nextSort = entity.getSort() + 1;
+        entity.setSort(nextSort);
+        updateById(entity);
+        /* 转换为 VO */
         BeanUtils.copyProperties(entity, vo);
+        /* 写入缓存 */
         redisJsonCacheTool.setObject(cacheKey, vo);
         return vo;   
-    }
+    }   
 }
