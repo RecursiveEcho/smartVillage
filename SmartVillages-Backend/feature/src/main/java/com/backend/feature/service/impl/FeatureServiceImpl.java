@@ -106,4 +106,20 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         redisJsonCacheTool.setObject(cacheKey, vo);
         return vo;   
     }   
+
+    /* 上下架乡村风采 */
+    @Override
+    public void updateStatus(Long id, Integer status, HttpServletRequest request) {
+        FeatureEntity entity = getById(id);
+        /* 如果实体不存在，则抛出异常 */
+        if(entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
+        }
+        if(Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
+            throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
+        }
+        entity.setStatus(status);   
+        updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }   
 }

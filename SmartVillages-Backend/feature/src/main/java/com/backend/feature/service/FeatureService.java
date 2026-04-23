@@ -23,4 +23,7 @@ public interface FeatureService extends IService<FeatureEntity> {
 
     /* 获取乡村风采详情 */
     FeatureVO getFeatureDetail(Long id);
+
+    /* 上下架乡村风采 */
+    void updateStatus(Long id, Integer status, HttpServletRequest request);
 }

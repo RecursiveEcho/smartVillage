@@ -16,6 +16,7 @@ import com.backend.feature.vo.FeatureVO;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -85,4 +86,21 @@ public class FeatureController {
     public Result<FeatureVO> getFeatureDetail(@PathVariable Long id) {
         return Result.success(featureService.getFeatureDetail(id));
     }   
+
+    /*  
+    * 上下架乡村风采
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 上下架乡村风采
+    * @param id 乡村风采ID
+    * @param status 状态
+    * @param request HTTP请求
+    * @return 乡村风采上下架成功
+    */
+    @Operation(summary = "上下架乡村风采")  
+    @PutMapping("/features/{id}/status")
+    public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
+        featureService.updateStatus(id, status, request);
+        return Result.success("乡村风采上下架成功");
+    }
 }
