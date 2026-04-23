@@ -31,4 +31,7 @@ public interface FeatureService extends IService<FeatureEntity> {
 
     /* 修改乡村风采 */
     void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request);
+
+    /* 删除乡村风采 */
+    void deleteFeature(Long id, HttpServletRequest request);
 }

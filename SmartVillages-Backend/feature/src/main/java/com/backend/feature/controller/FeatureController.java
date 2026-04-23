@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import java.time.LocalDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.DeleteMapping;
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -138,10 +139,36 @@ public class FeatureController {
         return Result.success(featureService.getFeatureListByAdmin(current, size, status, title, type, getSort, getCreateTime, startTime, endTime, request));
     }
 
+    /*  
+    * 修改乡村风采
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 修改乡村风采
+    * @param id 乡村风采ID
+    * @param dto 乡村风采修改DTO
+    * @param request HTTP请求
+    * @return 乡村风采修改成功
+    */
     @Operation(summary = "修改乡村风采")
     @PutMapping("/cadre/features/{id}")
     public Result<String> updateFeature(@PathVariable Long id, @Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
         featureService.updateFeature(id, dto, request);
         return Result.success("乡村风采修改成功");
+    }
+
+    /*  
+    * 删除乡村风采
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 删除乡村风采
+    * @param id 乡村风采ID
+    * @param request HTTP请求
+    * @return 乡村风采删除成功
+    */
+    @Operation(summary = "删除乡村风采")
+    @DeleteMapping("/cadre/features/{id}")
+    public Result<String> deleteFeature(@PathVariable Long id, HttpServletRequest request) {
+        featureService.deleteFeature(id, request);
+        return Result.success("乡村风采删除成功");
     }
 }
