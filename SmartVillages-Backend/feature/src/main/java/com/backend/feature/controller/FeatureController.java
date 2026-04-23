@@ -1,10 +1,88 @@
 package com.backend.feature.controller;
 
+import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import com.backend.feature.service.FeatureService;
+import com.backend.common.result.Result;
+import com.backend.feature.dto.HighlightCreateDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.backend.feature.vo.FeatureVO;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 /**
  * @author chenyang
- * &#064;date 2026/3/27
- * &#064;description TODO
+ * &#064;date 2026/4/23
+ * &#064;description 乡村风采控制器
  */
+@RestController
+@RequiredArgsConstructor
+@Tag(name = "乡村风采", description = "乡村风采接口")
 public class FeatureController {
 
+    private final FeatureService featureService; 
+
+    /*  
+    * 创建乡村风采
+    * @author chenyang
+     * &#064;date 2026/4/23
+     * &#064;description 乡村风采创建
+     * @param dto 乡村风采创建DTO
+     * @return 乡村风采创建成功
+     */
+    @Operation(summary = "创建乡村风采")
+    @PostMapping("/feature")
+    public Result<String> createFeature(@Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
+        featureService.createFeature(dto, request);
+        return Result.success("乡村风采创建成功");
+    }
+
+    /*  
+    * 获取乡村风采列表(村民可见)
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 乡村风采列表
+    * @param current 当前页
+    * @param size 每页条数
+    * @param type 类型
+    * @param getSort 排序
+    * @param getCreateTime 创建时间
+    * @param start 开始时间
+    * @param end 结束时间
+    * @param request HTTP请求
+    * @return 乡村风采列表
+    */
+    @Operation(summary = "获取乡村风采列表(村民可见)")
+    @GetMapping("/features")
+    public Result<IPage<FeatureVO>> getFeatureList(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String type,
+        @RequestParam(required = false) Integer getSort,
+        @RequestParam(required = false) Integer getCreateTime,
+        @RequestParam(required = false) Integer start,
+        @RequestParam(required = false) Integer end,
+        HttpServletRequest request) {
+        return Result.success(featureService.getFeatureList(current, size, type, getSort, getCreateTime, start, end, request));
+    }
+
+    /*  
+    * 获取乡村风采详情
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#047;description 乡村风采详情
+    * @param id 乡村风采ID
+    * @return 乡村风采详情
+    */
+    @Operation(summary = "获取乡村风采详情")
+    @GetMapping("/features/{id}")
+    public Result<FeatureVO> getFeatureDetail(@PathVariable Long id) {
+        return Result.success(featureService.getFeatureDetail(id));
+    }   
 }

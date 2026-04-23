@@ -23,7 +23,8 @@ public class MybatisPlusMetaObjectHandler implements MetaObjectHandler {
         LocalDateTime now = LocalDateTime.now();
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
-
+        this.strictInsertFill(metaObject, "status", Integer.class, 1);
+        this.strictInsertFill(metaObject, "sort", Integer.class, 0);
         // 设置逻辑删除
         Integer notDeleted = NOT_DELETED;
         if (metaObject.hasGetter("isDeleted")) {
