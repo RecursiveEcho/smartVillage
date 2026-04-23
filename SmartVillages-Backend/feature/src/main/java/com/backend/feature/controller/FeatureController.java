@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -37,8 +39,8 @@ public class FeatureController {
      * @param dto 乡村风采创建DTO
      * @return 乡村风采创建成功
      */
-    @Operation(summary = "创建乡村风采")
-    @PostMapping("/feature")
+    @Operation(summary = "村干部创建乡村风采")
+    @PostMapping("/cadre/features")
     public Result<String> createFeature(@Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
         featureService.createFeature(dto, request);
         return Result.success("乡村风采创建成功");
@@ -66,11 +68,11 @@ public class FeatureController {
         @RequestParam(defaultValue = "10") Long size,
         @RequestParam(required = false) String type,
         @RequestParam(required = false) Integer getSort,
-        @RequestParam(required = false) Integer getCreateTime,
-        @RequestParam(required = false) Integer start,
-        @RequestParam(required = false) Integer end,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime getCreateTime,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
         HttpServletRequest request) {
-        return Result.success(featureService.getFeatureList(current, size, type, getSort, getCreateTime, start, end, request));
+        return Result.success(featureService.getFeatureList(current, size, type, getSort, getCreateTime, startTime, endTime, request));
     }
 
     /*  
@@ -98,9 +100,41 @@ public class FeatureController {
     * @return 乡村风采上下架成功
     */
     @Operation(summary = "上下架乡村风采")  
-    @PutMapping("/features/{id}/status")
+    @PutMapping("/cadre/features/{id}/status")
     public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
         featureService.updateStatus(id, status, request);
         return Result.success("乡村风采上下架成功");
+    }
+
+    /*  
+    * 管理端获取乡村风采列表
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 管理端获取乡村风采列表
+    * @param current 当前页
+    * @param size 每页条数
+    * @param title 标题
+    * @param type 类型
+    * @param getSort 排序
+    * @param getCreateTime 创建时间
+    * @param startTime 开始时间
+    * @param endTime 结束时间
+    * @param request HTTP请求
+    * @return 乡村风采列表
+    */
+    @Operation(summary = "管理端获取乡村风采列表")
+    @GetMapping("/cadre/features")
+    public Result<IPage<FeatureVO>> getFeatureListByAdmin(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) Integer status,
+        @RequestParam(required = false) String title,
+        @RequestParam(required = false) String type,
+        @RequestParam(required = false) Integer getSort,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime getCreateTime,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
+        HttpServletRequest request) {
+        return Result.success(featureService.getFeatureListByAdmin(current, size, status, title, type, getSort, getCreateTime, startTime, endTime, request));
     }
 }

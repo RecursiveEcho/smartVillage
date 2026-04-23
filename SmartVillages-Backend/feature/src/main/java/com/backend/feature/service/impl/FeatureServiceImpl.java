@@ -9,8 +9,7 @@ import com.backend.feature.dto.HighlightCreateDTO;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.servlet.http.HttpServletRequest;
 import com.backend.common.context.LoginUserContext;
-import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.util.StringUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -22,6 +21,7 @@ import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import lombok.RequiredArgsConstructor;
 import java.util.Objects;
+import java.time.LocalDateTime;
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -38,7 +38,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     /* 创建乡村风采 */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void createFeature(@Valid@RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
+    public void createFeature(HighlightCreateDTO dto, HttpServletRequest request) {
         FeatureEntity entity = new FeatureEntity();
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
@@ -55,16 +55,17 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, entity.getId()));
     }
 
-    /* 获取乡村风采列表 */
+    /* 村民获取乡村风采列表 */
     @Override
-    public IPage<FeatureVO> getFeatureList(Long current, Long size, String type, Integer getSort, Integer getCreateTime, Integer start, Integer end, HttpServletRequest request) {
+    public IPage<FeatureVO> getFeatureList(Long current, Long size, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request) {
         LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
         .eq(FeatureEntity::getStatus, 1)
         .eq(FeatureEntity::getDeleted, 0)
         .eq(type != null, FeatureEntity::getType, type)
-        .ge(start != null, FeatureEntity::getCreateTime, start)
-        .le(end != null, FeatureEntity::getCreateTime, end)
-        .orderByDesc(FeatureEntity::getSort)
+        .ge(startTime != null, FeatureEntity::getCreateTime, startTime)
+        .le(endTime != null, FeatureEntity::getCreateTime, endTime)
+        .orderByDesc(getSort != null, FeatureEntity::getSort)
+        .orderByDesc(getCreateTime != null, FeatureEntity::getCreateTime)
         .orderByDesc(FeatureEntity::getCreateTime); 
         IPage<FeatureEntity> entityPage = page(new Page<>(current, size), wrapper);
         /* 转换为 VO */
@@ -115,11 +116,30 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         if(entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
-        if(Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
+        if(!Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
         entity.setStatus(status);   
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }   
+
+    /* 管理端获取乡村风采列表 */
+    @Override
+    public IPage<FeatureVO> getFeatureListByAdmin(Long current, Long size, Integer status, String title, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request) {
+        LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
+        .like(StringUtils.hasText(title), FeatureEntity::getTitle,title)
+        .eq(type != null, FeatureEntity::getType, type)
+        .ge(startTime != null, FeatureEntity::getCreateTime, startTime)
+        .le(endTime != null, FeatureEntity::getCreateTime, endTime)
+        .eq(status != null, FeatureEntity::getStatus, status)
+        .orderByDesc(getSort != null, FeatureEntity::getSort)
+        .orderByDesc(getCreateTime != null, FeatureEntity::getCreateTime); 
+        IPage<FeatureEntity> entityPage = page(new Page<>(current, size), wrapper);
+        return entityPage.convert(entity -> {
+            FeatureVO vo = new FeatureVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
+    }
 }
