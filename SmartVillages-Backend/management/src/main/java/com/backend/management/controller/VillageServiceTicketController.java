@@ -11,6 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.backend.management.vo.ServiceTicketDetailVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 
 /**
  * @author chenyang
@@ -34,6 +38,21 @@ public class VillageServiceTicketController {
     @PostMapping("/villager/management/services")
     public Result<Integer> create(@Valid @RequestBody ServiceTicketCreateDTO dto, HttpServletRequest request) {
         return Result.success(villageServiceTicketService.create(dto, request));
+    }
+
+    /**
+     * 获取民生服务工单列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param serviceType 服务类型
+     * @param status 状态
+     * @param request 请求
+     * @return 民生服务工单列表
+     */
+    @Operation(summary = "获取民生服务工单列表")
+    @GetMapping("/cadre/management/services")
+    public Result<IPage<ServiceTicketDetailVO>> getServiceTicketList(@RequestParam Long current, @RequestParam Long size, @RequestParam String serviceType, @RequestParam Integer status, HttpServletRequest request) {
+        return Result.success(villageServiceTicketService.getServiceTicketList(current, size, serviceType, status, request));
     }
 }
 
