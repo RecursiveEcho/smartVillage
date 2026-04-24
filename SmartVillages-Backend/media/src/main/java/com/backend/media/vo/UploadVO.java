@@ -17,6 +17,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "上传VO")
 public class UploadVO {
 
+    @Schema(description = "文件名")
+    private String fileName;
+
+    @Schema(description = "文件大小")
+    private Long fileSize;
+
     @Schema(description = "文件URL")
     private String fileUrl;
     
