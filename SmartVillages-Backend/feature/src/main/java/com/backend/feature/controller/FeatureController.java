@@ -187,6 +187,14 @@ public class FeatureController {
         return Result.success(featureService.getFeatureTypeStatistics());
     }
 
+    /*
+    * 获取村民我的乡村风采
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 获取村民我的乡村风采
+    * @param request HTTP请求
+    * @return 乡村风采列表
+    */
     @Operation(summary ="村民获取我的乡村风采" )
     @GetMapping("/cadre/features/summary")
     public Result<Map<String,Long>> getMyFeatureCount(HttpServletRequest request) {

@@ -206,6 +206,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         return result;
     }
 
+    /* 获取我的乡村风采数量 */
     @Override
     public Map<String,Long> getMyFeatureCount(HttpServletRequest request){
         LambdaQueryWrapper<FeatureEntity> wrapper=new LambdaQueryWrapper<FeatureEntity>()
