@@ -6,8 +6,6 @@ import com.backend.media.vo.UploadVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -16,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.validation.annotation.Validated;
 
 /**
  * @author chenyang
@@ -28,28 +25,26 @@ import org.springframework.validation.annotation.Validated;
 @RequestMapping("/media")
 @RequiredArgsConstructor
 @Tag(name = "媒体资源", description = "媒体资源接口")
-@Validated
 public class MediaController {
 
 
     private final MediaService mediaService;
 
     /**
-     * 上传图片
-     * @param file 图片文件
+     * 上传文件（兼容旧接口）
+     * @param file 文件
      * @param fileType 文件类型
      * @return 上传结果
      */
-    @Operation(summary = "上传图片")
-    @PostMapping(value = "/images/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传文件")
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<UploadVO> upload(
-        @RequestParam("file") @NotNull MultipartFile file,
-        @RequestParam("fileType") @NotBlank String fileType,
-        @RequestParam("category") @NotBlank String category,
+        @RequestParam("file") MultipartFile file,
+      @RequestParam("fileType") String fileType,
+        @RequestParam("category") String category,  
         HttpServletRequest request
     ) {
         UploadVO uploadVO = mediaService.upload(file, fileType,category, request);
         return Result.success(uploadVO);
     }
-
 }

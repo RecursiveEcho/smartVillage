@@ -16,8 +16,9 @@ public interface MediaService extends IService<MediaEntity> {
      * 上传媒体资源
      * @param file 媒体资源文件
      * @param fileType 文件类型
+     * @param category 分类
+     * @param request 请求
      * @return 上传结果
      */
     UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request);
-
 }

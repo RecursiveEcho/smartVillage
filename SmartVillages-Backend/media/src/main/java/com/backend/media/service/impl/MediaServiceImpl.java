@@ -49,13 +49,13 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
             this.save(mediaEntity);
             
             return new UploadVO(
+                file.getOriginalFilename(),
+                file.getSize(),
                 uploadResult.url(),
-                uploadResult.objectKey()
-            );
+                uploadResult.objectKey());
         } catch (IOException e) {
             log.error("读取上传文件流失败，filename={}, fileType={}", file.getOriginalFilename(), fileType, e);
             throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
         }
-
     }
 }
