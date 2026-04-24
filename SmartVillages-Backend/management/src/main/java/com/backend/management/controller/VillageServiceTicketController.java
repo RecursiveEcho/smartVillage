@@ -146,6 +146,19 @@ public class VillageServiceTicketController {
         villageServiceTicketService.doneServiceTicket(id, request);
         return Result.success("办结成功");
     }
+
+    /**
+     * 管理端关闭工单
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 操作结果文案
+     */
+    @Operation(summary = "管理端关闭工单")
+    @PutMapping("/cadre/management/services/{id}/close")
+    public Result<String> closeServiceTicket(@PathVariable Long id, HttpServletRequest request) {
+        villageServiceTicketService.closeServiceTicket(id, request);
+        return Result.success("关闭成功");
+    }
 }
 
 

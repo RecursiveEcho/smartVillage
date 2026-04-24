@@ -84,5 +84,11 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * @param request 请求
      */
     void doneServiceTicket(Long id, HttpServletRequest request);
+
+    /**管理端关闭工单
+     * @param id 民生服务工单id
+     * @param request 请求
+     */
+    void closeServiceTicket(Long id,HttpServletRequest request);
 }
 

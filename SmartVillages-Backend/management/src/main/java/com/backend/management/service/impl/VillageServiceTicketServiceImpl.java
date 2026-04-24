@@ -203,6 +203,21 @@ public class VillageServiceTicketServiceImpl
     }
 
     /**
+     * 管理端关闭工单
+     * @param id 民生服务工单id
+     * @param request 请求
+     */
+    @Override
+    public void closeServiceTicket(Long id, HttpServletRequest request) {
+        VillageServiceTicketEntity entity = requireById(id);
+        if(!Objects.equals(entity.getHandlerId(),LoginUserContext.getAuthId(request))) {
+            throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
+        }
+        entity.setStatus(3);
+        entity.setHandleNote("管理端关闭工单，申请退回");
+        updateById(entity);
+    }
+    /**
      * 获取实体并校验是否存在
      * @param id 民生服务工单id
      * @return 实体
