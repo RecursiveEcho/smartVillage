@@ -20,6 +20,7 @@ import com.backend.management.vo.ServiceTicketSimpleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import java.time.LocalDateTime;
 import com.backend.management.dto.ServiceTicketDoneDTO;
+import java.util.Map;
 /**
  * @author chenyang
  * &#064;date 2026/4/24
@@ -159,6 +160,18 @@ public class VillageServiceTicketController {
         villageServiceTicketService.closeServiceTicket(id, request);
         return Result.success("关闭成功");
     }
+
+    /**
+     * 后台获取民生服务工单统计
+     * @return 
+     *      total: 总申请数
+     *      pending: 待处理数
+     *      processing: 处理中数
+     *      completed: 已办结数
+     */
+    @Operation(summary = "后台申请统计")
+    @GetMapping("/cadre/management/services/statistics")
+    public Result<Map<String, Long>> getStatistics() {
+        return Result.success(villageServiceTicketService.getServiceTicketStatistics());
+    }
 }
-
-

@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-
+import java.util.Map;
 /**
  * @author chenyang
  * &#064;date 2026/4/24
@@ -90,5 +90,15 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * @param request 请求
      */
     void closeServiceTicket(Long id,HttpServletRequest request);
+
+    /**
+     * 后台获取民生服务工单统计
+     * @return 
+     *      total: 总申请数
+     *      pending: 待处理数
+     *      processing: 处理中数
+     *      completed: 已办结数
+     */
+    Map<String, Long> getServiceTicketStatistics();
 }
 

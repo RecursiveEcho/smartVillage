@@ -23,6 +23,7 @@ import com.backend.common.utils.CacheKeyUtils;
 import java.util.Objects;
 import java.time.LocalDateTime;
 import com.backend.management.dto.ServiceTicketDoneDTO;
+import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class VillageServiceTicketServiceImpl
@@ -216,6 +217,23 @@ public class VillageServiceTicketServiceImpl
         entity.setStatus(3);
         entity.setHandleNote("管理端关闭工单，申请退回");
         updateById(entity);
+    }
+    /**
+     * 后台获取民生服务工单统计
+     * @return 
+     *      total: 总申请数
+     *      pending: 待处理数
+     *      processing: 处理中数
+     *      completed: 已办结数
+     */
+    @Override
+    public Map<String, Long> getServiceTicketStatistics() {
+        LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>();        return Map.of(
+            "total", count(wrapper),
+            "pending", count(wrapper.eq(VillageServiceTicketEntity::getStatus, 0)),
+            "processing", count(wrapper.eq(VillageServiceTicketEntity::getStatus, 1)),
+            "completed", count(wrapper.eq(VillageServiceTicketEntity::getStatus, 2))
+        );
     }
     /**
      * 获取实体并校验是否存在
