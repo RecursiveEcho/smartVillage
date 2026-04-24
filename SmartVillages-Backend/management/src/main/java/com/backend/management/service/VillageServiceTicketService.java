@@ -1,6 +1,7 @@
 package com.backend.management.service;
 
 import com.backend.management.dto.ServiceTicketCreateDTO;
+import com.backend.management.dto.ServiceTicketDoneDTO;
 import com.backend.management.entity.VillageServiceTicketEntity;
 import com.backend.management.vo.ServiceTicketDetailVO;
 import com.backend.management.vo.ServiceTicketSimpleVO;
@@ -68,5 +69,13 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * @return 民生服务工单详情
      */
     ServiceTicketDetailVO getServiceTicketDetail(Long id);
+
+    /**
+     * 管理端处理民生服务工单申请
+     * @param id 民生服务工单id
+     * @param dto 民生服务工单处理DTO
+     * @param request 请求
+     */
+    void processingServiceTicket(Long id, ServiceTicketDoneDTO dto, HttpServletRequest request);
 }
 

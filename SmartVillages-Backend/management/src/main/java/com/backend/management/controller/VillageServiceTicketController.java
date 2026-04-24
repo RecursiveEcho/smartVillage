@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +19,7 @@ import com.backend.management.vo.ServiceTicketDetailVO;
 import com.backend.management.vo.ServiceTicketSimpleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import java.time.LocalDateTime;
+import com.backend.management.dto.ServiceTicketDoneDTO;
 /**
  * @author chenyang
  * &#064;date 2026/4/24
@@ -116,6 +118,20 @@ public class VillageServiceTicketController {
     @GetMapping("/cadre/management/services/{id}")
     public Result<ServiceTicketDetailVO> getServiceTicketDetail(@PathVariable Long id) {
         return Result.success(villageServiceTicketService.getServiceTicketDetail(id));
+    }
+
+    /**
+     * 管理端处理民生服务工单申请
+     * @param id 民生服务工单id
+     * @param dto 民生服务工单处理DTO
+     * @param request 请求
+     * @return 操作结果文案
+     */
+    @Operation(summary ="管理端处理民生服务工单申请")
+    @PutMapping("/cadre/management/services/{id}/processing")
+    public Result<String> processingServiceTicket(@PathVariable Long id, @RequestBody ServiceTicketDoneDTO dto, HttpServletRequest request) {
+        villageServiceTicketService.processingServiceTicket(id, dto, request);
+        return Result.success("处理成功");
     }
 }
 

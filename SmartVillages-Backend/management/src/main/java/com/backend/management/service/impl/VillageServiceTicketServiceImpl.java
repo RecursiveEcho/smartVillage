@@ -22,7 +22,7 @@ import com.backend.common.enums.ErrorCode;
 import com.backend.common.utils.CacheKeyUtils;
 import java.util.Objects;
 import java.time.LocalDateTime;
-
+import com.backend.management.dto.ServiceTicketDoneDTO;
 @Service
 @RequiredArgsConstructor
 public class VillageServiceTicketServiceImpl
@@ -156,7 +156,33 @@ public class VillageServiceTicketServiceImpl
         redisJsonCacheTool.setObject(cacheKey, vo);
         return vo;
     }
-    
+
+    /**
+     * 管理端处理民生服务工单申请
+     * @param id 民生服务工单id
+     * @param dto 民生服务工单处理DTO
+     * @param request 请求
+     */
+    @Override
+    public void processingServiceTicket(Long id, ServiceTicketDoneDTO dto, HttpServletRequest request) {
+        VillageServiceTicketEntity entity = requireById(id);
+        if(entity.getStatus() == 1) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单正在处理中，无法处理");
+        }
+        if(entity.getStatus() == 2) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单已办结，无法处理");
+        }
+        if(entity.getStatus() == 3) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单已关闭，无法处理");
+        }
+        if(entity.getHandlerId() != null) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单已有处理人，无法重新处理");
+        }
+        entity.setHandlerId(LoginUserContext.getAuthId(request));
+        entity.setStatus(1);
+        entity.setHandleNote(dto.getHandleNote());
+        updateById(entity);
+    }
     /**
      * 获取实体并校验是否存在
      * @param id 民生服务工单id
