@@ -74,6 +74,17 @@ public class VillageServiceTicketController {
         return Result.success(villageServiceTicketService.getMyDetail(id, request));
     }
 
-    
+    /**
+     * 取消我的民生服务工单申请
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 操作结果文案
+     */
+    @Operation(summary = "取消我的民生服务工单申请")
+    @PostMapping("/villager/management/services/{id}/close")
+    public Result<String> closeMyTicket(@PathVariable Long id, HttpServletRequest request) {
+        villageServiceTicketService.closeMyTicket(id, request);
+        return Result.success("取消成功");
+    }
 }
 

@@ -50,6 +50,5 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * @return 操作结果文案
      */
     void closeMyTicket(Long id, HttpServletRequest request);
-
 }
 

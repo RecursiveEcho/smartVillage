@@ -86,26 +86,31 @@ public class VillageServiceTicketServiceImpl
             if(!Objects.equals(entity.getApplicantId(), LoginUserContext.getAuthId(request))) {
                 throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
             }
-            ServiceTicketDetailVO vo = toVo(entity);
+            ServiceTicketDetailVO vo = new ServiceTicketDetailVO();
+            BeanUtils.copyProperties(entity, vo);
             redisJsonCacheTool.setObject(cacheKey, vo);
             return vo;
         }
 
-    @Override
-    public void closeMyTicket(Long id, HttpServletRequest request) {
-
-    }
-
     /**
-     * 将实体转换为VO
-     * @param entity 实体
-     * @return VO
+     * 取消我的民生服务工单申请
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 操作结果文案
      */
-    private ServiceTicketDetailVO toVo(VillageServiceTicketEntity entity) {
-        ServiceTicketDetailVO vo = new ServiceTicketDetailVO();
-        BeanUtils.copyProperties(entity, vo);
-        return vo;
-    }
+    @Override
+        public void closeMyTicket(Long id, HttpServletRequest request) {
+            VillageServiceTicketEntity entity = requireById(id);
+            if(!Objects.equals(entity.getApplicantId(), LoginUserContext.getAuthId(request))) {
+                throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
+            }
+            if(entity.getStatus() != 0) {
+                throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单已处理，无法取消");
+            }
+            entity.setStatus(3);
+            updateById(entity);
+        }
+
 
     /**
      * 获取实体并校验是否存在
@@ -120,5 +125,6 @@ public class VillageServiceTicketServiceImpl
         return entity;
     }
 
+    
 }
 
