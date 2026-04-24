@@ -56,6 +56,9 @@ public class FeatureEntity {
     @Schema(description = "状态")
     private Integer status;
 
+    @Schema(description = "浏览次数")
+    private Integer viewCount;
+
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

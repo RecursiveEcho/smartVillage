@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import java.time.LocalDateTime;
+import java.util.Map;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 /**
@@ -170,5 +172,24 @@ public class FeatureController {
     public Result<String> deleteFeature(@PathVariable Long id, HttpServletRequest request) {
         featureService.deleteFeature(id, request);
         return Result.success("乡村风采删除成功");
+    }
+
+    /*  
+    * 分类统计
+    * @author chenyang
+    * &#064;date 2026/4/23
+    * &#064;description 分类统计
+    * @return 分类统计结果
+    */
+    @Operation(summary = "获取乡村风采分类统计")
+    @GetMapping("/features/statistics")
+    public Result<Map<String, Long>> getFeatureTypeStatistics() {
+        return Result.success(featureService.getFeatureTypeStatistics());
+    }
+
+    @Operation(summary ="村民获取我的乡村风采" )
+    @GetMapping("/cadre/features/summary")
+    public Result<Map<String,Long>> getMyFeatureCount(HttpServletRequest request) {
+        return Result.success(featureService.getMyFeatureCount(request));
     }
 }

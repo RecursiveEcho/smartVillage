@@ -20,8 +20,12 @@ import com.backend.common.enums.ErrorCode;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
 import java.util.Objects;
+
 import java.time.LocalDateTime;
+import java.util.HashMap;
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -64,9 +68,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         .eq(type != null, FeatureEntity::getType, type)
         .ge(startTime != null, FeatureEntity::getCreateTime, startTime)
         .le(endTime != null, FeatureEntity::getCreateTime, endTime)
-        .orderByDesc(getSort != null, FeatureEntity::getSort)
-        .orderByDesc(getCreateTime != null, FeatureEntity::getCreateTime)
-        .orderByDesc(FeatureEntity::getCreateTime); 
+        .orderByDesc(getSort != null, FeatureEntity::getSort,FeatureEntity::getCreateTime);
         IPage<FeatureEntity> entityPage = page(new Page<>(current, size), wrapper);
         /* 转换为 VO */
         return entityPage.convert(entity -> {
@@ -90,8 +92,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         }
         /* 如果缓存命中，则累加浏览量 */
         if(fromCache != null) {
-            int nextSort = entity.getSort() + 1;
-            entity.setSort(nextSort);
+            int nextViewCount = entity.getViewCount() + 1;
+            entity.setSort(nextViewCount);
             updateById(entity);
             return fromCache;
         }
@@ -128,6 +130,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     @Override
     public IPage<FeatureVO> getFeatureListByAdmin(Long current, Long size, Integer status, String title, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request) {
         LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
+        .eq(FeatureEntity::getCreateUser, LoginUserContext.getAuthId(request))
+        .eq(FeatureEntity::getDeleted,0)
         .like(StringUtils.hasText(title), FeatureEntity::getTitle,title)
         .eq(type != null, FeatureEntity::getType, type)
         .ge(startTime != null, FeatureEntity::getCreateTime, startTime)
@@ -181,8 +185,36 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         if(!Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
-        entity.setDeleted(1);
-        updateById(entity);
+        removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
+
+    /* 类型统计 */
+    @Override
+    public Map<String, Long> getFeatureTypeStatistics() {
+        String[] types = {"scenery", "product", "culture", "history"};
+        Map<String, Long> result = new HashMap<>(types.length);
+
+        for (String t : types) {
+            long total = lambdaQuery()
+                    .eq(FeatureEntity::getDeleted, 0)
+                    .eq(FeatureEntity::getStatus, 1)
+                    .eq(FeatureEntity::getType, t)
+                    .count();
+            result.put(t, total);
+        }
+        return result;
+    }
+
+    @Override
+    public Map<String,Long> getMyFeatureCount(HttpServletRequest request){
+        LambdaQueryWrapper<FeatureEntity> wrapper=new LambdaQueryWrapper<FeatureEntity>()
+        .eq(FeatureEntity::getCreateUser,LoginUserContext.getAuthId(request));
+        Map<String,Long> result = new HashMap<>();
+        result.put("total",count(wrapper));
+        result.put("In reality",count(wrapper.eq(FeatureEntity::getStatus,1)));
+        result.put("Hidden",count(wrapper.eq(FeatureEntity::getStatus,0)));
+        return result;
+    }
+
 }

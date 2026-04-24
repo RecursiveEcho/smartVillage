@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  * &#064;date 2026/4/23
  * &#064;description 乡村风采服务接口
  */
+import java.util.Map;
 public interface FeatureService extends IService<FeatureEntity> {
 
     /* 创建乡村风采 */
@@ -34,4 +35,10 @@ public interface FeatureService extends IService<FeatureEntity> {
 
     /* 删除乡村风采 */
     void deleteFeature(Long id, HttpServletRequest request);
+
+    /* 类型统计 */
+    Map<String,Long> getFeatureTypeStatistics();
+
+    /* 村民获取我的乡村风采 */
+    Map<String,Long> getMyFeatureCount(HttpServletRequest request);
 }

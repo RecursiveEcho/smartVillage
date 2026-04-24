@@ -11,6 +11,4 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * &#064;description 乡村风采Mapper
  */
 @Mapper
-public interface FeatureMapper extends BaseMapper<FeatureEntity> {
-
-}
+public interface FeatureMapper extends BaseMapper<FeatureEntity> {}
