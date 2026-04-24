@@ -133,6 +133,19 @@ public class VillageServiceTicketController {
         villageServiceTicketService.processingServiceTicket(id, dto, request);
         return Result.success("处理成功");
     }
+
+    /**
+     * 管理端办结民生服务工单申请
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 操作结果文案
+     */
+    @Operation(summary ="管理端办结民生服务工单申请")
+    @PutMapping("/cadre/management/services/{id}/done")
+    public Result<String> doneServiceTicket(@PathVariable Long id, HttpServletRequest request) {
+        villageServiceTicketService.doneServiceTicket(id, request);
+        return Result.success("办结成功");
+    }
 }
 
 

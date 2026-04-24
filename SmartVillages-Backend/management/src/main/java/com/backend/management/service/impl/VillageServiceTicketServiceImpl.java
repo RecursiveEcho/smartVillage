@@ -183,6 +183,25 @@ public class VillageServiceTicketServiceImpl
         entity.setHandleNote(dto.getHandleNote());
         updateById(entity);
     }
+
+    /**
+     * 管理端办结民生服务工单申请
+     * @param id 民生服务工单id
+     * @param request 请求
+     */
+    @Override
+    public void doneServiceTicket(Long id, HttpServletRequest request) {
+        VillageServiceTicketEntity entity = requireById(id);
+        if(entity.getStatus() != 1) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单正在处理中，无法办结");
+        }
+        if(Objects.equals(entity.getHandlerId(),LoginUserContext.getAuthId(request))) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "您没有权限操作此民生服务工单");
+        }
+        entity.setStatus(2);
+        updateById(entity);
+    }
+
     /**
      * 获取实体并校验是否存在
      * @param id 民生服务工单id
