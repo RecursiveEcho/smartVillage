@@ -10,10 +10,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.backend.management.vo.ServiceTicketDetailVO;
+import com.backend.management.vo.ServiceTicketSimpleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
 /**
@@ -51,8 +53,27 @@ public class VillageServiceTicketController {
      */
     @Operation(summary = "获取民生服务工单列表")
     @GetMapping("/cadre/management/services")
-    public Result<IPage<ServiceTicketDetailVO>> getServiceTicketList(@RequestParam Long current, @RequestParam Long size, @RequestParam String serviceType, @RequestParam Integer status, HttpServletRequest request) {
+    public Result<IPage<ServiceTicketSimpleVO>> getServiceTicketList(
+        @RequestParam(defaultValue = "1") Long current, 
+        @RequestParam(defaultValue = "10") Long size, 
+        @RequestParam(required = false) String serviceType, 
+        @RequestParam(required = false) Integer status, 
+        HttpServletRequest request) {
         return Result.success(villageServiceTicketService.getServiceTicketList(current, size, serviceType, status, request));
     }
+
+    /**
+     * 获取我的民生服务工单详情
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 我的民生服务工单详情
+     */
+    @Operation(summary = "获取我的民生服务工单详情")
+    @GetMapping("/villager/management/services/{id}")
+    public Result<ServiceTicketDetailVO> getMyDetail(@PathVariable Long id, HttpServletRequest request) {
+        return Result.success(villageServiceTicketService.getMyDetail(id, request));
+    }
+
+    
 }
 

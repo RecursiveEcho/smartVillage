@@ -12,15 +12,24 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.backend.management.vo.ServiceTicketDetailVO;
+import com.backend.management.vo.ServiceTicketSimpleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.utils.CacheKeyUtils;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class VillageServiceTicketServiceImpl
         extends ServiceImpl<VillageServiceTicketMapper, VillageServiceTicketEntity>
         implements VillageServiceTicketService {
+
+    private static final String CACHE_KEY_PREFIX = "village_service_ticket:detail:";
+    private final RedisJsonCacheTool redisJsonCacheTool;
 
     /**
      * 创建民生服务工单
@@ -48,13 +57,43 @@ public class VillageServiceTicketServiceImpl
      * @return 民生服务工单列表
      */
     @Override
-    public IPage<ServiceTicketDetailVO> getServiceTicketList(Long current, Long size, String serviceType, Integer status, HttpServletRequest request) {
+    public IPage<ServiceTicketSimpleVO> getServiceTicketList(Long current, Long size, String serviceType, Integer status, HttpServletRequest request) {
         LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
         .eq(serviceType != null, VillageServiceTicketEntity::getServiceType, serviceType)
         .eq(status != null, VillageServiceTicketEntity::getStatus, status)
-        .eq(LoginUserContext.getAuthId(request) != null, VillageServiceTicketEntity::getHandlerId, LoginUserContext.getAuthId(request));
+        .eq(LoginUserContext.getAuthId(request) != null, VillageServiceTicketEntity::getApplicantId, LoginUserContext.getAuthId(request));
         IPage<VillageServiceTicketEntity> entityPage = page(new Page<>(current, size), wrapper);
-        return entityPage.convert(this::toVo);
+        return entityPage.convert(entity -> {
+            ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
+    }
+    /**
+     * 获取我的民生服务工单详情
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 民生服务工单详情
+     */
+    @Override
+            public ServiceTicketDetailVO getMyDetail(Long id, HttpServletRequest request) {
+            String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+            ServiceTicketDetailVO fromCache =redisJsonCacheTool.getObject(cacheKey,ServiceTicketDetailVO.class);
+            if (fromCache != null) {
+                return fromCache;
+            }
+            VillageServiceTicketEntity entity = requireById(id);
+            if(!Objects.equals(entity.getApplicantId(), LoginUserContext.getAuthId(request))) {
+                throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
+            }
+            ServiceTicketDetailVO vo = toVo(entity);
+            redisJsonCacheTool.setObject(cacheKey, vo);
+            return vo;
+        }
+
+    @Override
+    public void closeMyTicket(Long id, HttpServletRequest request) {
+
     }
 
     /**
@@ -67,5 +106,19 @@ public class VillageServiceTicketServiceImpl
         BeanUtils.copyProperties(entity, vo);
         return vo;
     }
+
+    /**
+     * 获取实体并校验是否存在
+     * @param id 民生服务工单id
+     * @return 实体
+     */
+    private VillageServiceTicketEntity requireById(Long id) {
+        VillageServiceTicketEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+        }
+        return entity;
+    }
+
 }
 

@@ -3,6 +3,7 @@ package com.backend.management.service;
 import com.backend.management.dto.ServiceTicketCreateDTO;
 import com.backend.management.entity.VillageServiceTicketEntity;
 import com.backend.management.vo.ServiceTicketDetailVO;
+import com.backend.management.vo.ServiceTicketSimpleVO;
 import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
@@ -32,7 +33,23 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * @param request 请求
      * @return 民生服务工单列表
      */
-    IPage<ServiceTicketDetailVO> getServiceTicketList(Long current, Long size, String serviceType, Integer status, HttpServletRequest request);
+    IPage<ServiceTicketSimpleVO> getServiceTicketList(Long current, Long size, String serviceType, Integer status, HttpServletRequest request);
+
+    /**
+     * 获取民生服务工单详情
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 民生服务工单详情
+     */
+    ServiceTicketDetailVO getMyDetail(Long id, HttpServletRequest request);
+
+    /**
+     * 取消我的民生服务工单申请
+     * @param id 民生服务工单id
+     * @param request 请求
+     * @return 操作结果文案
+     */
+    void closeMyTicket(Long id, HttpServletRequest request);
 
 }
 
