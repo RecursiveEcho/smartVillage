@@ -47,7 +47,6 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * 取消我的民生服务工单申请
      * @param id 民生服务工单id
      * @param request 请求
-     * @return 操作结果文案
      */
     void closeMyTicket(Long id, HttpServletRequest request);
 
@@ -59,9 +58,15 @@ public interface VillageServiceTicketService extends IService<VillageServiceTick
      * @param endTime 结束时间
      * @param current 当前页
      * @param size 每页条数
-     * @param request 请求
      * @return 民生服务工单列表
      */
     IPage<ServiceTicketSimpleVO> pageCadre(Long current,Long size,String serviceType,Integer status,LocalDateTime starTime,LocalDateTime endTime);
+
+    /**
+     * 管理端获取民生服务工单详情
+     * @param id 民生服务工单id
+     * @return 民生服务工单详情
+     */
+    ServiceTicketDetailVO getServiceTicketDetail(Long id);
 }
 

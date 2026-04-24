@@ -106,5 +106,17 @@ public class VillageServiceTicketController {
         @RequestParam(required = false) LocalDateTime endTime) {
         return Result.success(villageServiceTicketService.pageCadre(current, size, serviceType, status, starTime, endTime));
     }
+
+    /**
+     * 管理端获取民生服务工单详情
+     * @param id 民生服务工单id
+     * @return 民生服务工单详情
+     */
+    @Operation(summary ="管理端获取民生服务工单详情")
+    @GetMapping("/cadre/management/services/{id}")
+    public Result<ServiceTicketDetailVO> getServiceTicketDetail(@PathVariable Long id) {
+        return Result.success(villageServiceTicketService.getServiceTicketDetail(id));
+    }
 }
+
 

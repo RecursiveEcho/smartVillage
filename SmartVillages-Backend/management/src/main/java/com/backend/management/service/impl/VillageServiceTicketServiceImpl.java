@@ -97,7 +97,6 @@ public class VillageServiceTicketServiceImpl
      * 取消我的民生服务工单申请
      * @param id 民生服务工单id
      * @param request 请求
-     * @return 操作结果文案
      */
     @Override
         public void closeMyTicket(Long id, HttpServletRequest request) {
@@ -121,7 +120,6 @@ public class VillageServiceTicketServiceImpl
      * @param status 状态
      * @param starTime 开始时间
      * @param endTime 结束时间
-     * @param request 请求
      * @return 民生服务工单列表
      */
     @Override
@@ -139,6 +137,26 @@ public class VillageServiceTicketServiceImpl
             return vo;
         });
     }
+
+    /**
+     * 管理端获取民生服务工单详情
+     * @param id 民生服务工单id
+     * @return 民生服务工单详情
+     */
+    @Override
+    public ServiceTicketDetailVO getServiceTicketDetail(Long id) {
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        ServiceTicketDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, ServiceTicketDetailVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        VillageServiceTicketEntity entity = requireById(id);
+        ServiceTicketDetailVO vo = new ServiceTicketDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(cacheKey, vo);
+        return vo;
+    }
+    
     /**
      * 获取实体并校验是否存在
      * @param id 民生服务工单id
