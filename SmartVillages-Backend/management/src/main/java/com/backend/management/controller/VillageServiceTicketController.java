@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.backend.management.vo.ServiceTicketDetailVO;
 import com.backend.management.vo.ServiceTicketSimpleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-
+import java.time.LocalDateTime;
 /**
  * @author chenyang
  * &#064;date 2026/4/24
@@ -52,8 +52,8 @@ public class VillageServiceTicketController {
      * @return 民生服务工单列表
      */
     @Operation(summary = "获取民生服务工单列表")
-    @GetMapping("/cadre/management/services")
-    public Result<IPage<ServiceTicketSimpleVO>> getServiceTicketList(
+    @GetMapping("/villager/management/services/my")
+    public Result<IPage<ServiceTicketSimpleVO>> getMyServiceTicketList(
         @RequestParam(defaultValue = "1") Long current, 
         @RequestParam(defaultValue = "10") Long size, 
         @RequestParam(required = false) String serviceType, 
@@ -69,7 +69,7 @@ public class VillageServiceTicketController {
      * @return 我的民生服务工单详情
      */
     @Operation(summary = "获取我的民生服务工单详情")
-    @GetMapping("/villager/management/services/{id}")
+    @GetMapping("/villager/management/services/my/{id}")
     public Result<ServiceTicketDetailVO> getMyDetail(@PathVariable Long id, HttpServletRequest request) {
         return Result.success(villageServiceTicketService.getMyDetail(id, request));
     }
@@ -81,10 +81,30 @@ public class VillageServiceTicketController {
      * @return 操作结果文案
      */
     @Operation(summary = "取消我的民生服务工单申请")
-    @PostMapping("/villager/management/services/{id}/close")
+    @PostMapping("/villager/management/services/my/{id}/close")
     public Result<String> closeMyTicket(@PathVariable Long id, HttpServletRequest request) {
         villageServiceTicketService.closeMyTicket(id, request);
         return Result.success("取消成功");
+    }
+
+    /**
+     * 管理端获取民生服务工单列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param serviceType 服务类型
+     * @param status 状态
+     * @return 民生服务工单列表
+     */
+    @Operation(summary ="管理端获取民生服务工单列表")
+    @GetMapping("/cadre/management/services")
+    public Result<IPage<ServiceTicketSimpleVO>> pageCadre(
+        @RequestParam(defaultValue = "1") Long current, 
+        @RequestParam(defaultValue = "10") Long size, 
+        @RequestParam(required = false) String serviceType, 
+        @RequestParam(required = false) Integer status, 
+        @RequestParam(required = false) LocalDateTime starTime,
+        @RequestParam(required = false) LocalDateTime endTime) {
+        return Result.success(villageServiceTicketService.pageCadre(current, size, serviceType, status, starTime, endTime));
     }
 }
 

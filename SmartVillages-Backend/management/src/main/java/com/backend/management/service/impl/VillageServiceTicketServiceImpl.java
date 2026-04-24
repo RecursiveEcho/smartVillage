@@ -21,6 +21,7 @@ import com.backend.common.exception.BusinessException;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.utils.CacheKeyUtils;
 import java.util.Objects;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +49,7 @@ public class VillageServiceTicketServiceImpl
     }
 
     /**
-     * 获取民生服务工单列表
+     * 获取我的我的民生服务工单列表
      * @param current 当前页
      * @param size 每页条数
      * @param serviceType 服务类型
@@ -112,6 +113,32 @@ public class VillageServiceTicketServiceImpl
         }
 
 
+    /**
+     * 管理端获取民生服务工单列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param serviceType 服务类型
+     * @param status 状态
+     * @param starTime 开始时间
+     * @param endTime 结束时间
+     * @param request 请求
+     * @return 民生服务工单列表
+     */
+    @Override
+    public IPage<ServiceTicketSimpleVO> pageCadre(Long current,Long size,String serviceType,Integer status,LocalDateTime starTime,LocalDateTime endTime) {
+        LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
+        .eq(serviceType != null, VillageServiceTicketEntity::getServiceType, serviceType)
+        .eq(status != null, VillageServiceTicketEntity::getStatus, status)
+        .ge(starTime != null, VillageServiceTicketEntity::getCreateTime, starTime)
+        .le(endTime != null, VillageServiceTicketEntity::getCreateTime, endTime)
+        .orderByDesc(VillageServiceTicketEntity::getCreateTime);
+        IPage<VillageServiceTicketEntity> entityPage = page(new Page<>(current, size), wrapper);
+        return entityPage.convert(entity -> {
+            ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
+    }
     /**
      * 获取实体并校验是否存在
      * @param id 民生服务工单id
