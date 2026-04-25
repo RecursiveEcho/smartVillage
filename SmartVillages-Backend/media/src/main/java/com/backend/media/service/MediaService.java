@@ -3,7 +3,9 @@ package com.backend.media.service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.multipart.MultipartFile;
 import com.backend.media.vo.UploadVO;
+import com.backend.media.vo.PageVO;
 import com.backend.media.entity.MediaEntity;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -21,4 +23,15 @@ public interface MediaService extends IService<MediaEntity> {
      * @return 上传结果
      */
     UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request);
+
+    /**
+     * 分页查询媒体资源
+     * @param current 当前页
+     * @param size 每页条数
+     * @param fileType 文件类型
+     * @param category 分类
+     * @param status 状态
+     * @return 分页查询结果
+     */
+    IPage<PageVO> page(Long current, Long size, String fileType, String category, Integer status);
 }

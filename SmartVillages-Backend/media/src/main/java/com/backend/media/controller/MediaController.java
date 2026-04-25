@@ -2,6 +2,7 @@ package com.backend.media.controller;
 
 import com.backend.common.result.Result;
 import com.backend.media.service.MediaService;
+import com.backend.media.vo.PageVO;
 import com.backend.media.vo.UploadVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,12 +10,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.web.bind.annotation.GetMapping;
 /**
  * @author chenyang
  * &#064;date 2026/4/20
@@ -46,5 +48,26 @@ public class MediaController {
     ) {
         UploadVO uploadVO = mediaService.upload(file, fileType,category, request);
         return Result.success(uploadVO);
+    }
+
+    /**
+     * 分页查询媒体资源
+     * @param current 当前页
+     * @param size 每页条数
+     * @param fileType 文件类型
+     * @param category 分类
+     * @param status 状态
+     * @return 分页查询结果
+     */
+    @Operation(summary = "分页查询媒体资源")
+    @GetMapping("/cadre/media")
+    public Result<IPage<PageVO>> page(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String fileType,
+        @RequestParam(required = false) String category,
+        @RequestParam(required = false) Integer status
+    ) {
+        return Result.success(mediaService.page(current, size, fileType, category, status));
     }
 }
