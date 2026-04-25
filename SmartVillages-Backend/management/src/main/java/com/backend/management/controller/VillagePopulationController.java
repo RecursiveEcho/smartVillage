@@ -74,5 +74,18 @@ public class VillagePopulationController {
     public Result<VillagePopulationDetailVO> getVillagePopulationDetail(@PathVariable Long id) {
         return Result.success(villagePopulationService.getVillagePopulationDetail(id));
     }
+
+    /**
+     * 更新人口台账
+     * @param id 人口台账id
+     * @param villagePopulationUpdateDTO 人口台账更新DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "更新人口台账")
+    @PutMapping("/cadre/village-population/{id}")
+    public Result<String> updateVillagePopulation(@PathVariable Long id, @RequestBody @Valid VillagePopulationUpdateDTO villagePopulationUpdateDTO) {
+        villagePopulationService.updateVillagePopulation(id, villagePopulationUpdateDTO);
+        return Result.success("人口台账更新成功");
+    }
 }
 

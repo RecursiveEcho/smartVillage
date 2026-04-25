@@ -80,5 +80,20 @@ public class VillagePopulationServiceImpl
         BeanUtils.copyProperties(entity, vo);
         return vo;
     }
+
+    /**
+     * 更新人口台账
+     * @param id 人口台账id
+     * @param villagePopulationUpdateDTO 人口台账更新DTO
+     */
+    @Override
+    public void updateVillagePopulation(Long id, VillagePopulationUpdateDTO villagePopulationUpdateDTO) {
+        VillagePopulationEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+        }
+        BeanUtils.copyProperties(villagePopulationUpdateDTO, entity);
+        updateById(entity);
+    }
 }
 
