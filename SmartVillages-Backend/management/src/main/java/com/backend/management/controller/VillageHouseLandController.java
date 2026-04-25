@@ -83,5 +83,17 @@ public class VillageHouseLandController {
         villageHouseLandService.update(id, villageHouseLandUpdateDTO);
         return Result.success("更新成功");
     }
+
+    /**
+     * 删除房屋与土地台账
+     * @param id 房屋与土地台账id
+     * @return 操作结果文案
+     */
+    @Operation(summary = "删除房屋与土地台账")
+    @DeleteMapping("/cadre/village-house-land/{id}")
+    public Result<String> deleteVillageHouseLand(@PathVariable Integer id) {
+        villageHouseLandService.delete(id);
+        return Result.success("删除成功");
+    }
 }
 

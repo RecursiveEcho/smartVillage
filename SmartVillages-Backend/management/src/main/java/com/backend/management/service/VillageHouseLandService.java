@@ -40,5 +40,11 @@ public interface VillageHouseLandService extends IService<VillageHouseLandEntity
      * @param id 房屋与土地台账id
      */
     void update(Integer id, VillageHouseLandUpdateDTO villageHouseLandUpdateDTO);
+
+    /**
+     * 删除房屋与土地台账
+     * @param id 房屋与土地台账id
+     */
+    void delete(Integer id);
 }
 
