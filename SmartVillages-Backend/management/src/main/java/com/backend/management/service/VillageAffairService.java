@@ -59,5 +59,12 @@ public interface VillageAffairService extends IService<VillageAffairEntity> {
      * @return 村务事项/公示列表
      */
     IPage<VillageAffairSimpleVO> getPublicList(Long current, Long size, String affairType, String title);
+
+    /**
+     * 根据id获取村务事项/公示详情
+     * @param id 村务事项/公示id
+     * @return 村务事项/公示详情
+     */
+    VillageAffairDetailVO getPublicDetail(Integer id);
 }
 

@@ -165,4 +165,26 @@ public class VillageAffairServiceImpl
             }
         );
     }
+
+    /**
+     * 根据id获取村务事项/公示详情
+     * @param id 村务事项/公示id
+     * @return 村务事项/公示详情
+     */
+    @Override
+    public VillageAffairDetailVO getPublicDetail(Integer id) {
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        VillageAffairDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillageAffairDetailVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        VillageAffairEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
+        }
+        VillageAffairDetailVO vo = new VillageAffairDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(cacheKey, vo);
+        return vo;
+    }
 }
