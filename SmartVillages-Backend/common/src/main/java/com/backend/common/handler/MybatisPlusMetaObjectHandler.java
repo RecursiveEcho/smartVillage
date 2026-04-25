@@ -39,5 +39,8 @@ public class MybatisPlusMetaObjectHandler implements MetaObjectHandler {
     public void updateFill(MetaObject metaObject) {
         // 设置更新时间
         this.strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+        if (metaObject.hasGetter("handleTime")) {
+            this.strictUpdateFill(metaObject, "handleTime", LocalDateTime.class, LocalDateTime.now());
+        }
     }
 }
