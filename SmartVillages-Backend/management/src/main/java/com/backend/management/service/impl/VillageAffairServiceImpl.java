@@ -109,5 +109,19 @@ public class VillageAffairServiceImpl
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
+
+    /**
+     * 删除村务事项/公示
+     * @param id 村务事项/公示id
+     */
+    @Override
+    public void delete(Integer id) {
+        VillageAffairEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
+        }
+        removeById(id);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
 }
 

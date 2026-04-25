@@ -82,5 +82,17 @@ public class VillageAffairController {
         villageAffairService.update(id, dto);
         return Result.success("村务事项/公示更新成功");
     }
+
+    /**
+     * 删除村务事项/公示
+     * @param id 村务事项/公示id
+     * @return 操作结果文案
+     */
+    @Operation(summary = "删除村务事项/公示")
+    @DeleteMapping("/cadre/village-affairs/{id}")
+    public Result<String> delete(@PathVariable Integer id) {
+        villageAffairService.delete(id);
+        return Result.success("村务事项/公示删除成功");
+    }
 }
 
