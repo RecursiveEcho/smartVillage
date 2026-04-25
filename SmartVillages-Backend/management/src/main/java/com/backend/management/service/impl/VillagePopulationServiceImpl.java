@@ -14,17 +14,24 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import java.util.Objects;
 
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
 @Service
 public class VillagePopulationServiceImpl
         extends ServiceImpl<VillagePopulationMapper, VillagePopulationEntity>
         implements VillagePopulationService {
 
+    private static final String CACHE_KEY_PREFIX = "village_population:";
+    private final RedisJsonCacheTool redisJsonCacheTool;
     /**
      * 创建人口台账
      * @param villagePopulationCreateDTO 人口台账创建DTO
@@ -35,6 +42,7 @@ public class VillagePopulationServiceImpl
         VillagePopulationEntity villagePopulationEntity = new VillagePopulationEntity();
         BeanUtils.copyProperties(villagePopulationCreateDTO, villagePopulationEntity);
         save(villagePopulationEntity);
+        redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, villagePopulationEntity.getId()), villagePopulationEntity);
     }
 
     /**
@@ -78,6 +86,7 @@ public class VillagePopulationServiceImpl
         }
         VillagePopulationDetailVO vo = new VillagePopulationDetailVO();
         BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id), vo);
         return vo;
     }
 
@@ -94,6 +103,7 @@ public class VillagePopulationServiceImpl
         }
         BeanUtils.copyProperties(villagePopulationUpdateDTO, entity);
         updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 
     /**
@@ -107,6 +117,7 @@ public class VillagePopulationServiceImpl
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
         }
         removeById(id);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 }
 
