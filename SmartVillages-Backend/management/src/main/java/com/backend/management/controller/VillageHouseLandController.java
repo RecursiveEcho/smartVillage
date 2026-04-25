@@ -28,6 +28,17 @@ public class VillageHouseLandController {
 
     private final VillageHouseLandService villageHouseLandService;
 
+    /**
+     * 创建房屋与土地台账
+     * @param villageHouseLandCreateDTO 房屋与土地台账创建DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "创建房屋与土地台账")
+    @PostMapping("/cadre/village-house-land")
+    public Result<Integer> createVillageHouseLand(@RequestBody VillageHouseLandCreateDTO villageHouseLandCreateDTO) {
+        Integer id = villageHouseLandService.createVillageHouseLand(villageHouseLandCreateDTO);
+        return Result.success(id);
+    }
     
 }
 

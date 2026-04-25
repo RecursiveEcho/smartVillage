@@ -11,5 +11,10 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public interface VillageHouseLandService extends IService<VillageHouseLandEntity> {
 
+    /**
+     * 创建房屋与土地台账
+     * @param villageHouseLandCreateDTO 房屋与土地台账创建DTO
+     */
+    Integer createVillageHouseLand(VillageHouseLandCreateDTO villageHouseLandCreateDTO);
 }
 

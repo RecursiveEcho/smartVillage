@@ -20,12 +20,31 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.common.utils.CacheKeyUtils;
 
 @Service
+@RequiredArgsConstructor
 public class VillageHouseLandServiceImpl
         extends ServiceImpl<VillageHouseLandMapper, VillageHouseLandEntity>
         implements VillageHouseLandService {
-
-    
+        
+    private static final String CACHE_KEY_PREFIX = "village_house_land:";
+    private final RedisJsonCacheTool redisJsonCacheTool;
+    /**
+     * 创建房屋与土地台账
+     * @param villageHouseLandCreateDTO 房屋与土地台账创建DTO
+     * @return 房屋与土地台账id
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Integer createVillageHouseLand(VillageHouseLandCreateDTO villageHouseLandCreateDTO) {
+        VillageHouseLandEntity villageHouseLandEntity = new VillageHouseLandEntity();
+        BeanUtils.copyProperties(villageHouseLandCreateDTO, villageHouseLandEntity);
+        save(villageHouseLandEntity);
+        Integer id = villageHouseLandEntity.getId();
+        redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id), villageHouseLandEntity);
+        return id;
+    }
 }
-
