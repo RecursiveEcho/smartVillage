@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -84,7 +85,7 @@ public class VillageServiceTicketController {
      * @return 操作结果文案
      */
     @Operation(summary = "取消我的民生服务工单申请")
-    @PostMapping("/villager/management/services/my/{id}/close")
+    @PutMapping("/villager/management/services/my/{id}/close")
     public Result<String> closeMyTicket(@PathVariable Long id, HttpServletRequest request) {
         villageServiceTicketService.closeMyTicket(id, request);
         return Result.success("取消成功");
@@ -105,8 +106,8 @@ public class VillageServiceTicketController {
         @RequestParam(defaultValue = "10") Long size, 
         @RequestParam(required = false) String serviceType, 
         @RequestParam(required = false) Integer status, 
-        @RequestParam(required = false) LocalDateTime starTime,
-        @RequestParam(required = false) LocalDateTime endTime) {
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime starTime,
+        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
         return Result.success(villageServiceTicketService.pageCadre(current, size, serviceType, status, starTime, endTime));
     }
 

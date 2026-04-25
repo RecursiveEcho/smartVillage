@@ -51,6 +51,7 @@ public class VillageServiceTicketEntity {
     private String handleNote;
 
     @Schema(description = "处理时间")
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime handleTime;
 
     @TableField(fill = FieldFill.INSERT)

@@ -45,6 +45,8 @@ public class VillageServiceTicketServiceImpl
         VillageServiceTicketEntity entity = new VillageServiceTicketEntity();
         BeanUtils.copyProperties(dto, entity);
         entity.setApplicantId(LoginUserContext.getAuthId(request));
+        entity.setHandlerId(null);
+        entity.setHandleNote(null);
         save(entity);
         return entity.getId();
     }
@@ -63,7 +65,8 @@ public class VillageServiceTicketServiceImpl
         LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
         .eq(serviceType != null, VillageServiceTicketEntity::getServiceType, serviceType)
         .eq(status != null, VillageServiceTicketEntity::getStatus, status)
-        .eq(LoginUserContext.getAuthId(request) != null, VillageServiceTicketEntity::getApplicantId, LoginUserContext.getAuthId(request));
+        .eq(LoginUserContext.getAuthId(request) != null, VillageServiceTicketEntity::getApplicantId, LoginUserContext.getAuthId(request))
+        .orderByDesc(VillageServiceTicketEntity::getCreateTime);
         IPage<VillageServiceTicketEntity> entityPage = page(new Page<>(current, size), wrapper);
         return entityPage.convert(entity -> {
             ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();
@@ -110,6 +113,7 @@ public class VillageServiceTicketServiceImpl
             }
             entity.setStatus(3);
             updateById(entity);
+            redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
         }
 
 
@@ -183,6 +187,7 @@ public class VillageServiceTicketServiceImpl
         entity.setStatus(1);
         entity.setHandleNote(dto.getHandleNote());
         updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 
     /**
@@ -196,11 +201,12 @@ public class VillageServiceTicketServiceImpl
         if(entity.getStatus() != 1) {
             throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单正在处理中，无法办结");
         }
-        if(Objects.equals(entity.getHandlerId(),LoginUserContext.getAuthId(request))) {
+        if(!Objects.equals(entity.getHandlerId(),LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "您没有权限操作此民生服务工单");
         }
         entity.setStatus(2);
         updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 
     /**
@@ -217,6 +223,7 @@ public class VillageServiceTicketServiceImpl
         entity.setStatus(3);
         entity.setHandleNote("管理端关闭工单，申请退回");
         updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
     /**
      * 后台获取民生服务工单统计
@@ -228,11 +235,18 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public Map<String, Long> getServiceTicketStatistics() {
-        LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>();        return Map.of(
-            "total", count(wrapper),
-            "pending", count(wrapper.eq(VillageServiceTicketEntity::getStatus, 0)),
-            "processing", count(wrapper.eq(VillageServiceTicketEntity::getStatus, 1)),
-            "completed", count(wrapper.eq(VillageServiceTicketEntity::getStatus, 2))
+        LambdaQueryWrapper<VillageServiceTicketEntity> totalWrapper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<VillageServiceTicketEntity> pendingWrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
+                .eq(VillageServiceTicketEntity::getStatus, 0);
+        LambdaQueryWrapper<VillageServiceTicketEntity> processingWrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
+                .eq(VillageServiceTicketEntity::getStatus, 1);
+        LambdaQueryWrapper<VillageServiceTicketEntity> completedWrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
+                .eq(VillageServiceTicketEntity::getStatus, 2);
+        return Map.of(
+            "total", count(totalWrapper),
+            "pending", count(pendingWrapper),
+            "processing", count(processingWrapper),
+            "completed", count(completedWrapper)
         );
     }
     /**
