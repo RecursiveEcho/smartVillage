@@ -59,5 +59,17 @@ public class VillageHouseLandController {
         @RequestParam(required = false) String location) {
         return Result.success(villageHouseLandService.getVillageHouseLandList(current, size, bizType, ownerName, location));
     }
+
+    /**
+     * 根据id获取房屋与土地台账详情
+     * @param id 房屋与土地台账id
+     * @return 房屋与土地台账详情
+     */
+    @Operation(summary = "根据id获取房屋与土地台账详情")
+    @GetMapping("/cadre/village-house-land/{id}")
+    public Result<VillageHouseLandDetailVO> getVillageHouseLandDetail(@PathVariable Integer id) {
+        return Result.success(villageHouseLandService.getVillageHouseLandDetail(id));
+    }
+
 }
 

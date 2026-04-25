@@ -71,4 +71,26 @@ public class VillageHouseLandServiceImpl
             return vo;
         });
     }
+
+    /**
+     * 根据id获取房屋与土地台账详情
+     * @param id 房屋与土地台账id
+     * @return 房屋与土地台账详情
+     */
+    @Override
+    public VillageHouseLandDetailVO getVillageHouseLandDetail(Integer id) {
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        VillageHouseLandDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillageHouseLandDetailVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        VillageHouseLandEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+        }
+        VillageHouseLandDetailVO vo = new VillageHouseLandDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(cacheKey, vo);
+        return vo;
+    }
 }

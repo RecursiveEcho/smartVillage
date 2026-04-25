@@ -27,5 +27,13 @@ public interface VillageHouseLandService extends IService<VillageHouseLandEntity
      * @return 房屋与土地台账列表
      */
    IPage<VillageHouseLandSimpleVO> getVillageHouseLandList(Long current, Long size, String bizType, String ownerName, String location);
+
+    /**
+     * 根据id获取房屋与土地台账详情
+     * @param id 房屋与土地台账id
+     * @return 房屋与土地台账详情
+     */
+    VillageHouseLandDetailVO getVillageHouseLandDetail(Integer id);
+    
 }
 
