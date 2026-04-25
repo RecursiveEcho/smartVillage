@@ -35,7 +35,7 @@ public class VillagePopulationController {
      * @return 操作结果文案
      */
     @Operation(summary = "创建人口台账")
-    @PostMapping("/village-population")
+    @PostMapping("/cadre/village-population")
     public Result<String> createVillagePopulation(@RequestBody @Valid VillagePopulationCreateDTO villagePopulationCreateDTO) {
         villagePopulationService.createVillagePopulation(villagePopulationCreateDTO);
         return Result.success("人口台账创建成功");
@@ -45,10 +45,14 @@ public class VillagePopulationController {
      * 分页查询人口台账列表
      * @param current 当前页
      * @param size 每页条数
+     * @param householdNo 户号
+     * @param fullName 姓名
+     * @param gender 性别
+     * @param relationToHead 与户主关系
      * @return 分页查询结果
      */
     @Operation(summary = "分页查询人口台账列表")
-    @GetMapping("/village-population")
+    @GetMapping("/cadre/village-population")
     public Result<IPage<VillagePopulationSimpleVO>> getVillagePopulationList(
         @RequestParam(defaultValue = "1") Long current, 
         @RequestParam(defaultValue = "10") Long size,
@@ -58,6 +62,17 @@ public class VillagePopulationController {
         @RequestParam(required = false) String relationToHead
         ) {
         return Result.success(villagePopulationService.getVillagePopulationList(current, size, householdNo, fullName, gender, relationToHead));
+    }
+
+    /**
+     * 根据id获取人口台账详情
+     * @param id 人口台账id
+     * @return 人口台账详情
+     */
+    @Operation(summary = "根据id获取人口台账详情")
+    @GetMapping("/cadre/village-population/{id}")
+    public Result<VillagePopulationDetailVO> getVillagePopulationDetail(@PathVariable Long id) {
+        return Result.success(villagePopulationService.getVillagePopulationDetail(id));
     }
 }
 

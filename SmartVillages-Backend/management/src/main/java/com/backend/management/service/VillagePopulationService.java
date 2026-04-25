@@ -28,5 +28,12 @@ public interface VillagePopulationService extends IService<VillagePopulationEnti
      * @return 分页查询结果
      */
     IPage<VillagePopulationSimpleVO> getVillagePopulationList(Long current, Long size, String householdNo, String fullName, Integer gender, String relationToHead);
+
+    /**
+     * 根据id获取人口台账详情
+     * @param id 人口台账id
+     * @return 人口台账详情
+     */
+    VillagePopulationDetailVO getVillagePopulationDetail(Long id);
 }
 

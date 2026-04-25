@@ -37,6 +37,16 @@ public class VillagePopulationServiceImpl
         save(villagePopulationEntity);
     }
 
+    /**
+     * 分页查询人口台账列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param householdNo 户号
+     * @param fullName 姓名
+     * @param gender 性别
+     * @param relationToHead 与户主关系
+     * @return 分页查询结果
+     */
     @Override
     public IPage<VillagePopulationSimpleVO> getVillagePopulationList(Long current, Long size, String householdNo, String fullName, Integer gender, String relationToHead) {
         LambdaQueryWrapper<VillagePopulationEntity> queryWrapper = new LambdaQueryWrapper<VillagePopulationEntity>()
@@ -53,6 +63,22 @@ public class VillagePopulationServiceImpl
                     return vo;
                 }
         );
+    }
+
+    /**
+     * 根据id获取人口台账详情
+     * @param id 人口台账id
+     * @return 人口台账详情
+     */
+    @Override
+    public VillagePopulationDetailVO getVillagePopulationDetail(Long id) {
+        VillagePopulationEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+        }
+        VillagePopulationDetailVO vo = new VillagePopulationDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 }
 
