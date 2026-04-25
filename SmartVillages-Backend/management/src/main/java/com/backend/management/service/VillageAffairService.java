@@ -16,5 +16,13 @@ public interface VillageAffairService extends IService<VillageAffairEntity> {
      * @return 村务事项/公示ID
      */
     Integer create(VillageAffairCreateDTO dto);
+
+    /**
+     * 分页查询村务事项/公示列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @return 村务事项/公示列表
+     */
+    IPage<VillageAffairSimpleVO> getList(Long current, Long size,Integer status, String affairType, String title);
 }
 

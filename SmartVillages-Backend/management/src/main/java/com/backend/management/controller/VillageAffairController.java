@@ -40,5 +40,23 @@ public class VillageAffairController {
     public Result<Integer> create(@RequestBody VillageAffairCreateDTO dto) {
         return Result.success(villageAffairService.create(dto));
     }
+
+    /**
+     * 分页查询村务事项/公示列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @return 村务事项/公示列表
+     */
+    @Operation(summary = "分页查询村务事项/公示列表")
+    @GetMapping("/cadre/village-affairs")
+    public Result<IPage<VillageAffairSimpleVO>> getList(
+        @RequestParam(defaultValue = "1") Long current, 
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) Integer status,
+        @RequestParam(required = false) String affairType,
+        @RequestParam(required = false) String title
+    ) {
+        return Result.success(villageAffairService.getList(current, size, status, affairType, title));
+    }
 }
 
