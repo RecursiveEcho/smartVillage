@@ -30,6 +30,15 @@ public class VillageAffairController {
 
     // ---------------- 管理端（村干部） ----------------
 
-    
+    /**
+     * 创建村务事项/公示
+     * @param dto 村务事项/公示创建DTO
+     * @return 村务事项/公示ID
+     */
+    @Operation(summary = "创建村务事项/公示")
+    @PostMapping("/cadre/village-affairs")
+    public Result<Integer> create(@RequestBody VillageAffairCreateDTO dto) {
+        return Result.success(villageAffairService.create(dto));
+    }
 }
 

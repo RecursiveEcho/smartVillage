@@ -34,6 +34,19 @@ public class VillageAffairServiceImpl
     private static final String CACHE_KEY_PREFIX = "village_affair:";
     private final RedisJsonCacheTool redisJsonCacheTool;
 
-    
+    /**
+     * 创建村务事项/公示
+     * @param dto 村务事项/公示创建DTO
+     * @return 村务事项/公示ID
+     */
+    @Override
+    public Integer create(VillageAffairCreateDTO dto) {
+        VillageAffairEntity entity = new VillageAffairEntity();
+        BeanUtils.copyProperties(dto, entity);
+        save(entity);
+        Integer id = entity.getId();
+        redisJsonCacheTool.setObject(CACHE_KEY_PREFIX, id);
+        return id;
+    }
 }
 

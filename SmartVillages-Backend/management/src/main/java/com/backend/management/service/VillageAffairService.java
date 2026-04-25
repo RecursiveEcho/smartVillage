@@ -10,5 +10,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 public interface VillageAffairService extends IService<VillageAffairEntity> {
+    /**
+     * 创建村务事项/公示
+     * @param dto 村务事项/公示创建DTO
+     * @return 村务事项/公示ID
+     */
+    Integer create(VillageAffairCreateDTO dto);
 }
 
