@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 /**
  * @author chenyang
  * &#064;date 2026/4/20
@@ -98,4 +99,16 @@ public class MediaController {
         return Result.success(mediaService.getDetail(id));
     }
 
+    /**
+     * 启用/禁用媒体资源
+     * @param id 媒体资源id
+     * @param status 状态 0-禁用 1-启用
+     * @return 启用/禁用结果
+     */
+    @Operation(summary = "启用/禁用媒体资源")
+    @PutMapping("/cadre/media/{id}/status")
+    public Result<String> updateStatus(@PathVariable Integer id, @RequestParam Integer status) {
+        mediaService.updateStatus(id, status);
+        return Result.success("操作媒体资源状态成功");
+    }
 }

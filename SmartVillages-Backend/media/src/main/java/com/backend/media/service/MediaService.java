@@ -49,4 +49,11 @@ public interface MediaService extends IService<MediaEntity> {
      * @return 媒体资源详情
      */
     DetailVO getDetail(Integer id);
+
+    /**
+     *  启用/禁用媒体资源
+     * @param id 媒体资源id
+     * @param status 状态 0-禁用 1-启用
+     */
+    void updateStatus(Integer id, Integer status);
 }

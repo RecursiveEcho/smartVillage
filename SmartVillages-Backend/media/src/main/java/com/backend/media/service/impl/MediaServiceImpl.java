@@ -132,4 +132,20 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         BeanUtils.copyProperties(mediaEntity, detailVO);
         return detailVO;
     }
+
+    /**
+     * 启用/禁用媒体资源
+     * @param id 媒体资源id
+     * @param status 状态 0-禁用 1-启用
+     */
+    @Override
+    public void updateStatus(Integer id, Integer status) {
+        MediaEntity mediaEntity = this.getById(id);
+        if (mediaEntity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "媒体资源不存在");
+        }
+        mediaEntity.setStatus(status);
+        this.updateById(mediaEntity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
 }
