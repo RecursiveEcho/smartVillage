@@ -28,6 +28,17 @@ public class VillagePopulationController {
 
     private final VillagePopulationService villagePopulationService;
 
+    /**
+     * 创建人口台账
+     * @param villagePopulationCreateDTO 人口台账创建DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "创建人口台账")
+    @PostMapping("/village-population")
+    public Result<String> createVillagePopulation(@RequestBody @Valid VillagePopulationCreateDTO villagePopulationCreateDTO) {
+        villagePopulationService.createVillagePopulation(villagePopulationCreateDTO);
+        return Result.success("人口台账创建成功");
+    }
 
 }
 

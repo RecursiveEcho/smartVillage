@@ -24,6 +24,16 @@ public class VillagePopulationServiceImpl
         extends ServiceImpl<VillagePopulationMapper, VillagePopulationEntity>
         implements VillagePopulationService {
 
-    
+    /**
+     * 创建人口台账
+     * @param villagePopulationCreateDTO 人口台账创建DTO
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createVillagePopulation(VillagePopulationCreateDTO villagePopulationCreateDTO) {
+        VillagePopulationEntity villagePopulationEntity = new VillagePopulationEntity();
+        BeanUtils.copyProperties(villagePopulationCreateDTO, villagePopulationEntity);
+        save(villagePopulationEntity);
+    }
 }
 
