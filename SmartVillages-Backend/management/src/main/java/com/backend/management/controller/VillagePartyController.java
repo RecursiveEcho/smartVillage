@@ -71,5 +71,18 @@ public class VillagePartyController {
     public Result<VillagePartyDetailVO> getDetail(@PathVariable Integer id) {
         return Result.success(villagePartyService.getDetail(id));
     }
+
+    /**
+     * 更新党建组织信息
+     * @param id 党建组织信息id
+     * @param dto 党建组织信息更新DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "更新党建组织信息")
+    @PutMapping("/cadre/village-party/{id}")
+    public Result<String> update(@PathVariable Integer id, @RequestBody VillagePartyUpdateDTO dto) {
+        villagePartyService.update(id, dto);
+        return Result.success("党建组织信息更新成功");
+    }
 }
 

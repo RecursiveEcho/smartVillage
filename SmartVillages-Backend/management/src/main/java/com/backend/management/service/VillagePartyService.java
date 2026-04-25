@@ -33,5 +33,12 @@ public interface VillagePartyService extends IService<VillagePartyEntity> {
      * @return 党建组织信息详情
      */
     VillagePartyDetailVO getDetail(Integer id);
+
+    /**
+     * 更新党建组织信息
+     * @param id 党建组织信息id
+     * @param dto 党建组织信息更新DTO
+     */
+    void update(Integer id, VillagePartyUpdateDTO dto);
 }
 
