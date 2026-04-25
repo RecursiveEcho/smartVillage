@@ -32,6 +32,20 @@ public class VillagePartyServiceImpl
     private static final String CACHE_KEY_PREFIX = "village_party:";
     private final RedisJsonCacheTool redisJsonCacheTool;
 
+    /**
+     * 创建党组织
+     * @param dto 党组织创建DTO
+     * @return 党组织ID
+     */
+    @Override
+    public  Integer create(VillagePartyCreateDTO dto){
+        VillagePartyEntity entity=new VillagePartyEntity();
+        BeanUtils.copyProperties(dto, entity);
+        save(entity);
+        Integer id=entity.getId();
+        redisJsonCacheTool.setObject(CACHE_KEY_PREFIX, id);
+        return id;
+    }
     
 }
 

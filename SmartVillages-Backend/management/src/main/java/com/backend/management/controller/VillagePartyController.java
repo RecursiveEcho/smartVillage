@@ -27,6 +27,16 @@ public class VillagePartyController {
 
     private final VillagePartyService villagePartyService;
 
+    /**
+     * 创建党组织
+     * @param dto 党组织创建DTO
+     * @return 党组织ID
+     */
+    @Operation(summary = "创建党组织")
+    @PostMapping("/cadre/village-party")
+    public Result<Integer> create(@RequestBody VillagePartyCreateDTO dto) {
+        return Result.success(villagePartyService.create(dto));
+    }
     
 }
 
