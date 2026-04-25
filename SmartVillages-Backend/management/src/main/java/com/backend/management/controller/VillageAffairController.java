@@ -58,5 +58,16 @@ public class VillageAffairController {
     ) {
         return Result.success(villageAffairService.getList(current, size, status, affairType, title));
     }
+
+    /**
+     * 根据id获取村务事项/公示详情
+     * @param id 村务事项/公示id
+     * @return 村务事项/公示详情
+     */
+    @Operation(summary = "根据id获取村务事项/公示详情")
+    @GetMapping("/cadre/village-affairs/{id}")
+    public Result<VillageAffairDetailVO> getDetail(@PathVariable Integer id) {
+        return Result.success(villageAffairService.getDetail(id));
+    }
 }
 
