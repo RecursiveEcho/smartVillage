@@ -16,6 +16,17 @@ public interface VillagePopulationService extends IService<VillagePopulationEnti
      * @param villagePopulationCreateDTO 人口台账创建DTO
      */
     void createVillagePopulation(VillagePopulationCreateDTO villagePopulationCreateDTO);
-
+    
+    /**
+     * 分页查询人口台账列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param householdNo 户号
+     * @param fullName 姓名
+     * @param gender 性别
+     * @param relationToHead 与户主关系
+     * @return 分页查询结果
+     */
+    IPage<VillagePopulationSimpleVO> getVillagePopulationList(Long current, Long size, String householdNo, String fullName, Integer gender, String relationToHead);
 }
 

@@ -7,6 +7,7 @@ import com.backend.management.service.VillagePopulationService;
 import com.backend.management.vo.VillagePopulationDetailVO;
 import com.backend.management.vo.VillagePopulationSimpleVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import java.time.LocalDate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,5 +41,23 @@ public class VillagePopulationController {
         return Result.success("人口台账创建成功");
     }
 
+    /**
+     * 分页查询人口台账列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @return 分页查询结果
+     */
+    @Operation(summary = "分页查询人口台账列表")
+    @GetMapping("/village-population")
+    public Result<IPage<VillagePopulationSimpleVO>> getVillagePopulationList(
+        @RequestParam(defaultValue = "1") Long current, 
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String householdNo,
+        @RequestParam(required = false) String fullName,
+        @RequestParam(required = false) Integer gender,
+        @RequestParam(required = false) String relationToHead
+        ) {
+        return Result.success(villagePopulationService.getVillagePopulationList(current, size, householdNo, fullName, gender, relationToHead));
+    }
 }
 

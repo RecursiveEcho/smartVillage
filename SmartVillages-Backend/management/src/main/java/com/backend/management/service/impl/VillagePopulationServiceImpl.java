@@ -9,15 +9,16 @@ import com.backend.management.mapper.VillagePopulationMapper;
 import com.backend.management.service.VillagePopulationService;
 import com.backend.management.vo.VillagePopulationDetailVO;
 import com.backend.management.vo.VillagePopulationSimpleVO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import java.util.Objects;
 
 @Service
 public class VillagePopulationServiceImpl
@@ -34,6 +35,24 @@ public class VillagePopulationServiceImpl
         VillagePopulationEntity villagePopulationEntity = new VillagePopulationEntity();
         BeanUtils.copyProperties(villagePopulationCreateDTO, villagePopulationEntity);
         save(villagePopulationEntity);
+    }
+
+    @Override
+    public IPage<VillagePopulationSimpleVO> getVillagePopulationList(Long current, Long size, String householdNo, String fullName, Integer gender, String relationToHead) {
+        LambdaQueryWrapper<VillagePopulationEntity> queryWrapper = new LambdaQueryWrapper<VillagePopulationEntity>()
+        .like(StringUtils.hasText(householdNo), VillagePopulationEntity::getHouseholdNo, householdNo)
+        .like(StringUtils.hasText(fullName), VillagePopulationEntity::getFullName, fullName)
+        .eq(gender != null, VillagePopulationEntity::getGender, gender)
+        .eq(StringUtils.hasText(relationToHead), VillagePopulationEntity::getRelationToHead, relationToHead)
+        .orderByDesc(VillagePopulationEntity::getCreateTime);
+        IPage<VillagePopulationEntity> entityPage = page(new Page<>(current, size), queryWrapper);
+        return entityPage.convert(
+                entity -> {
+                    VillagePopulationSimpleVO vo = new VillagePopulationSimpleVO();
+                    BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+                    return vo;
+                }
+        );
     }
 }
 
