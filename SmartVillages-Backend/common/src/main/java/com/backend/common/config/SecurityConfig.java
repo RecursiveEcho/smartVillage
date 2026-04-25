@@ -36,7 +36,8 @@ public class SecurityConfig {
                 "/swagger-resources/**",
                 "/features/**",
                 "/announcements/**",
-                "/guest/**"
+                "/guest/**",
+                "/village-affairs/**"
             ).permitAll()//白名单请求放行
             // 当前登录信息：只要已登录即可查询（管理员/村干部/村民都可）
             .requestMatchers("/admin/me","/media/page","/media/upload","/media/{id}").authenticated()
@@ -49,8 +50,18 @@ public class SecurityConfig {
             // 管理员仅负责账号管理
             .requestMatchers("/admin/users/**").hasAuthority("ROLE_ADMIN")
             // 村干部负责业务处理（公告、留言）
-            .requestMatchers("/cadre/announcements/**", "/cadre/management/services/**", "/cadre/management/population/**",
-             "/cadre/interactions/**", "/cadre/features/**","/media/cadre/**").hasAuthority("ROLE_CADRE")
+            .requestMatchers(
+                "/cadre/announcements/**",
+                "/cadre/management/services/**",
+                "/cadre/management/population/**",
+                "/cadre/interactions/**",
+                "/cadre/features/**",
+                "/cadre/village-population/**",
+                "/cadre/village-house-land/**",
+                "/cadre/village-party/**",
+                "/cadre/village-affairs/**",
+                "/media/cadre/**"
+            ).hasAuthority("ROLE_CADRE")
             .requestMatchers("/villager/**").hasAnyAuthority("ROLE_VILLAGER")//村民请求需要认证
             .anyRequest().authenticated()//任何请求都需要认证
         )
