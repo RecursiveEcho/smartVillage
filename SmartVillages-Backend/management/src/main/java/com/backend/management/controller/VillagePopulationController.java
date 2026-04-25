@@ -87,5 +87,17 @@ public class VillagePopulationController {
         villagePopulationService.updateVillagePopulation(id, villagePopulationUpdateDTO);
         return Result.success("人口台账更新成功");
     }
+
+    /**
+     * 删除人口台账
+     * @param id 人口台账id
+     * @return 操作结果文案
+     */
+    @Operation(summary = "删除人口台账")
+    @DeleteMapping("/cadre/village-population/{id}")
+    public Result<String> deleteVillagePopulation(@PathVariable Long id) {
+        villagePopulationService.deleteVillagePopulation(id);
+        return Result.success("人口台账删除成功");
+    }
 }
 

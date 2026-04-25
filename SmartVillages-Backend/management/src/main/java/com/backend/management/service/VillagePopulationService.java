@@ -42,6 +42,12 @@ public interface VillagePopulationService extends IService<VillagePopulationEnti
      * @param villagePopulationUpdateDTO 人口台账更新DTO
      */
     void updateVillagePopulation(Long id, VillagePopulationUpdateDTO villagePopulationUpdateDTO);
+
+    /**
+     * 删除人口台账
+     * @param id 人口台账id
+     */
+    void deleteVillagePopulation(Long id);
 }
 
 

@@ -95,5 +95,18 @@ public class VillagePopulationServiceImpl
         BeanUtils.copyProperties(villagePopulationUpdateDTO, entity);
         updateById(entity);
     }
+
+    /**
+     * 删除人口台账
+     * @param id 人口台账id
+     */
+    @Override
+    public void deleteVillagePopulation(Long id) {
+        VillagePopulationEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+        }
+        removeById(id);
+    }
 }
 
