@@ -40,5 +40,24 @@ public class VillageHouseLandController {
         return Result.success(id);
     }
     
+    /**
+     * 分页查询房屋与土地台账列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param bizType 类型
+     * @param ownerName 权利人/户主
+     * @param location 坐落
+     * @return 房屋与土地台账列表
+     */
+    @Operation(summary = "分页查询房屋与土地台账列表")
+    @GetMapping("/cadre/village-house-land")
+    public Result<IPage<VillageHouseLandSimpleVO>> getVillageHouseLandList(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String bizType,
+        @RequestParam(required = false) String ownerName,
+        @RequestParam(required = false) String location) {
+        return Result.success(villageHouseLandService.getVillageHouseLandList(current, size, bizType, ownerName, location));
+    }
 }
 

@@ -47,4 +47,28 @@ public class VillageHouseLandServiceImpl
         redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id), villageHouseLandEntity);
         return id;
     }
+
+    /**
+     * 分页查询房屋与土地台账列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param bizType 类型
+     * @param ownerName 权利人/户主
+     * @param location 坐落
+     * @return 房屋与土地台账列表
+     */
+    @Override
+    public IPage<VillageHouseLandSimpleVO> getVillageHouseLandList(Long current, Long size, String bizType, String ownerName, String location) {
+        LambdaQueryWrapper<VillageHouseLandEntity> queryWrapper = new LambdaQueryWrapper<VillageHouseLandEntity>()
+        .eq(StringUtils.hasText(bizType), VillageHouseLandEntity::getBizType, bizType)
+        .like(StringUtils.hasText(ownerName), VillageHouseLandEntity::getOwnerName, ownerName)
+        .like(StringUtils.hasText(location), VillageHouseLandEntity::getLocation, location)
+        .orderByDesc(VillageHouseLandEntity::getCreateTime);
+        IPage<VillageHouseLandEntity> entityPage = page(new Page<>(current, size), queryWrapper);
+        return entityPage.convert(entity -> {
+            VillageHouseLandSimpleVO vo = new VillageHouseLandSimpleVO();
+            BeanUtils.copyProperties(entity, vo);
+            return vo;
+        });
+    }
 }

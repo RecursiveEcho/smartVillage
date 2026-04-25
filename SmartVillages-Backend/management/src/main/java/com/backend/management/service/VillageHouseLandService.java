@@ -16,5 +16,16 @@ public interface VillageHouseLandService extends IService<VillageHouseLandEntity
      * @param villageHouseLandCreateDTO 房屋与土地台账创建DTO
      */
     Integer createVillageHouseLand(VillageHouseLandCreateDTO villageHouseLandCreateDTO);
+
+    /**
+     * 分页查询房屋与土地台账列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param bizType 类型
+     * @param ownerName 权利人/户主
+     * @param location 坐落
+     * @return 房屋与土地台账列表
+     */
+   IPage<VillageHouseLandSimpleVO> getVillageHouseLandList(Long current, Long size, String bizType, String ownerName, String location);
 }
 
