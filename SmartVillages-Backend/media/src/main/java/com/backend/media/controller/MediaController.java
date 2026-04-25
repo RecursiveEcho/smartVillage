@@ -3,6 +3,7 @@ package com.backend.media.controller;
 import com.backend.common.result.Result;
 import com.backend.media.service.MediaService;
 import com.backend.media.vo.PageVO;
+import com.backend.media.vo.DetailVO;
 import com.backend.media.vo.UploadVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -85,4 +86,16 @@ public class MediaController {
         mediaService.delete(id, request);
         return Result.success("删除成功");
     }
+
+    /**
+     * 获取媒体资源详情
+     * @param id 媒体资源id
+     * @return 媒体资源详情
+     */
+    @Operation(summary = "获取媒体资源详情")
+    @GetMapping("/cadre/media/{id}")
+    public Result<DetailVO> getDetail(@PathVariable Integer id) {
+        return Result.success(mediaService.getDetail(id));
+    }
+
 }

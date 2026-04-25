@@ -14,6 +14,7 @@ import org.springframework.beans.BeanUtils;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.backend.media.vo.DetailVO;
 import com.backend.media.mapper.MediaMapper;
 import com.backend.media.entity.MediaEntity;
 import com.backend.media.vo.PageVO;
@@ -109,5 +110,26 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         }
         this.removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
+
+    /**
+     * 获取媒体资源详情
+     * @param id 媒体资源id
+     * @return 媒体资源详情
+     */
+    @Override
+    public DetailVO getDetail(Integer id) {
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        DetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, DetailVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        MediaEntity mediaEntity = this.getById(id);
+        if (mediaEntity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "媒体资源不存在");
+        }
+        DetailVO detailVO = new DetailVO();
+        BeanUtils.copyProperties(mediaEntity, detailVO);
+        return detailVO;
     }
 }

@@ -3,6 +3,7 @@ package com.backend.media.service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.multipart.MultipartFile;
 import com.backend.media.vo.UploadVO;
+import com.backend.media.vo.DetailVO;
 import com.backend.media.vo.PageVO;
 import com.backend.media.entity.MediaEntity;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -41,4 +42,11 @@ public interface MediaService extends IService<MediaEntity> {
      * @param request 请求
      */
     void delete(Integer id, HttpServletRequest request);
+
+    /**
+     * 获取媒体资源详情
+     * @param id 媒体资源id
+     * @return 媒体资源详情
+     */
+    DetailVO getDetail(Integer id);
 }
