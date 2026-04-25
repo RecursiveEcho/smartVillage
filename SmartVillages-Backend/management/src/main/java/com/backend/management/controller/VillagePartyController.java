@@ -20,6 +20,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * @author 村务管理-党建组织信息
+ * &#064;date 2026/4/25
+ * &#064;description 党建组织信息控制器
+ */
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "村务管理-党建组织信息", description = "党建组织信息接口")
@@ -54,6 +59,17 @@ public class VillagePartyController {
         @RequestParam(required = false) String secretaryName
     ) {
         return Result.success(villagePartyService.getList(current, size, orgName, orgType, secretaryName));
+    }
+
+    /**
+     * 根据id获取党建组织信息详情
+     * @param id 党建组织信息id
+     * @return 党建组织信息详情
+     */
+    @Operation(summary = "根据id获取党建组织信息详情")
+    @GetMapping("/cadre/village-party/{id}")
+    public Result<VillagePartyDetailVO> getDetail(@PathVariable Integer id) {
+        return Result.success(villagePartyService.getDetail(id));
     }
 }
 

@@ -72,5 +72,26 @@ public class VillagePartyServiceImpl
             }
         );
     }
+    /**
+     * 根据id获取党建组织信息详情
+     * @param id 党建组织信息id
+     * @return 党建组织信息详情
+     */
+    @Override
+    public VillagePartyDetailVO getDetail(Integer id) {
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        VillagePartyDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillagePartyDetailVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        VillagePartyEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
+        }
+        VillagePartyDetailVO vo = new VillagePartyDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(cacheKey, vo);
+        return vo;
+    }
 }
 

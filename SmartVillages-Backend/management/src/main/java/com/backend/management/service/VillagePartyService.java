@@ -26,5 +26,12 @@ public interface VillagePartyService extends IService<VillagePartyEntity> {
      * @return 党建组织信息列表
      */
     IPage<VillagePartySimpleVO> getList(Long current, Long size, String orgName, String orgType, String secretaryName);
+
+    /**
+     * 根据id获取党建组织信息详情
+     * @param id 党建组织信息id
+     * @return 党建组织信息详情
+     */
+    VillagePartyDetailVO getDetail(Integer id);
 }
 
