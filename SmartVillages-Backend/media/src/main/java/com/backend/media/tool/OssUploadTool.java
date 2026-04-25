@@ -62,8 +62,7 @@ public class OssUploadTool {
             metadata.setContentType(contentType);
             // 上传文件到OSS
             ossClient.putObject(bucketName, objectKey, inputStream, metadata);
-            // 生成文件URL
-            String normalizedEndpoint = endpoint.replace("https://", "").replace("http://", "");
+            String normalizedEndpoint = endpoint.replaceAll("^https?://", "");
             String url = "https://" + bucketName + "." + normalizedEndpoint + "/" + objectKey;
             // 返回上传结果
             log.info("OSS上传成功，fileType={}, objectKey={}", fileType, objectKey);
@@ -101,9 +100,13 @@ public class OssUploadTool {
      * 按原始文件名生成对象键，若已存在则追加(1)、(2)...
      */
     private String buildObjectKey(OSS ossClient, String fileType, String originalFileName) {
-        // 获取点的位置
+        if (!StringUtils.hasText(originalFileName)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件名不能为空");
+        }
         int dotIndex = originalFileName.lastIndexOf('.');
-        // 文件名无后缀
+        if (dotIndex < 0) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件名不合法");
+        }
         String baseName = originalFileName.substring(0, dotIndex);
         // 文件名后缀
         String suffix = originalFileName.substring(dotIndex);

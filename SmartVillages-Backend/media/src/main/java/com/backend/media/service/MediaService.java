@@ -39,9 +39,8 @@ public interface MediaService extends IService<MediaEntity> {
     /**
      * 删除媒体资源
      * @param id 媒体资源id
-     * @param request 请求
      */
-    void delete(Integer id, HttpServletRequest request);
+    void delete(Integer id);
 
     /**
      * 获取媒体资源详情

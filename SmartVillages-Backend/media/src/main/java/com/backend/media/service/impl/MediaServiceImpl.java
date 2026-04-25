@@ -38,6 +38,26 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
     private static final String CACHE_KEY_PREFIX = "media:detail:";
     @Override
     public UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request) {
+        
+        // 判断文件大小是否超过1GB
+        if (file.getSize() > 1024 * 1024 * 1024) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件大小不能超过1GB");
+        }
+        if (file.getSize() == 0) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件大小不能为0");
+        }
+        if (file.getOriginalFilename() == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件名不能为空");
+        }
+        if (file.getContentType() == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "文件类型不能为空");
+        }
+
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, file.getOriginalFilename());
+        UploadVO fromCache = redisJsonCacheTool.getObject(cacheKey, UploadVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
         try {
             // 获取当前用户ID
             // 上传文件到OSS
@@ -57,7 +77,12 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
             mediaEntity.setCategory(category);
             mediaEntity.setUploadUser(LoginUserContext.getAuthId(request));
             this.save(mediaEntity);
-            
+            //写入缓存
+            redisJsonCacheTool.setObject(cacheKey, new UploadVO(
+                file.getOriginalFilename(),
+                file.getSize(),
+                uploadResult.url(),
+                uploadResult.objectKey()));
             return new UploadVO(
                 file.getOriginalFilename(),
                 file.getSize(),
@@ -97,17 +122,13 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
     /**
      * 删除媒体资源
      * @param id 媒体资源id
-     * @param request 请求
      */
     @Override
-    public void delete(Integer id, HttpServletRequest request) {
+    public void delete(Integer id) {
         MediaEntity mediaEntity = this.getById(id);
         if (mediaEntity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "媒体资源不存在");
-        }
-        if (!Objects.equals(mediaEntity.getUploadUser(), LoginUserContext.getAuthId(request))) {
-            throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此媒体资源");
-        }
+        } 
         this.removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
@@ -130,6 +151,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         }
         DetailVO detailVO = new DetailVO();
         BeanUtils.copyProperties(mediaEntity, detailVO);
+        redisJsonCacheTool.setObject(cacheKey, detailVO);
         return detailVO;
     }
 

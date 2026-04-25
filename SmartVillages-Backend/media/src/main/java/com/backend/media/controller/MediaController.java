@@ -28,9 +28,9 @@ import org.springframework.web.bind.annotation.PutMapping;
  */
 @Slf4j
 @RestController
-@RequestMapping("/media")
 @RequiredArgsConstructor
 @Tag(name = "媒体资源", description = "媒体资源接口")
+@RequestMapping("/media")
 public class MediaController {
 
 
@@ -64,7 +64,7 @@ public class MediaController {
      * @return 分页查询结果
      */
     @Operation(summary = "分页查询媒体资源")
-    @GetMapping("/cadre/media")
+    @GetMapping("/page")
     public Result<IPage<PageVO>> page(
         @RequestParam(defaultValue = "1") Long current,
         @RequestParam(defaultValue = "10") Long size,
@@ -78,13 +78,12 @@ public class MediaController {
     /**
      * 删除媒体资源
      * @param id 媒体资源id
-     * @param request 请求
      * @return 删除结果
      */
     @Operation(summary = "删除媒体资源")
-    @DeleteMapping("/cadre/media/{id}")
-    public Result<String> delete(@PathVariable Integer id, HttpServletRequest request) {
-        mediaService.delete(id, request);
+    @DeleteMapping("/cadre/{id}")
+    public Result<String> delete(@PathVariable Integer id) {
+        mediaService.delete(id);
         return Result.success("删除成功");
     }
 
@@ -94,7 +93,7 @@ public class MediaController {
      * @return 媒体资源详情
      */
     @Operation(summary = "获取媒体资源详情")
-    @GetMapping("/cadre/media/{id}")
+    @GetMapping("/{id}")
     public Result<DetailVO> getDetail(@PathVariable Integer id) {
         return Result.success(mediaService.getDetail(id));
     }
@@ -106,7 +105,7 @@ public class MediaController {
      * @return 启用/禁用结果
      */
     @Operation(summary = "启用/禁用媒体资源")
-    @PutMapping("/cadre/media/{id}/status")
+    @PutMapping("/cadre/{id}/status")
     public Result<String> updateStatus(@PathVariable Integer id, @RequestParam Integer status) {
         mediaService.updateStatus(id, status);
         return Result.success("操作媒体资源状态成功");
