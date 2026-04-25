@@ -44,5 +44,12 @@ public interface VillageAffairService extends IService<VillageAffairEntity> {
      * @param id 村务事项/公示id
      */
     void delete(Integer id);
+
+    /**
+     * 审核村务事项/公示
+     * @param id 村务事项/公示id
+     * @param dto 村务事项/公示审核DTO
+     */
+    void audit(Integer id, VillageAffairAuditDTO dto);
 }
 

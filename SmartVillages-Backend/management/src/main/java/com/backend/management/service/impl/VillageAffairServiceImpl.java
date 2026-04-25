@@ -123,5 +123,23 @@ public class VillageAffairServiceImpl
         removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
-}
 
+    /**
+     * 审核村务事项/公示
+     * @param id 村务事项/公示id
+     * @param dto 村务事项/公示审核DTO
+     */
+    @Override
+    public void audit(Integer id, VillageAffairAuditDTO dto) {
+        VillageAffairEntity entity = getById(id);
+       if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
+        } 
+        if (entity.getStatus() == 2) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "村务事项/公示已发布，不能审核");
+        }
+        BeanUtils.copyProperties(dto, entity);
+        updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
+}

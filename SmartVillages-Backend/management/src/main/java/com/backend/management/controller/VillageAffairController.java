@@ -94,5 +94,18 @@ public class VillageAffairController {
         villageAffairService.delete(id);
         return Result.success("村务事项/公示删除成功");
     }
+
+    /**
+     * 审核村务事项/公示
+     * @param id 村务事项/公示id
+     * @param dto 村务事项/公示审核DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "审核村务事项/公示")
+    @PostMapping("/cadre/village-affairs/{id}/audit")
+    public Result<String> audit(@PathVariable Integer id, @RequestBody VillageAffairAuditDTO dto) {
+        villageAffairService.audit(id, dto);
+        return Result.success("村务事项/公示审核成功");
+    }
 }
 
