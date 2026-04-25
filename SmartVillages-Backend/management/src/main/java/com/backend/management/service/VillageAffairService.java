@@ -31,5 +31,12 @@ public interface VillageAffairService extends IService<VillageAffairEntity> {
      * @return 村务事项/公示详情
      */
     VillageAffairDetailVO getDetail(Integer id);
+
+    /**
+     * 更新村务事项/公示
+     * @param id 村务事项/公示id
+     * @param dto 村务事项/公示更新DTO
+     */
+    void update(Integer id, VillageAffairUpdateDTO dto);
 }
 

@@ -93,5 +93,21 @@ public class VillageAffairServiceImpl
         redisJsonCacheTool.setObject(cacheKey, vo);
         return vo;
     }
+
+    /**
+     * 更新村务事项/公示
+     * @param id 村务事项/公示id
+     * @param dto 村务事项/公示更新DTO
+     */
+    @Override
+    public void update(Integer id, VillageAffairUpdateDTO dto) {
+        VillageAffairEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
+        }
+        BeanUtils.copyProperties(dto, entity);
+        updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
 }
 

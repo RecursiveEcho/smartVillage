@@ -69,5 +69,18 @@ public class VillageAffairController {
     public Result<VillageAffairDetailVO> getDetail(@PathVariable Integer id) {
         return Result.success(villageAffairService.getDetail(id));
     }
+
+    /**
+     * 更新村务事项/公示
+     * @param id 村务事项/公示id
+     * @param dto 村务事项/公示更新DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "更新村务事项/公示")
+    @PutMapping("/cadre/village-affairs/{id}")
+    public Result<String> update(@PathVariable Integer id, @RequestBody VillageAffairUpdateDTO dto) {
+        villageAffairService.update(id, dto);
+        return Result.success("村务事项/公示更新成功");
+    }
 }
 
