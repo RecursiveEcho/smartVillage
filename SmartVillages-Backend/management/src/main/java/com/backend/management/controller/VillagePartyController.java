@@ -28,15 +28,32 @@ public class VillagePartyController {
     private final VillagePartyService villagePartyService;
 
     /**
-     * 创建党组织
-     * @param dto 党组织创建DTO
+     * 创建党建组织信息
+     * @param dto 党建组织信息创建DTO
      * @return 党组织ID
      */
-    @Operation(summary = "创建党组织")
+    @Operation(summary = "创建党建组织信息")
     @PostMapping("/cadre/village-party")
     public Result<Integer> create(@RequestBody VillagePartyCreateDTO dto) {
-        return Result.success(villagePartyService.create(dto));
+        Integer id = villagePartyService.create(dto);
+        return Result.success(id);
     }
-    
+    /**
+     * 分页查询党建组织信息列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @return 党建组织信息列表
+     */
+    @Operation(summary = "分页查询党建组织信息列表")
+    @GetMapping("/cadre/village-party")
+    public Result<IPage<VillagePartySimpleVO>> getList(
+        @RequestParam(defaultValue = "1") Long current, 
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String orgName,
+        @RequestParam(required = false) String orgType,
+        @RequestParam(required = false) String secretaryName
+    ) {
+        return Result.success(villagePartyService.getList(current, size, orgName, orgType, secretaryName));
+    }
 }
 

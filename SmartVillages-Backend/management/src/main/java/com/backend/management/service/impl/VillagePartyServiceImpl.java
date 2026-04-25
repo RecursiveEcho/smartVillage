@@ -47,5 +47,30 @@ public class VillagePartyServiceImpl
         return id;
     }
     
+    /**
+     * 分页查询党建组织信息列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param orgName 党组织名称
+     * @param orgType 组织类型
+     * @param secretaryName 书记姓名
+     * @return 党建组织信息列表
+     */
+    @Override
+    public IPage<VillagePartySimpleVO> getList(Long current, Long size, String orgName, String orgType, String secretaryName) {
+        LambdaQueryWrapper<VillagePartyEntity> queryWrapper = new LambdaQueryWrapper<VillagePartyEntity>()
+        .like(StringUtils.hasText(orgName), VillagePartyEntity::getOrgName, orgName)
+        .like(StringUtils.hasText(orgType), VillagePartyEntity::getOrgType, orgType)
+        .like(StringUtils.hasText(secretaryName), VillagePartyEntity::getSecretaryName, secretaryName)
+        .orderByDesc(VillagePartyEntity::getCreateTime);
+        IPage<VillagePartyEntity> entityPage = page(new Page<>(current, size), queryWrapper);
+        return entityPage.convert(
+            entity -> {
+                VillagePartySimpleVO vo = new VillagePartySimpleVO();
+                BeanUtils.copyProperties(entity, vo);
+                return vo;
+            }
+        );
+    }
 }
 
