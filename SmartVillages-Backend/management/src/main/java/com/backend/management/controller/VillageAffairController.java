@@ -107,5 +107,16 @@ public class VillageAffairController {
         villageAffairService.audit(id, dto);
         return Result.success("村务事项/公示审核成功");
     }
+
+    @Operation(summary = "前台分页查询村务事项/公示列表")
+    @GetMapping("/public/village-affairs")
+    public Result<IPage<VillageAffairSimpleVO>> getPublicList(
+        @RequestParam(defaultValue = "1") Long current, 
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String affairType,
+        @RequestParam(required = false) String title
+    ) {
+        return Result.success(villageAffairService.getPublicList(current, size, affairType, title));
+    }
 }
 

@@ -51,5 +51,13 @@ public interface VillageAffairService extends IService<VillageAffairEntity> {
      * @param dto 村务事项/公示审核DTO
      */
     void audit(Integer id, VillageAffairAuditDTO dto);
+
+    /*
+     * 前台分页查询村务事项/公示列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @return 村务事项/公示列表
+     */
+    IPage<VillageAffairSimpleVO> getPublicList(Long current, Long size, String affairType, String title);
 }
 

@@ -142,4 +142,27 @@ public class VillageAffairServiceImpl
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
+
+    /**
+     * 前台分页查询村务事项/公示列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @return 村务事项/公示列表
+     */
+    @Override
+    public IPage<VillageAffairSimpleVO> getPublicList(Long current, Long size, String affairType, String title) {
+        LambdaQueryWrapper<VillageAffairEntity> queryWrapper = new LambdaQueryWrapper<VillageAffairEntity>()
+        .eq(VillageAffairEntity::getStatus, 2) // 已发布
+        .like(StringUtils.hasText(affairType), VillageAffairEntity::getAffairType, affairType)
+        .like(StringUtils.hasText(title), VillageAffairEntity::getTitle, title)
+        .orderByDesc(VillageAffairEntity::getPublishTime);
+        IPage<VillageAffairEntity> entityPage = page(new Page<>(current, size), queryWrapper);
+        return entityPage.convert(
+            entity -> {
+                VillageAffairSimpleVO vo = new VillageAffairSimpleVO();
+                BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+                return vo;
+            }
+        );
+    }
 }
