@@ -110,5 +110,18 @@ public class VillagePartyServiceImpl
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
+    /**
+     * 删除党建组织信息
+     * @param id 党建组织信息id
+     */
+    @Override
+    public void delete(Integer id) {
+        VillagePartyEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
+        }
+        removeById(id);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
 }
 

@@ -84,5 +84,17 @@ public class VillagePartyController {
         villagePartyService.update(id, dto);
         return Result.success("党建组织信息更新成功");
     }
+
+    /**
+     * 删除党建组织信息
+     * @param id 党建组织信息id
+     * @return 操作结果文案
+     */
+    @Operation(summary = "删除党建组织信息")
+    @DeleteMapping("/cadre/village-party/{id}")
+    public Result<String> delete(@PathVariable Integer id) {
+        villagePartyService.delete(id);
+        return Result.success("党建组织信息删除成功");
+    }
 }
 
