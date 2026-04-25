@@ -21,6 +21,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.common.utils.CacheKeyUtils;
 @Slf4j
 /*
   @author chenyang
@@ -31,7 +33,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 @RequiredArgsConstructor
 public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> implements MediaService {
     private final OssUploadTool ossUploadTool;
-
+    private final RedisJsonCacheTool redisJsonCacheTool;
+    private static final String CACHE_KEY_PREFIX = "media:detail:";
     @Override
     public UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request) {
         try {
@@ -88,5 +91,23 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
             BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
             return vo;
         });
+    }
+
+    /**
+     * 删除媒体资源
+     * @param id 媒体资源id
+     * @param request 请求
+     */
+    @Override
+    public void delete(Integer id, HttpServletRequest request) {
+        MediaEntity mediaEntity = this.getById(id);
+        if (mediaEntity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "媒体资源不存在");
+        }
+        if (!Objects.equals(mediaEntity.getUploadUser(), LoginUserContext.getAuthId(request))) {
+            throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此媒体资源");
+        }
+        this.removeById(id);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 }

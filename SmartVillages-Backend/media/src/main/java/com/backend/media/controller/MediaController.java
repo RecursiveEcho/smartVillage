@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -69,5 +71,18 @@ public class MediaController {
         @RequestParam(required = false) Integer status
     ) {
         return Result.success(mediaService.page(current, size, fileType, category, status));
+    }
+
+    /**
+     * 删除媒体资源
+     * @param id 媒体资源id
+     * @param request 请求
+     * @return 删除结果
+     */
+    @Operation(summary = "删除媒体资源")
+    @DeleteMapping("/cadre/media/{id}")
+    public Result<String> delete(@PathVariable Integer id, HttpServletRequest request) {
+        mediaService.delete(id, request);
+        return Result.success("删除成功");
     }
 }

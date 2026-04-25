@@ -34,4 +34,11 @@ public interface MediaService extends IService<MediaEntity> {
      * @return 分页查询结果
      */
     IPage<PageVO> page(Long current, Long size, String fileType, String category, Integer status);
+
+    /**
+     * 删除媒体资源
+     * @param id 媒体资源id
+     * @param request 请求
+     */
+    void delete(Integer id, HttpServletRequest request);
 }

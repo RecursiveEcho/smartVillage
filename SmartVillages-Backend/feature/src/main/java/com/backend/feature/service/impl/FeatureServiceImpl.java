@@ -211,10 +211,16 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     public Map<String,Long> getMyFeatureCount(HttpServletRequest request){
         LambdaQueryWrapper<FeatureEntity> wrapper=new LambdaQueryWrapper<FeatureEntity>()
         .eq(FeatureEntity::getCreateUser,LoginUserContext.getAuthId(request));
+        LambdaQueryWrapper<FeatureEntity> wrapper2=new LambdaQueryWrapper<FeatureEntity>()
+        .eq(FeatureEntity::getCreateUser,LoginUserContext.getAuthId(request))
+        .eq(FeatureEntity::getStatus,0);
+        LambdaQueryWrapper<FeatureEntity> wrapper3=new LambdaQueryWrapper<FeatureEntity>()
+        .eq(FeatureEntity::getCreateUser,LoginUserContext.getAuthId(request))
+        .eq(FeatureEntity::getStatus,1);
         Map<String,Long> result = new HashMap<>();
         result.put("total",count(wrapper));
-        result.put("In reality",count(wrapper.eq(FeatureEntity::getStatus,1)));
-        result.put("Hidden",count(wrapper.eq(FeatureEntity::getStatus,0)));
+        result.put("In reality",count(wrapper3));
+        result.put("Hidden",count(wrapper2));
         return result;
     }
 
