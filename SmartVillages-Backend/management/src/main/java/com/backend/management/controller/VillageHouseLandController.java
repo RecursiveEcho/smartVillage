@@ -71,5 +71,17 @@ public class VillageHouseLandController {
         return Result.success(villageHouseLandService.getVillageHouseLandDetail(id));
     }
 
+    /**
+     * 更新房屋与土地台账
+     * @param id 房屋与土地台账id
+     * @param villageHouseLandUpdateDTO 房屋与土地台账更新DTO
+     * @return 操作结果文案
+     */
+    @Operation(summary = "更新房屋与土地台账")
+    @PutMapping("/cadre/village-house-land/{id}")
+    public Result<String> updateVillageHouseLand(@PathVariable Integer id, @RequestBody VillageHouseLandUpdateDTO villageHouseLandUpdateDTO) {
+        villageHouseLandService.update(id, villageHouseLandUpdateDTO);
+        return Result.success("更新成功");
+    }
 }
 

@@ -93,4 +93,20 @@ public class VillageHouseLandServiceImpl
         redisJsonCacheTool.setObject(cacheKey, vo);
         return vo;
     }
+
+    /**
+     * 更新房屋与土地台账
+     * @param id 房屋与土地台账id
+     * @param villageHouseLandUpdateDTO 房屋与土地台账更新DTO
+     */
+    @Override
+    public void update(Integer id, VillageHouseLandUpdateDTO villageHouseLandUpdateDTO) {
+        VillageHouseLandEntity entity = getById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+        }
+        BeanUtils.copyProperties(villageHouseLandUpdateDTO, entity);
+        updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));  
+    }
 }
