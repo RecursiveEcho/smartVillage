@@ -28,10 +28,7 @@ cd SmartVillages-Backend
 ./mvnw -pl service -am spring-boot:run
 ```
 
-后端默认配置在 `SmartVillages-Backend/service/src/main/resources/application.yml`：
-
-- **MySQL**：库名示例为 `smartVillage`，账号 `root` / `1234`（请与本机一致后再启动）。
-- **Redis**：公告详情等会使用缓存；示例为 `localhost:6379`，密码 `123456`。若本地未装 Redis，需调整配置或先启动对应实例，否则相关能力可能启动失败。
+后端配置已改为 **环境变量优先**（避免敏感信息入库）。详细环境变量清单与示例账号请看后端说明：`SmartVillages-Backend/README.md`。
 
 ### 前端启动（SmartVillages-Web）
 
@@ -68,3 +65,5 @@ npm run build
 - **公告域**：前台只读 **`/announcements*`** 与村干部维护 **`/cadre/announcements*`** 等已接入（含 Redis 详情缓存等，见实现类注释）。
 - **留言域**：**`POST /interactions/messages`**（路径以 Controller 为准）。
 - 前端工程目前为 **Vue 3 最小入口 + 页面文件占位**，尚未接入 `vue-router` / `pinia` / 统一 HTTP 客户端；完整联调需按 `SmartVillages-Web/README.md` 中的规划逐步补齐。
+
+

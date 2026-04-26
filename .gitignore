@@ -5,6 +5,20 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 maven_repo
+
+### Local Maven caches (do not commit) ###
+.m2repo/
+**/.m2/
+
+### Logs ###
+**/logs/
+**/*.log
+
+### Env files ###
+.env
+.env.*
+*.local
+
 ### Node / Vite ###
 node_modules/
 dist/

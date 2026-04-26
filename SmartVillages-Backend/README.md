@@ -1,3 +1,81 @@
+# SmartVillages Backend（面试官版）
+
+> 目标：让面试官在 **1-2 分钟**内看懂“你做了什么、怎么跑、怎么验收、亮点在哪”。  
+> 如果你想复盘/照抄整个项目脚手架流程，请看：`开发手册.md`
+
+## 项目一句话
+
+智慧乡村综合管理系统后端：基于 **Spring Boot 3 + Maven 多模块**，实现 **Spring Security + JWT** 无状态鉴权与 **RBAC 三角色权限**，落地公告、互动留言、村务台账、民生服务工单等典型乡村治理业务闭环。
+
+## 亮点（面试可讲）
+
+- **多模块边界清晰**：业务域拆分（`auth/admin/announcement/interaction/management/media/feature`），`common` 承载基础设施，`service` 单进程聚合启动。
+- **权限模型清晰**：`ROLE_ADMIN / ROLE_CADRE / ROLE_VILLAGER` 三角色职责边界明确，配合 `SecurityConfig` 的 URL 规则控制访问。
+- **工程化规范**：统一返回 `Result`、统一业务异常 `BusinessException + GlobalExceptionHandler`、错误码枚举 `ErrorCode`。
+- **数据一致性**：逻辑删除 + 创建/更新时间自动填充（MyBatis-Plus）。
+- **性能意识**：Redis JSON 详情缓存（读缓存 + 更新/删除淘汰），适用于公告/台账详情等高频读接口。
+- **配置安全**：运行配置“环境变量优先”，避免密码/AccessKey/密钥硬编码进仓库。
+
+## 模块说明（你交付的能力范围）
+
+- `auth`：登录/登出，签发 JWT
+- `admin`：账号管理（用户分页、启用禁用、创建村干部账号）
+- `announcement`：公告（公共端只读 + 村干部管理端）
+- `interaction`：留言互动（村民提交 + 干部处理）
+- `management`：村务治理台账（人口/房屋土地/党建组织/村务公示、民生服务工单等）
+- `media`：文件上传与访问（对接 OSS 等）
+- `feature`：乡村风采内容（前台展示 + 干部维护）
+
+## 权限边界（RBAC）
+
+- **ROLE_ADMIN**：只负责账号管理
+- **ROLE_CADRE**：负责业务执行（公告、留言处理、村务台账、工单处理等）
+- **ROLE_VILLAGER**：前台浏览与反馈（提交留言/工单、查看自己的记录等）
+
+最终以 `common/src/main/java/com/backend/common/config/SecurityConfig.java` 为准。
+
+## 运行与配置
+
+### 1）构建与启动
+
+```bash
+./mvnw -pl service -am clean package
+./mvnw -pl service -am spring-boot:run
+```
+
+### 2）环境变量（推荐）
+
+- **MySQL**：`DB_URL`、`DB_USERNAME`、`DB_PASSWORD`
+- **Redis**：`REDIS_HOST`、`REDIS_PORT`、`REDIS_PASSWORD`、`REDIS_DB`
+- **JWT**：`JWT_SECRET`、`JWT_EXPIRE_MS`
+- **阿里云 OSS（可选）**：`ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_BUCKET`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`
+
+示例模板：`service/src/main/resources/application-example.yml`
+
+### 3）初始化数据库
+
+SQL 目录：`service/src/main/resources/sql/`（按模块拆分）。  
+建议至少执行：`auth.sql`、`admin.sql`、`announcement.sql`、`interaction.sql`、`management.sql`（以及你需要的其它模块 SQL）。
+
+## 接口文档入口
+
+- Knife4j：`http://localhost:8080/doc.html`
+- OpenAPI：`http://localhost:8080/v3/api-docs`
+
+## 示例账号（本地联调）
+
+来源：`service/src/main/resources/sql/auth.sql`（统一明文密码 `123456`）
+
+- 管理员：`admin`
+- 村干部：`cadre_wang`
+- 村民：`zhang_san`、`li_si`
+
+## 最短验收（面试 2 分钟演示）
+
+1. 打开 Knife4j：`/doc.html`（证明接口文档自解释）
+2. 登录：`POST /auth/login`（拿 token）
+3. 带 token 调一个业务接口（例如村干部管理端分页、公示管理、台账列表等），展示权限边界与返回结构 `Result`
+
 # SmartVillages Backend（后端）
 
 本目录为后端工程（Spring Boot + Maven 多模块）。仓库根目录 `README.md` 只保留整体使用方式；本文件承载后端的详细说明。
@@ -23,12 +101,38 @@
 ./mvnw -pl service -am spring-boot:run
 ```
 
-配置入口：
+### 配置与环境变量（重要）
 
-- `service/src/main/resources/application.yml`（当前示例：**MySQL** 库名 `smartVillage` / `root` / `1234`；**Redis** `localhost:6379` / 密码 `123456`；**JWT** `jwt.secret` / `jwt.expiration-ms`）
-- `service/src/main/resources/sql/`（DDL/初始化脚本，按模块拆分）
+后端运行配置位于 `service/src/main/resources/application.yml`，但已改为 **环境变量优先**，避免敏感信息写死在仓库里。
 
-本地启动前请确保 **MySQL 与 Redis** 可用且与配置一致；否则公告缓存等依赖 Redis 的功能可能在启动或运行时失败。
+可以直接在启动前设置这些环境变量（未设置时会使用 `application.yml` 里的默认值或空值）：
+
+- **MySQL**
+  - `DB_URL`：JDBC URL（默认 `jdbc:mysql://127.0.0.1:3306/smartVillage?...`）
+  - `DB_USERNAME`：用户名（默认 `root`）
+  - `DB_PASSWORD`：密码（默认空）
+- **Redis**
+  - `REDIS_HOST`（默认 `localhost`）
+  - `REDIS_PORT`（默认 `6379`）
+  - `REDIS_PASSWORD`（默认空）
+  - `REDIS_DB`（默认 `0`）
+- **JWT**
+  - `JWT_SECRET`（默认 `smartVillages`，生产务必替换）
+  - `JWT_EXPIRE_MS`（默认 `86400000`，24h）
+- **阿里云 OSS（可选，只有 media 上传相关才需要）**
+  - `ALIYUN_OSS_ENDPOINT`
+  - `ALIYUN_OSS_BUCKET`
+  - `ALIYUN_OSS_ACCESS_KEY_ID`
+  - `ALIYUN_OSS_ACCESS_KEY_SECRET`
+
+示例配置文件（仅供参考，不参与运行）：`service/src/main/resources/application-example.yml`
+
+SQL 初始化脚本：`service/src/main/resources/sql/`（按模块拆分）
+
+### 启动前置条件
+
+- MySQL：创建数据库 `smartVillage`（或你自定义并通过 `DB_URL` 指定），执行 `service/src/main/resources/sql/` 下的建表与初始化脚本
+- Redis：建议启动（公告详情、台账详情等会用到缓存）；若不启用，涉及缓存的功能可能运行报错
 
 ## 统一返回与错误约定
 
@@ -79,8 +183,41 @@
 
 ### 接口文档
 
-- Knife4j：**`/doc.html`**
-- OpenAPI JSON：**`/v3/api-docs`**（或 `/**` 子路径，以 springdoc 实际暴露为准）
+- Knife4j：`http://localhost:8080/doc.html`
+- OpenAPI JSON：`http://localhost:8080/v3/api-docs`
+
+> 端口以实际启动日志为准（默认通常是 8080）。
+
+## 示例账号（本地联调）
+
+初始化数据来源：`service/src/main/resources/sql/auth.sql`
+
+- **管理员（ROLE_ADMIN）**
+  - username：`admin`
+  - password：`123456`
+- **村干部（ROLE_CADRE）**
+  - username：`cadre_wang`
+  - password：`123456`
+- **村民（ROLE_VILLAGER）**
+  - username：`zhang_san` / `li_si`
+  - password：`123456`
+
+## 联调示例（curl）
+
+登录拿 token：
+
+```bash
+curl -X POST "http://localhost:8080/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"123456"}'
+```
+
+之后访问需登录接口时，在请求头带上 `token`：
+
+```bash
+curl "http://localhost:8080/cadre/village-affairs?current=1&size=10" \
+  -H "token: <JWT_TOKEN>"
+```
 
 ## 业务模块接口线索（公告 / 留言）
 

@@ -29,9 +29,6 @@ import java.util.List;
  * 公告 REST：前台读已发布列表/详情/热门；{@code /cadre/announcements} 下为村干部业务操作。
  * <p>
  * 热门接口使用静态子路径 {@code /announcements/hot}，避免与 {@code /announcements/{id}} 路由冲突。
- *
- * @author chenyang
- * &#064;date 2026/4/8
  */
 @Slf4j
 @RestController
@@ -42,11 +39,12 @@ public class AnnouncementController {
     private final AnnouncementService announcementService;
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/8
-     * &#064;description 村干部新增公告
+     * 新增公告（村干部端）。
+     *
+     * <p>POST /cadre/announcements</p>
+     *
      * @param dto 创建参数
-     * @return 操作结果文案
+     * @return 创建结果提示文案
      */
     @Operation(summary = "村干部新增公告")
     @PostMapping("/cadre/announcements")
@@ -56,11 +54,12 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/8
-     * &#064;description 前台分页公告（仅已发布）
+     * 前台分页查询公告（仅返回已发布）。
+     *
+     * <p>GET /announcements</p>
+     *
      * @param current 当前页
-     * @param size    每页数量
+     * @param size 每页数量
      * @return 分页结果
      */
     @Operation(summary = "前台分页公告（仅已发布）")
@@ -72,12 +71,13 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/9
-     * &#064;description 编辑公告基础信息
-     * @param id  公告 ID
+     * 编辑公告基础信息（村干部端）。
+     *
+     * <p>PUT /cadre/announcements/{id}</p>
+     *
+     * @param id 公告ID
      * @param dto 更新参数
-     * @return 操作结果文案
+     * @return 编辑结果提示文案
      */
     @Operation(summary = "编辑公告基础信息")
     @PutMapping("/cadre/announcements/{id}")
@@ -87,12 +87,13 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/9
-     * &#064;description 上架/下架公告
-     * @param id     公告 ID
+     * 上架/下架公告（村干部端）。
+     *
+     * <p>PUT /cadre/announcements/{id}/status</p>
+     *
+     * @param id 公告ID
      * @param status 目标状态
-     * @return 操作结果文案
+     * @return 状态更新结果提示文案
      */
     @Operation(summary = "上架/下架公告")
     @PutMapping("/cadre/announcements/{id}/status")
@@ -103,11 +104,12 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/10
-     * &#064;description 热门公告（静态路径，避免与 /{id} 冲突）
+     * 获取热门公告列表（前台）。
+     *
+     * <p>GET /announcements/hot</p>
+     *
      * @param limit 条数上限
-     * @return 热门列表
+     * @return 热门公告列表
      */
     @Operation(summary = "热门公告")
     @GetMapping("/announcements/hot")
@@ -117,10 +119,11 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/9
-     * &#064;description 公告详情
-     * @param id 公告 ID
+     * 获取公告详情（前台）。
+     *
+     * <p>GET /announcements/{id}</p>
+     *
+     * @param id 公告ID
      * @return 公告详情
      */
     @Operation(summary = "公告详细")
@@ -130,10 +133,11 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/15
-     * &#064;description 村干部公告详情
-     * @param id 公告 ID
+     * 获取公告详情（村干部端，可用于查看非发布态等管理视角数据）。
+     *
+     * <p>GET /cadre/announcements/{id}</p>
+     *
+     * @param id 公告ID
      * @return 公告详情
      */
     @Operation(summary = "村干部公告详情")
@@ -143,11 +147,12 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/12
-     * &#064;description 删除公告
-     * @param id 公告 ID
-     * @return 操作结果文案
+     * 删除公告（村干部端）。
+     *
+     * <p>DELETE /cadre/announcements/{id}</p>
+     *
+     * @param id 公告ID
+     * @return 删除结果提示文案
      */
     @Operation(summary = "删除公告")
     @DeleteMapping("/cadre/announcements/{id}")
@@ -157,12 +162,13 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/14
-     * &#064;description 村干部分页查询公告
+     * 村干部分页查询公告列表（支持按状态/标题/类型/置顶/时间范围筛选）。
+     *
+     * <p>GET /cadre/announcements</p>
+     *
      * @param current 当前页
-     * @param size    每页数量
-     * @param status  状态
+     * @param size 每页数量
+     * @param status 状态
      * @return 分页结果
      */
     @Operation(summary = "村干部分页查询公告")
@@ -182,10 +188,11 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/14
-     * &#064;description 村干部待审核公告
-     * @return 待审核公告列表
+     * 村干部待审核公告列表（分页）。
+     *
+     * <p>GET /cadre/announcements/pending</p>
+     *
+     * @return 待审核公告分页结果
      */
     @Operation(summary = "村干部待审核公告")
     @GetMapping("/cadre/announcements/pending")
@@ -202,12 +209,13 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/14
-     * &#064;description 村干部审核公告
-     * @param id 公告 ID
-     * @param status 状态
-     * @return 操作结果文案
+     * 审核公告（村干部端）。
+     *
+     * <p>PUT /cadre/announcements/{id}/audit</p>
+     *
+     * @param id 公告ID
+     * @param status 审核状态
+     * @return 审核结果提示文案
      */
     @Operation(summary = "村干部审核公告")
     @PutMapping("/cadre/announcements/{id}/audit")
@@ -218,17 +226,18 @@ public class AnnouncementController {
     }
 
     /**
-     * @author chenyang
-     * &#064;date 2026/4/15
-     * &#064;description 审核历史列表
+     * 审核历史列表（已审核，分页）。
+     *
+     * <p>GET /cadre/announcements/audited</p>
+     *
      * @param current 当前页
-     * @param size    每页数量
-     * @param title   标题
-     * @param type    类型
-     * @param isTop   是否置顶
+     * @param size 每页数量
+     * @param title 标题
+     * @param type 类型
+     * @param isTop 是否置顶
      * @param startTime 开始时间
-     * @param endTime   结束时间
-     * @return 审核历史列表
+     * @param endTime 结束时间
+     * @return 审核历史分页结果
      */
     @Operation(summary = "审核历史列表")
     @GetMapping("/cadre/announcements/audited")
