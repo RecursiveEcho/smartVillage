@@ -3,6 +3,9 @@ package com.backend.common.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -10,6 +13,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.backend.common.filter.JwtSecurityFilter;
+
+import java.util.List;
 /**
  * @author chengyang
  * &#064;date  2026/4/16
@@ -24,7 +29,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)//禁用CSRF保护
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)//禁用CSRF保护
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))//禁用会话管理
             .authorizeHttpRequests(auth -> auth//授权请求
             .requestMatchers(
@@ -68,5 +74,19 @@ public class SecurityConfig {
         //在UsernamePasswordAuthenticationFilter之前添加JwtSecurityFilter
             .addFilterBefore(jwtSecurityFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of("token"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
