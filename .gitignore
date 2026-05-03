@@ -55,3 +55,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### docker ###
+docker/
+Docker.md
+docker-compose.backend.yml

@@ -44,3 +44,7 @@ logs/
 
 # Git
 .gitignore
+
+# docker
+.dockerignore
+Dockerfile
