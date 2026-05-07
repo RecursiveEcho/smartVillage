@@ -89,9 +89,5 @@ curl -s "http://localhost:8080/village-affairs?current=1&size=10"
 curl -s "http://localhost:8080/village-affairs/${AFFAIR_ID}"
 ```
 
-> 你也可以顺口强调：详情接口里有浏览量递增 + Redis 详情缓存。
 
-## 4. 演示“民生服务工单”闭环（可选加分）
-
-如果你已经有工单模块接口（村民提交、干部处理、统计），按你现有路径补充一轮“提交 → 处理中 → 办结/关闭”的演示即可。
 

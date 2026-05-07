@@ -3,6 +3,7 @@ package com.backend.management.service.impl;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.management.dto.VillageHouseLandCreateDTO;
+import com.backend.management.dto.VillageHouseLandListPageCache;
 import com.backend.management.dto.VillageHouseLandUpdateDTO;
 import com.backend.management.entity.VillageHouseLandEntity;
 import com.backend.management.mapper.VillageHouseLandMapper;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import com.backend.common.utils.RedisJsonCacheTool;
@@ -31,7 +34,10 @@ public class VillageHouseLandServiceImpl
         implements VillageHouseLandService {
         
     private static final String CACHE_KEY_PREFIX = "village_house_land:";
+    private static final String CACHE_LIST_VER_KEY = "village-house-land:list:ver";
+    private static final String CACHE_LIST_PREFIX = "village-house-land:list:";
     private final RedisJsonCacheTool redisJsonCacheTool;
+    private final VillageHouseLandMapper villageHouseLandMapper;
     /**
      * 创建房屋与土地台账
      * @param villageHouseLandCreateDTO 房屋与土地台账创建DTO
@@ -45,6 +51,7 @@ public class VillageHouseLandServiceImpl
         save(villageHouseLandEntity);
         Integer id = villageHouseLandEntity.getId();
         redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id), villageHouseLandEntity);
+        bumpListCacheVersion();
         return id;
     }
 
@@ -59,17 +66,30 @@ public class VillageHouseLandServiceImpl
      */
     @Override
     public IPage<VillageHouseLandSimpleVO> getVillageHouseLandList(Long current, Long size, String bizType, String ownerName, String location) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_PREFIX + CacheKeyUtils.listFilterSegment(bizType, ownerName, location);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        VillageHouseLandListPageCache cached = redisJsonCacheTool.getObject(listKey, VillageHouseLandListPageCache.class);
+        if (cached != null) {
+            List<VillageHouseLandSimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<VillageHouseLandSimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillageHouseLandEntity> queryWrapper = new LambdaQueryWrapper<VillageHouseLandEntity>()
         .eq(StringUtils.hasText(bizType), VillageHouseLandEntity::getBizType, bizType)
         .like(StringUtils.hasText(ownerName), VillageHouseLandEntity::getOwnerName, ownerName)
         .like(StringUtils.hasText(location), VillageHouseLandEntity::getLocation, location)
         .orderByDesc(VillageHouseLandEntity::getCreateTime);
         IPage<VillageHouseLandEntity> entityPage = page(new Page<>(current, size), queryWrapper);
-        return entityPage.convert(entity -> {
-            VillageHouseLandSimpleVO vo = new VillageHouseLandSimpleVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        });
+        VillageHouseLandListPageCache toSave = new VillageHouseLandListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toHouseLandSimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toHouseLandSimpleVo);
     }
 
     /**
@@ -80,13 +100,28 @@ public class VillageHouseLandServiceImpl
     @Override
     public VillageHouseLandDetailVO getVillageHouseLandDetail(Integer id) {
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        VillageHouseLandDetailVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        VillageHouseLandEntity entity = villageHouseLandMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+        }
+        VillageHouseLandDetailVO vo = new VillageHouseLandDetailVO();
+        BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(cacheKey, vo);
+        return vo;
+    }
+    private VillageHouseLandDetailVO tryLoadAndBumpFromCache(Integer id, String cacheKey) {
         VillageHouseLandDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillageHouseLandDetailVO.class);
         if (fromCache != null) {
             return fromCache;
         }
-        VillageHouseLandEntity entity = getById(id);
+        VillageHouseLandEntity entity = villageHouseLandMapper.selectById(id);
         if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
         }
         VillageHouseLandDetailVO vo = new VillageHouseLandDetailVO();
         BeanUtils.copyProperties(entity, vo);
@@ -107,7 +142,8 @@ public class VillageHouseLandServiceImpl
         }
         BeanUtils.copyProperties(villageHouseLandUpdateDTO, entity);
         updateById(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));  
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -123,5 +159,16 @@ public class VillageHouseLandServiceImpl
         }
         removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
+    }
+
+    private VillageHouseLandSimpleVO toHouseLandSimpleVo(VillageHouseLandEntity entity) {
+        VillageHouseLandSimpleVO vo = new VillageHouseLandSimpleVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
+
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
 }

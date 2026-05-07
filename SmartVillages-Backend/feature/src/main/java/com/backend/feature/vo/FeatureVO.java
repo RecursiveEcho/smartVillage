@@ -32,6 +32,9 @@ public class FeatureVO {
     @Schema(description = "创建用户")
     private Integer createUser;
 
+    @Schema(description = "浏览次数")
+    private Integer viewCount;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

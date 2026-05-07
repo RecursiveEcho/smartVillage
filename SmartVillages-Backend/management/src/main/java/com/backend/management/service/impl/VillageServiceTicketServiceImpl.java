@@ -2,6 +2,7 @@ package com.backend.management.service.impl;
 
 import com.backend.common.context.LoginUserContext;
 import com.backend.management.dto.ServiceTicketCreateDTO;
+import com.backend.management.dto.ServiceTicketListPageCache;
 import com.backend.management.entity.VillageServiceTicketEntity;
 import com.backend.management.mapper.VillageServiceTicketMapper;
 import com.backend.management.service.VillageServiceTicketService;
@@ -20,6 +21,8 @@ import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.utils.CacheKeyUtils;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.time.LocalDateTime;
 import com.backend.management.dto.ServiceTicketDoneDTO;
@@ -31,6 +34,9 @@ public class VillageServiceTicketServiceImpl
         implements VillageServiceTicketService {
 
     private static final String CACHE_KEY_PREFIX = "village_service_ticket:detail:";
+    private static final String CACHE_LIST_VER_KEY = "village-service-ticket:list:ver";
+    private static final String CACHE_LIST_MINE_PREFIX = "village-service-ticket:list:mine:";
+    private static final String CACHE_LIST_CADRE_PREFIX = "village-service-ticket:list:cadre:";
     private final RedisJsonCacheTool redisJsonCacheTool;
 
     /**
@@ -48,6 +54,7 @@ public class VillageServiceTicketServiceImpl
         entity.setHandlerId(null);
         entity.setHandleNote(null);
         save(entity);
+        bumpListCacheVersion();
         return entity.getId();
     }
 
@@ -62,17 +69,31 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public IPage<ServiceTicketSimpleVO> getServiceTicketList(Long current, Long size, String serviceType, Integer status, HttpServletRequest request) {
+        Integer applicantId = LoginUserContext.getAuthId(request);
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_MINE_PREFIX + CacheKeyUtils.listFilterSegment(applicantId, serviceType, status);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        ServiceTicketListPageCache cached = redisJsonCacheTool.getObject(listKey, ServiceTicketListPageCache.class);
+        if (cached != null) {
+            List<ServiceTicketSimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<ServiceTicketSimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
         .eq(serviceType != null, VillageServiceTicketEntity::getServiceType, serviceType)
         .eq(status != null, VillageServiceTicketEntity::getStatus, status)
-        .eq(LoginUserContext.getAuthId(request) != null, VillageServiceTicketEntity::getApplicantId, LoginUserContext.getAuthId(request))
+        .eq(applicantId != null, VillageServiceTicketEntity::getApplicantId, applicantId)
         .orderByDesc(VillageServiceTicketEntity::getCreateTime);
         IPage<VillageServiceTicketEntity> entityPage = page(new Page<>(current, size), wrapper);
-        return entityPage.convert(entity -> {
-            ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        });
+        ServiceTicketListPageCache toSave = new ServiceTicketListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toTicketSimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toTicketSimpleVo);
     }
     /**
      * 获取我的民生服务工单详情
@@ -114,6 +135,7 @@ public class VillageServiceTicketServiceImpl
             entity.setStatus(3);
             updateById(entity);
             redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+            bumpListCacheVersion();
         }
 
 
@@ -129,6 +151,16 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public IPage<ServiceTicketSimpleVO> pageCadre(Long current,Long size,String serviceType,Integer status,LocalDateTime starTime,LocalDateTime endTime) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_CADRE_PREFIX + CacheKeyUtils.listFilterSegment(serviceType, status, starTime, endTime);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        ServiceTicketListPageCache cached = redisJsonCacheTool.getObject(listKey, ServiceTicketListPageCache.class);
+        if (cached != null) {
+            List<ServiceTicketSimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<ServiceTicketSimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillageServiceTicketEntity> wrapper = new LambdaQueryWrapper<VillageServiceTicketEntity>()
         .eq(serviceType != null, VillageServiceTicketEntity::getServiceType, serviceType)
         .eq(status != null, VillageServiceTicketEntity::getStatus, status)
@@ -136,11 +168,14 @@ public class VillageServiceTicketServiceImpl
         .le(endTime != null, VillageServiceTicketEntity::getCreateTime, endTime)
         .orderByDesc(VillageServiceTicketEntity::getCreateTime);
         IPage<VillageServiceTicketEntity> entityPage = page(new Page<>(current, size), wrapper);
-        return entityPage.convert(entity -> {
-            ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        });
+        ServiceTicketListPageCache toSave = new ServiceTicketListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toTicketSimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toTicketSimpleVo);
     }
 
     /**
@@ -188,6 +223,7 @@ public class VillageServiceTicketServiceImpl
         entity.setHandleNote(dto.getHandleNote());
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -207,6 +243,7 @@ public class VillageServiceTicketServiceImpl
         entity.setStatus(2);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -224,6 +261,7 @@ public class VillageServiceTicketServiceImpl
         entity.setHandleNote("管理端关闭工单，申请退回");
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
     /**
      * 后台获取民生服务工单统计
@@ -262,6 +300,14 @@ public class VillageServiceTicketServiceImpl
         return entity;
     }
 
-    
+    private ServiceTicketSimpleVO toTicketSimpleVo(VillageServiceTicketEntity entity) {
+        ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
+
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+    }
 }
 

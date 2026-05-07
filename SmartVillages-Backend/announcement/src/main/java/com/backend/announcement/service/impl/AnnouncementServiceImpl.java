@@ -5,6 +5,7 @@ import com.backend.announcement.dto.AnnouncementUpdateDTO;
 import com.backend.announcement.entity.AnnouncementEntity;
 import com.backend.announcement.mapper.AnnouncementMapper;
 import com.backend.announcement.service.AnnouncementService;
+import com.backend.announcement.vo.AnnouncementPublishedPageCache;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -40,6 +42,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /** Redis 中单条详情 JSON 的 key 前缀 */
     private static final String CACHE_KEY_PREFIX = "announcement:detail:";
+    private static final String CACHE_LIST_KEY_PREFIX = "announcement:list:published:";
+    /** 列表缓存版本号：写操作 INCR 后，所有旧分页 key 自然失效（无需 KEYS 扫描） */
+    private static final String CACHE_LIST_VER_KEY = "announcement:list:published:ver";
 
     private static final int STATUS_PENDING = 0;
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
@@ -72,26 +77,48 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /// 前台列表：已发布 + 未删除，置顶优先再按发布时间倒序
     @Override
     public IPage<AnnouncementVO> pagePublished(Long current, Long size) {
-        /* 查询条件：状态为已发布，未删除，置顶优先，再按发布时间倒序 */
+        /* 获取版本号 */
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        /* 构建列表缓存 key */
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
+                CACHE_LIST_KEY_PREFIX, ver, current, size);
+
+        AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+        // 列表「缓存穿透」：空页也写入 records=[]，命中后不再打库；records 为 null 时按空列表返回，避免坏 JSON 反复回源
+        if (cached != null) {
+            List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
+
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
                 .orderByDesc(AnnouncementEntity::getIsTop)
                 .orderByDesc(AnnouncementEntity::getPublishTime);
+        
+                
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
-        /* 转换为 VO 并返回 */
-        return page.convert(entity -> {
-            AnnouncementVO vo = new AnnouncementVO();
-            BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-            return vo;
-        });
+
+        AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
+        toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(page.getTotal());
+        toSave.setCurrent(page.getCurrent());
+        toSave.setSize(page.getSize());
+        toSave.setPages(page.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+
+        return page.convert(this::toVo);
     }
 
     /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
-        /* 构建缓存 key */
-        AnnouncementEntity entity = mustGetEntity(id);
+        AnnouncementEntity entity = announcementMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
         /* 设置标题、内容、类型、是否置顶 */
         if(!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.NO_PERMISSION);
@@ -103,6 +130,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         /* 更新实体并清除详情缓存 */
         updateById(entity);
         evictDetailCache(id);
+        bumpPublishedListCacheVersion();
     }
 
     /** 上下架状态更新 */
@@ -111,7 +139,10 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     public void updateStatus(Long id, Integer status, HttpServletRequest request) {
         /* 获取实体并校验 */
         validateStatus(status);
-        AnnouncementEntity entity = mustGetEntity(id);
+        AnnouncementEntity entity = announcementMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
         /* 设置状态 */
         entity.setStatus(status);
         entity.setAuditUser(LoginUserContext.getAuthId(request));
@@ -127,32 +158,78 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         /* 更新实体并清除详情缓存 */
         updateById(entity);
         evictDetailCache(id);
+        bumpPublishedListCacheVersion();
     }
 
-    /**
-     * 读详情：优先缓存；缓存未命中则查库、浏览量 +1、写缓存。缓存命中路径见 {@link #tryLoadAndBumpFromCache}。
-     */
+    // 读详情：优先缓存；缓存未命中则查库校验、浏览量 +1、写缓存。
     @Override
     public AnnouncementVO getAnnouncement(Long id) {
-        /* 构建缓存 key */
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
-        /* 尝试从缓存中获取 */
+
+        // 先拦截空值占位（防穿透）
+        if (redisJsonCacheTool.isNullMarker(cacheKey)) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
+
+        // 缓存命中：DB 原子 +1，并同步返回值与缓存
         AnnouncementVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
-        /* 如果缓存命中，则返回 */
         if (fromCache != null) {
             return fromCache;
         }
 
-        /* 获取实体并累加浏览量（仅已发布可看） */
-        AnnouncementEntity entity = mustGetEntity(id);
-        if (!Objects.equals(entity.getStatus(), STATUS_PUBLISHED)) {
+        // 未命中：查库校验是否存在且已发布
+        AnnouncementEntity entity = announcementMapper.selectById(id);
+        if (entity == null||!Objects.equals(entity.getStatus(), STATUS_PUBLISHED)) {
+            redisJsonCacheTool.setNullMarker(cacheKey);
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
-        int nextViews = (entity.getViewCount() == null ? 0 : entity.getViewCount()) + 1;
-        entity.setViewCount(nextViews);
-        updateById(entity);
-        /* 转换为 VO 并写入缓存 */
+
+        // DB 原子 +1（并发安全）
+        LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getId, id)
+                .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
+                .setSql("view_count = IFNULL(view_count, 0) + 1");
+        int rows = announcementMapper.update(null, bump);
+        if (rows <= 0) {
+            redisJsonCacheTool.delete(cacheKey);
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
+
+        // 同步返回值中的浏览量（entity 是更新前的对象）
+        int currentViewCount = entity.getViewCount() == null ? 0 : entity.getViewCount();
+        entity.setViewCount(currentViewCount + 1);
+
         AnnouncementVO vo = toVo(entity);
+        writeDetailCache(cacheKey, vo);
+        return vo;
+    }
+
+    /** 缓存命中时，更新浏览量并返回 VO */
+    private AnnouncementVO tryLoadAndBumpFromCache(Long id, String cacheKey) {
+        // 从缓存中获取VO
+        AnnouncementVO vo = redisJsonCacheTool.getObject(cacheKey, AnnouncementVO.class);
+        if (vo == null) {
+            // 缓存未命中，返回null
+            return null;
+        }
+        // 只允许已发布公告走缓存命中路径；否则删缓存回落 DB
+        if (!Objects.equals(vo.getStatus(), STATUS_PUBLISHED)) {
+            // 缓存命中但状态不匹配，删除缓存并返回null
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
+        }
+        LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
+                .eq(AnnouncementEntity::getId, id)
+                .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
+                .setSql("view_count = IFNULL(view_count, 0) + 1");
+        int rows = announcementMapper.update(null, bump);
+        if (rows <= 0) {
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
+        }
+        int current = vo.getViewCount() == null ? 0 : vo.getViewCount();
+        vo.setViewCount(current + 1);
+        // 更新缓存
         writeDetailCache(cacheKey, vo);
         return vo;
     }
@@ -160,7 +237,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /** 管理员公告详情 */
     @Override
     public AnnouncementVO getAdminAnnouncement(Long id) {
-        return toVo(mustGetEntity(id));
+        AnnouncementEntity entity = announcementMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
+        return toVo(entity);
     }
 
     /** 已发布列表按浏览量降序，浏览量相同时按创建时间升序，限制条数 */
@@ -187,6 +268,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
         evictDetailCache(id);
+        bumpPublishedListCacheVersion();
     }
 
     /* 管理员分页查询公告 */
@@ -201,6 +283,16 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             Integer isTop,
             LocalDateTime startTime,
             LocalDateTime endTime) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
+                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+        if (cached != null) {
+            List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(status != null, AnnouncementEntity::getStatus, status)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
@@ -210,6 +302,13 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
                 .orderByDesc(AnnouncementEntity::getUpdateTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
+        AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
+        toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(page.getTotal());
+        toSave.setCurrent(page.getCurrent());
+        toSave.setSize(page.getSize());
+        toSave.setPages(page.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
         return page.convert(this::toVo);
     }
 
@@ -223,6 +322,16 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             Integer isTop,
             LocalDateTime startTime,
             LocalDateTime endTime) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
+                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+        if (cached != null) {
+            List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .eq(AnnouncementEntity::getStatus, STATUS_PENDING)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
@@ -232,6 +341,13 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
                 .orderByDesc(AnnouncementEntity::getUpdateTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
+        AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
+        toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(page.getTotal());
+        toSave.setCurrent(page.getCurrent());
+        toSave.setSize(page.getSize());
+        toSave.setPages(page.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
         return page.convert(this::toVo);
     }
 
@@ -240,7 +356,10 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Override
     public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
         validateStatus(status);
-        AnnouncementEntity entity = mustGetEntity(id);
+        AnnouncementEntity entity = announcementMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+        }
         entity.setAuditTime(LocalDateTime.now());
         entity.setAuditUser(LoginUserContext.getAuthId(request));
         if (Objects.equals(status, STATUS_PUBLISHED)) {
@@ -249,6 +368,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setStatus(status);
         updateById(entity);
         evictDetailCache(id);
+        bumpPublishedListCacheVersion();
     }
 
     /* 管理员审核历史列表 */
@@ -261,6 +381,16 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             Integer isTop,
             LocalDateTime startTime,
             LocalDateTime endTime) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
+                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+        if (cached != null) {
+            List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
                 .in(AnnouncementEntity::getStatus, 1, 2)
                 .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
@@ -271,60 +401,37 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .orderByDesc(AnnouncementEntity::getAuditTime)
                 .orderByDesc(AnnouncementEntity::getUpdateTime);
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
+        AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
+        toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(page.getTotal());
+        toSave.setCurrent(page.getCurrent());
+        toSave.setSize(page.getSize());
+        toSave.setPages(page.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
         return page.convert(this::toVo);
     }
 
-    /**
-     * 缓存命中：反序列化 VO，用 {@code UPDATE ... SET view_count = IFNULL(view_count,0)+1} 原子加浏览量；
-     * 更新失败则删缓存回落到 DB 路径；JSON 损坏亦删缓存。
-     */
-    private AnnouncementVO tryLoadAndBumpFromCache(Long id, String cacheKey) {
-        AnnouncementVO vo = redisJsonCacheTool.getObject(cacheKey, AnnouncementVO.class);
-        if (vo == null) {
-            return null;
-        }
-        // 仅前台已发布公告才允许读缓存与刷浏览量
-        if (!Objects.equals(vo.getStatus(), STATUS_PUBLISHED)) {
-            redisJsonCacheTool.delete(cacheKey);
-            return null;
-        }
-        LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
-                .eq(AnnouncementEntity::getId, id.intValue())
-                .setSql("view_count = IFNULL(view_count,0) + 1");
-        int rows = announcementMapper.update(null, bump);
-        if (rows > 0) {
-            int vc = vo.getViewCount() == null ? 0 : vo.getViewCount();
-            vo.setViewCount(vc + 1);
-            return vo;
-        }
-        redisJsonCacheTool.delete(cacheKey);
-        return null;
-    }
-
+    
     /** 序列化 VO 写入 Redis */
     private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
         redisJsonCacheTool.setObject(cacheKey, vo);
     }
 
+    /** 转换为 VO */
     private AnnouncementVO toVo(AnnouncementEntity entity) {
         AnnouncementVO vo = new AnnouncementVO();
         BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
         return vo;
     }
 
+    /** 使所有「已发布列表」分页缓存失效：版本号 +1，读侧使用新前缀 */
+    private void bumpPublishedListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+    }
+
     /** 写操作后删除对应详情缓存，避免脏读 */
     private void evictDetailCache(Long id) {
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-    }
-
-
-    /** 获取实体并校验是否存在 */
-    private AnnouncementEntity mustGetEntity(Long id) {
-        AnnouncementEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
-        }
-        return entity;
     }
 
     /** 校验状态 */

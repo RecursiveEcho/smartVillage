@@ -1,5 +1,6 @@
 package com.backend.admin.service.impl;
 
+import com.backend.admin.dto.AuthPublishedPageCache;
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.mapper.AdminMapper;
 import com.backend.admin.service.AdminService;
@@ -27,7 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Collections;
 import java.util.List;
-import com.backend.admin.vo.AuthPublishedPageCache;
+
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.common.utils.CacheKeyUtils;
 /**

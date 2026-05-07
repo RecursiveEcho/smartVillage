@@ -5,6 +5,7 @@ import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillagePartyCreateDTO;
+import com.backend.management.dto.VillagePartyListPageCache;
 import com.backend.management.dto.VillagePartyUpdateDTO;
 import com.backend.management.entity.VillagePartyEntity;
 import com.backend.management.mapper.VillagePartyMapper;
@@ -21,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -30,6 +33,8 @@ public class VillagePartyServiceImpl
         implements VillagePartyService {
 
     private static final String CACHE_KEY_PREFIX = "village_party:";
+    private static final String CACHE_LIST_VER_KEY = "village-party:list:ver";
+    private static final String CACHE_LIST_PREFIX = "village-party:list:";
     private final RedisJsonCacheTool redisJsonCacheTool;
 
     /**
@@ -44,6 +49,7 @@ public class VillagePartyServiceImpl
         save(entity);
         Integer id=entity.getId();
         redisJsonCacheTool.setObject(CACHE_KEY_PREFIX, id);
+        bumpListCacheVersion();
         return id;
     }
     
@@ -58,19 +64,30 @@ public class VillagePartyServiceImpl
      */
     @Override
     public IPage<VillagePartySimpleVO> getList(Long current, Long size, String orgName, String orgType, String secretaryName) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_PREFIX + CacheKeyUtils.listFilterSegment(orgName, orgType, secretaryName);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        VillagePartyListPageCache cached = redisJsonCacheTool.getObject(listKey, VillagePartyListPageCache.class);
+        if (cached != null) {
+            List<VillagePartySimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<VillagePartySimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillagePartyEntity> queryWrapper = new LambdaQueryWrapper<VillagePartyEntity>()
         .like(StringUtils.hasText(orgName), VillagePartyEntity::getOrgName, orgName)
         .like(StringUtils.hasText(orgType), VillagePartyEntity::getOrgType, orgType)
         .like(StringUtils.hasText(secretaryName), VillagePartyEntity::getSecretaryName, secretaryName)
         .orderByDesc(VillagePartyEntity::getCreateTime);
         IPage<VillagePartyEntity> entityPage = page(new Page<>(current, size), queryWrapper);
-        return entityPage.convert(
-            entity -> {
-                VillagePartySimpleVO vo = new VillagePartySimpleVO();
-                BeanUtils.copyProperties(entity, vo);
-                return vo;
-            }
-        );
+        VillagePartyListPageCache toSave = new VillagePartyListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toPartySimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toPartySimpleVo);
     }
 
     /**
@@ -109,6 +126,7 @@ public class VillagePartyServiceImpl
         BeanUtils.copyProperties(dto, entity);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
     /**
      * 删除党建组织信息
@@ -122,6 +140,17 @@ public class VillagePartyServiceImpl
         }
         removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
+    }
+
+    private VillagePartySimpleVO toPartySimpleVo(VillagePartyEntity entity) {
+        VillagePartySimpleVO vo = new VillagePartySimpleVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
+
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
 }
 

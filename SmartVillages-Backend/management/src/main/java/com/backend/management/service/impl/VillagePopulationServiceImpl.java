@@ -3,6 +3,7 @@ package com.backend.management.service.impl;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.management.dto.VillagePopulationCreateDTO;
+import com.backend.management.dto.VillagePopulationListPageCache;
 import com.backend.management.dto.VillagePopulationUpdateDTO;
 import com.backend.management.entity.VillagePopulationEntity;
 import com.backend.management.mapper.VillagePopulationMapper;
@@ -20,6 +21,8 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,8 @@ public class VillagePopulationServiceImpl
         implements VillagePopulationService {
 
     private static final String CACHE_KEY_PREFIX = "village_population:";
+    private static final String CACHE_LIST_VER_KEY = "village-population:list:ver";
+    private static final String CACHE_LIST_PREFIX = "village-population:list:";
     private final RedisJsonCacheTool redisJsonCacheTool;
     /**
      * 创建人口台账
@@ -43,6 +48,7 @@ public class VillagePopulationServiceImpl
         BeanUtils.copyProperties(villagePopulationCreateDTO, villagePopulationEntity);
         save(villagePopulationEntity);
         redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, villagePopulationEntity.getId()), villagePopulationEntity);
+        bumpListCacheVersion();
     }
 
     /**
@@ -57,6 +63,16 @@ public class VillagePopulationServiceImpl
      */
     @Override
     public IPage<VillagePopulationSimpleVO> getVillagePopulationList(Long current, Long size, String householdNo, String fullName, Integer gender, String relationToHead) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_PREFIX + CacheKeyUtils.listFilterSegment(householdNo, fullName, gender, relationToHead);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        VillagePopulationListPageCache cached = redisJsonCacheTool.getObject(listKey, VillagePopulationListPageCache.class);
+        if (cached != null) {
+            List<VillagePopulationSimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<VillagePopulationSimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillagePopulationEntity> queryWrapper = new LambdaQueryWrapper<VillagePopulationEntity>()
         .like(StringUtils.hasText(householdNo), VillagePopulationEntity::getHouseholdNo, householdNo)
         .like(StringUtils.hasText(fullName), VillagePopulationEntity::getFullName, fullName)
@@ -64,13 +80,14 @@ public class VillagePopulationServiceImpl
         .eq(StringUtils.hasText(relationToHead), VillagePopulationEntity::getRelationToHead, relationToHead)
         .orderByDesc(VillagePopulationEntity::getCreateTime);
         IPage<VillagePopulationEntity> entityPage = page(new Page<>(current, size), queryWrapper);
-        return entityPage.convert(
-                entity -> {
-                    VillagePopulationSimpleVO vo = new VillagePopulationSimpleVO();
-                    BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-                    return vo;
-                }
-        );
+        VillagePopulationListPageCache toSave = new VillagePopulationListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toPopulationSimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toPopulationSimpleVo);
     }
 
     /**
@@ -104,6 +121,7 @@ public class VillagePopulationServiceImpl
         BeanUtils.copyProperties(villagePopulationUpdateDTO, entity);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -118,6 +136,17 @@ public class VillagePopulationServiceImpl
         }
         removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
+    }
+
+    private VillagePopulationSimpleVO toPopulationSimpleVo(VillagePopulationEntity entity) {
+        VillagePopulationSimpleVO vo = new VillagePopulationSimpleVO();
+        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+        return vo;
+    }
+
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
 }
 

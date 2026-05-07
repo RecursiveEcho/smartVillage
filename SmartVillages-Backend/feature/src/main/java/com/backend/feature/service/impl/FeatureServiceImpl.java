@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.backend.feature.vo.FeatureVO;
 import org.springframework.beans.BeanUtils;
 import com.backend.common.exception.BusinessException;
@@ -20,12 +21,14 @@ import com.backend.common.enums.ErrorCode;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import lombok.RequiredArgsConstructor;
-
+import com.backend.feature.dto.FeaturePublishedPageCache;
 import java.util.Map;
 import java.util.Objects;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Collections;
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -36,8 +39,13 @@ import java.util.HashMap;
 public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity> implements FeatureService {
 
     private static final String CACHE_KEY_PREFIX = "feature:detail:";
-
+    private static final String CACHE_LIST_KEY_PREFIX = "feature:list:";
+    private static final String CACHE_LIST_VER_KEY = "feature:list:ver";
+    private static final String CACHE_LIST_ADMIN_PREFIX = "feature:list:admin:";
+    private static final String CACHE_LIST_ADMIN_VER_KEY = "feature:list:admin:ver";
     private final RedisJsonCacheTool redisJsonCacheTool;
+
+    private final FeatureMapper featureMapper;
 
     /* 创建乡村风采 */
     @Override
@@ -57,11 +65,22 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         entity.setCreateUser(LoginUserContext.getAuthId(request));
         save(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, entity.getId()));
+        bumpPublishedListCacheVersion();
+        bumpAdminListCacheVersion();
     }
 
     /* 村民获取乡村风采列表 */
     @Override
     public IPage<FeatureVO> getFeatureList(Long current, Long size, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(CACHE_LIST_KEY_PREFIX, ver, current, size);
+        FeaturePublishedPageCache cached = redisJsonCacheTool.getObject(listKey, FeaturePublishedPageCache.class);
+        if (cached != null) {
+            List<FeatureVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<FeatureVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
         .eq(FeatureEntity::getStatus, 1)
         .eq(FeatureEntity::getDeleted, 0)
@@ -71,44 +90,78 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         .orderByDesc(getSort != null, FeatureEntity::getSort,FeatureEntity::getCreateTime);
         IPage<FeatureEntity> entityPage = page(new Page<>(current, size), wrapper);
         /* 转换为 VO */
-        return entityPage.convert(entity -> {
-            FeatureVO vo = new FeatureVO();
-            BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-            return vo;
-        });
+        return entityPage.convert(this::toVo);
     }
 
     /* 获取乡村风采详情 */
     @Override
     public FeatureVO getFeatureDetail(Long id){
-        /* 构建缓存 key */
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
-        FeatureVO fromCache =redisJsonCacheTool.getObject(cacheKey, FeatureVO.class);
-        /* 获取实体 */
-        FeatureEntity entity = getById(id);
-        /* 如果实体不存在，则抛出异常 */
-        if(entity == null) {
+        if (redisJsonCacheTool.isNullMarker(cacheKey)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
-        /* 如果缓存命中，则累加浏览量 */
-        if(fromCache != null) {
-            int nextViewCount = entity.getViewCount() + 1;
-            entity.setSort(nextViewCount);
-            updateById(entity);
+        FeatureVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
+        if (fromCache != null) {
             return fromCache;
         }
-        /* 转换为 VO */
-        FeatureVO vo = new FeatureVO();
-        /* 累加浏览量 */
-        int nextSort = entity.getSort() + 1;
-        entity.setSort(nextSort);
+        
+        FeatureEntity entity = getById(id);
+        if (entity == null||entity.getStatus()!=1) {
+            redisJsonCacheTool.isNullMarker(cacheKey);
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
+        }
+        LambdaUpdateWrapper<FeatureEntity> wrapper=new LambdaUpdateWrapper<FeatureEntity>()
+        .eq(FeatureEntity::getId,id)
+        .setSql("view_count=IFNULL(view_count,0)+1");
+        int rows = featureMapper.update(null, wrapper);
+        if (rows <= 0) {
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
+        }
+        int currentViewCount = entity.getViewCount() == null ? 0 : entity.getViewCount();
+        entity.setViewCount(currentViewCount + 1);
         updateById(entity);
-        /* 转换为 VO */
+
+        FeatureVO vo = new FeatureVO();
         BeanUtils.copyProperties(entity, vo);
-        /* 写入缓存 */
         redisJsonCacheTool.setObject(cacheKey, vo);
-        return vo;   
-    }   
+        bumpPublishedListCacheVersion();
+        return vo;
+    }
+
+
+    /* 尝试从缓存中加载并增加浏览量 */
+    /**
+     * 尝试从缓存中加载并增加浏览量
+     * @param id 乡村风采 ID
+     * @param cacheKey 缓存键
+     * @return 乡村风采 VO
+     */
+    private FeatureVO tryLoadAndBumpFromCache(Long id, String cacheKey) {
+        FeatureVO fromCache = redisJsonCacheTool.getObject(cacheKey, FeatureVO.class);
+        if (fromCache == null) {
+            return null;
+        }
+        FeatureEntity entity = getById(id);
+        if (entity == null||!Objects.equals(entity.getStatus(), 1)) {
+            redisJsonCacheTool.setNullMarker(cacheKey);
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
+        }
+        LambdaUpdateWrapper<FeatureEntity> wrapper = new LambdaUpdateWrapper<FeatureEntity>()
+        .eq(FeatureEntity::getId, id)
+        .setSql("view_count = IFNULL(view_count, 0) + 1");
+        int rows = featureMapper.update(null, wrapper);
+        if (rows <= 0) {
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
+        }
+        int current = fromCache.getViewCount() == null ? 0 : fromCache.getViewCount();
+        fromCache.setViewCount(current + 1);
+        redisJsonCacheTool.setObject(cacheKey, fromCache);
+        bumpPublishedListCacheVersion();
+        return fromCache;
+    }
+
 
     /* 上下架乡村风采 */
     @Override
@@ -123,14 +176,27 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         }
         entity.setStatus(status);   
         updateById(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        evictDetailCache(id);
+        bumpPublishedListCacheVersion();
+        bumpAdminListCacheVersion();
     }   
 
     /* 管理端获取乡村风采列表 */
     @Override
     public IPage<FeatureVO> getFeatureListByAdmin(Long current, Long size, Integer status, String title, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request) {
+        Integer uid = LoginUserContext.getAuthId(request);
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_ADMIN_VER_KEY);
+        String prefix = CACHE_LIST_ADMIN_PREFIX + CacheKeyUtils.listFilterSegment(uid, status, title, type, getSort, getCreateTime, startTime, endTime);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        FeaturePublishedPageCache cached = redisJsonCacheTool.getObject(listKey, FeaturePublishedPageCache.class);
+        if (cached != null) {
+            List<FeatureVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<FeatureVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
-        .eq(FeatureEntity::getCreateUser, LoginUserContext.getAuthId(request))
+        .eq(FeatureEntity::getCreateUser, uid)
         .eq(FeatureEntity::getDeleted,0)
         .like(StringUtils.hasText(title), FeatureEntity::getTitle,title)
         .eq(type != null, FeatureEntity::getType, type)
@@ -138,13 +204,16 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         .le(endTime != null, FeatureEntity::getCreateTime, endTime)
         .eq(status != null, FeatureEntity::getStatus, status)
         .orderByDesc(getSort != null, FeatureEntity::getSort)
-        .orderByDesc(getCreateTime != null, FeatureEntity::getCreateTime); 
+        .orderByDesc(getCreateTime != null, FeatureEntity::getCreateTime);
         IPage<FeatureEntity> entityPage = page(new Page<>(current, size), wrapper);
-        return entityPage.convert(entity -> {
-            FeatureVO vo = new FeatureVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        });
+        FeaturePublishedPageCache toSave = new FeaturePublishedPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toVo);
     }
 
     /* 修改乡村风采 */
@@ -170,7 +239,9 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
             entity.setImages(dto.getImages());
         }
         updateById(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        evictDetailCache(id);
+        bumpPublishedListCacheVersion();
+        bumpAdminListCacheVersion();
     }
 
     /* 删除乡村风采 */
@@ -186,7 +257,9 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
         removeById(id);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        evictDetailCache(id);
+        bumpPublishedListCacheVersion();
+        bumpAdminListCacheVersion();
     }
 
     /* 类型统计 */
@@ -223,5 +296,25 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         result.put("Hidden",count(wrapper2));
         return result;
     }
+    
+    /* 使所有「已发布列表」分页缓存失效：版本号 +1，读侧使用新前缀 */
+    public void bumpPublishedListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+    }
 
+    private void bumpAdminListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_ADMIN_VER_KEY);
+    }
+    
+    /* 写操作后删除对应详情缓存，避免脏读 */
+    private void evictDetailCache(Long id) {
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
+
+    /* 转换为 VO */
+    private FeatureVO toVo(FeatureEntity entity) {
+        FeatureVO vo = new FeatureVO();
+        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+        return vo;
+    }
 }

@@ -6,6 +6,7 @@ import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillageAffairAuditDTO;
 import com.backend.management.dto.VillageAffairCreateDTO;
+import com.backend.management.dto.VillageAffairListPageCache;
 import com.backend.management.dto.VillageAffairUpdateDTO;
 import com.backend.management.entity.VillageAffairEntity;
 import com.backend.management.mapper.VillageAffairMapper;
@@ -23,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -32,8 +35,11 @@ public class VillageAffairServiceImpl
         implements VillageAffairService {
 
     private static final String CACHE_KEY_PREFIX = "village_affair:";
+    private static final String CACHE_LIST_VER_KEY = "village-affair:list:ver";
+    private static final String CACHE_LIST_ADMIN_PREFIX = "village-affair:list:admin:";
+    private static final String CACHE_LIST_PUBLIC_PREFIX = "village-affair:list:public:";
     private final RedisJsonCacheTool redisJsonCacheTool;
-
+    private final VillageAffairMapper villageAffairMapper;
     /**
      * 创建村务事项/公示
      * @param dto 村务事项/公示创建DTO
@@ -46,6 +52,7 @@ public class VillageAffairServiceImpl
         save(entity);
         Integer id = entity.getId();
         redisJsonCacheTool.setObject(CACHE_KEY_PREFIX, id);
+        bumpListCacheVersion();
         return id;
     }
 
@@ -57,19 +64,30 @@ public class VillageAffairServiceImpl
      */
     @Override
     public IPage<VillageAffairSimpleVO> getList(Long current, Long size,Integer status, String affairType, String title) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_ADMIN_PREFIX + CacheKeyUtils.listFilterSegment(status, affairType, title);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        VillageAffairListPageCache cached = redisJsonCacheTool.getObject(listKey, VillageAffairListPageCache.class);
+        if (cached != null) {
+            List<VillageAffairSimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<VillageAffairSimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillageAffairEntity> queryWrapper = new LambdaQueryWrapper<VillageAffairEntity>()
         .eq(status != null, VillageAffairEntity::getStatus, status)
         .like(StringUtils.hasText(affairType), VillageAffairEntity::getAffairType, affairType)
         .like(StringUtils.hasText(title), VillageAffairEntity::getTitle, title)
         .orderByDesc(VillageAffairEntity::getCreateTime);
         IPage<VillageAffairEntity> entityPage = page(new Page<>(current, size), queryWrapper);
-        return entityPage.convert(
-            entity -> {
-                VillageAffairSimpleVO vo = new VillageAffairSimpleVO();
-                BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-                return vo;
-            }
-        );
+        VillageAffairListPageCache toSave = new VillageAffairListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toSimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toSimpleVo);
     }
 
     /**
@@ -108,6 +126,7 @@ public class VillageAffairServiceImpl
         BeanUtils.copyProperties(dto, entity);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -122,6 +141,7 @@ public class VillageAffairServiceImpl
         }
         removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -141,6 +161,7 @@ public class VillageAffairServiceImpl
         BeanUtils.copyProperties(dto, entity);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -151,19 +172,30 @@ public class VillageAffairServiceImpl
      */
     @Override
     public IPage<VillageAffairSimpleVO> getPublicList(Long current, Long size, String affairType, String title) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_PUBLIC_PREFIX + CacheKeyUtils.listFilterSegment(affairType, title);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        VillageAffairListPageCache cached = redisJsonCacheTool.getObject(listKey, VillageAffairListPageCache.class);
+        if (cached != null) {
+            List<VillageAffairSimpleVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<VillageAffairSimpleVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<VillageAffairEntity> queryWrapper = new LambdaQueryWrapper<VillageAffairEntity>()
         .eq(VillageAffairEntity::getStatus, 2) // 已发布
         .like(StringUtils.hasText(affairType), VillageAffairEntity::getAffairType, affairType)
         .like(StringUtils.hasText(title), VillageAffairEntity::getTitle, title)
         .orderByDesc(VillageAffairEntity::getPublishTime);
         IPage<VillageAffairEntity> entityPage = page(new Page<>(current, size), queryWrapper);
-        return entityPage.convert(
-            entity -> {
-                VillageAffairSimpleVO vo = new VillageAffairSimpleVO();
-                BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-                return vo;
-            }
-        );
+        VillageAffairListPageCache toSave = new VillageAffairListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toSimpleVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toSimpleVo);
     }
 
     /**
@@ -174,17 +206,44 @@ public class VillageAffairServiceImpl
     @Override
     public VillageAffairDetailVO getPublicDetail(Integer id) {
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
-        VillageAffairDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillageAffairDetailVO.class);
+        if (redisJsonCacheTool.isNullMarker(cacheKey)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
+        }
+        VillageAffairDetailVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
         if (fromCache != null) {
             return fromCache;
         }
-        VillageAffairEntity entity = getById(id);
-        if (entity == null) {
+        VillageAffairEntity entity = villageAffairMapper.selectById(id);
+        if (entity == null||entity.getStatus() != 2) {
+            redisJsonCacheTool.setNullMarker(cacheKey);
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
         }
         VillageAffairDetailVO vo = new VillageAffairDetailVO();
         BeanUtils.copyProperties(entity, vo);
         redisJsonCacheTool.setObject(cacheKey, vo);
         return vo;
+    }
+    
+    private VillageAffairDetailVO tryLoadAndBumpFromCache(Integer id, String cacheKey) {
+        VillageAffairDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillageAffairDetailVO.class);
+        if (fromCache == null) {
+            return null;
+        }
+        VillageAffairEntity entity = villageAffairMapper.selectById(id);
+        if (entity == null||entity.getStatus() != 2) {
+            redisJsonCacheTool.delete(cacheKey);
+            return null;
+        }
+        return fromCache;
+    }
+
+    private VillageAffairSimpleVO toSimpleVo(VillageAffairEntity entity) {
+        VillageAffairSimpleVO vo = new VillageAffairSimpleVO();
+        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+        return vo;
+    }
+
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
 }

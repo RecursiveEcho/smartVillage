@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.backend.media.vo.DetailVO;
 import com.backend.media.mapper.MediaMapper;
 import com.backend.media.entity.MediaEntity;
+import com.backend.media.dto.MediaListPageCache;
 import com.backend.media.vo.PageVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -24,6 +25,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.common.utils.CacheKeyUtils;
+
+import java.util.Collections;
+import java.util.List;
 @Slf4j
 /*
   @author chenyang
@@ -36,6 +40,8 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
     private final OssUploadTool ossUploadTool;
     private final RedisJsonCacheTool redisJsonCacheTool;
     private static final String CACHE_KEY_PREFIX = "media:detail:";
+    private static final String CACHE_LIST_VER_KEY = "media:list:ver";
+    private static final String CACHE_LIST_PREFIX = "media:list:";
     @Override
     public UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request) {
         
@@ -77,6 +83,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
             mediaEntity.setCategory(category);
             mediaEntity.setUploadUser(LoginUserContext.getAuthId(request));
             this.save(mediaEntity);
+            bumpListCacheVersion();
             //写入缓存
             redisJsonCacheTool.setObject(cacheKey, new UploadVO(
                 file.getOriginalFilename(),
@@ -106,17 +113,30 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
      */
     @Override
     public IPage<PageVO> page(Long current, Long size, String fileType, String category, Integer status) {
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String prefix = CACHE_LIST_PREFIX + CacheKeyUtils.listFilterSegment(fileType, category, status);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+        MediaListPageCache cached = redisJsonCacheTool.getObject(listKey, MediaListPageCache.class);
+        if (cached != null) {
+            List<PageVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<PageVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
         LambdaQueryWrapper<MediaEntity> wrapper = new LambdaQueryWrapper<MediaEntity>()
             .eq(fileType != null, MediaEntity::getFileType, fileType)
             .eq(category != null, MediaEntity::getCategory, category)
             .eq(status != null, MediaEntity::getStatus, status)
             .orderByDesc(MediaEntity::getCreateTime);
         IPage<MediaEntity> entityPage = page(new Page<>(current, size), wrapper);
-        return entityPage.convert(entity -> {
-            PageVO vo = new PageVO();
-            BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-            return vo;
-        });
+        MediaListPageCache toSave = new MediaListPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toPageVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toPageVo);
     }
 
     /**
@@ -131,6 +151,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         } 
         this.removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
     }
 
     /**
@@ -169,5 +190,16 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         mediaEntity.setStatus(status);
         this.updateById(mediaEntity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        bumpListCacheVersion();
+    }
+
+    private PageVO toPageVo(MediaEntity entity) {
+        PageVO vo = new PageVO();
+        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+        return vo;
+    }
+
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
 }
