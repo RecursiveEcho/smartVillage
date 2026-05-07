@@ -25,6 +25,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.Collections;
+import java.util.List;
+import com.backend.admin.vo.AuthPublishedPageCache;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.common.utils.CacheKeyUtils;
 /**
  * 管理员业务实现：继承 MyBatis-Plus 对 {@link AdminEntity} 的基础 CRUD，
  * 用户列表与状态变更实际读写 {@link AuthEntity}（认证账号表），与管理员扩展信息分离。
@@ -34,8 +39,13 @@ import java.util.Objects;
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> implements AdminService {
 
     private final AuthMapper authMapper;
-
+    private static final String CACHE_KEY_PREFIX = "admin:users:detail:";
     private final MediaService mediaService;
+
+    private final RedisJsonCacheTool redisJsonCacheTool;
+    
+    private static final String CACHE_LIST_KEY_PREFIX = "admin:users:list:";
+    private static final String CACHE_LIST_VER_KEY = "admin:users:ver";
 
     /**
      * 按条件分页查询认证用户，并映射为 {@link AuthVO 返回给管理端。
@@ -45,8 +55,16 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      */
     @Override
     public IPage<AuthVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
-        Page<AuthEntity> page = new Page<>(current, size);
-        // 条件为 null 时不拼进 WHERE，实现「可选筛选」
+        String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(CACHE_LIST_KEY_PREFIX, ver, current, size);
+        AuthPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AuthPublishedPageCache.class);
+        if (cached != null) {
+            List<AuthVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            Page<AuthVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            hit.setRecords(rows);
+            return hit;
+        }
+
         LambdaQueryWrapper<AuthEntity> wrapper = new LambdaQueryWrapper<AuthEntity>()
                 .like(StringUtils.hasText(username), AuthEntity::getUsername, username)
                 .eq(role != null, AuthEntity::getRole, role)
@@ -55,19 +73,17 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
                 .orderByDesc(AuthEntity::getCreateTime)
                 .orderByAsc(AuthEntity::getId);
         // 查询认证账号表
-        IPage<AuthEntity> entityPage = authMapper.selectPage(page, wrapper);
+        IPage<AuthEntity> entityPage = authMapper.selectPage(new Page<>(current, size), wrapper);
 
         // 保持与原分页对象一致的页码、条数、总数，仅替换记录类型
-        Page<AuthVO> voPage = new Page<>(
-                entityPage.getCurrent(),
-                entityPage.getSize(),
-                entityPage.getTotal());
-        voPage.setRecords(entityPage.getRecords().stream().map(entity -> {
-            AuthVO vo = new AuthVO();
-            BeanUtils.copyProperties(entity, vo);
-            return vo;
-        }).toList());
-        return voPage;
+        AuthPublishedPageCache toSave = new AuthPublishedPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
+        return entityPage.convert(this::toVo);
     }
 
     /**
@@ -115,7 +131,60 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      */
     @Override
     public UploadVO uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request) {
-        UploadVO uploadVO = mediaService.upload(avatar, "image", "other", request);
-        return uploadVO;
+        return mediaService.upload(avatar, "image", "other", request);
+    }
+    
+
+    /**
+     * 查看用户详细信息
+     * @param id 用户 ID
+     * @return 用户详细信息
+     */
+    @Override
+    public AuthVO getUserDetail(Integer id) {
+        String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        if (redisJsonCacheTool.isNullMarker(cacheKey)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        AuthVO fromCache = redisJsonCacheTool.getObject(cacheKey, AuthVO.class);
+        if (fromCache != null) {
+            return fromCache;
+        }
+        AuthEntity entity = authMapper.selectById(id);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+        AuthVO vo = new AuthVO();
+        BeanUtils.copyProperties(entity, vo);
+        redisJsonCacheTool.setObject(cacheKey, vo);
+        return vo;
+    }
+    /**
+     * 写操作后删除对应详情缓存，避免脏读
+     * @param id 用户 ID
+     */
+    private void evictDetailCache(Integer id) {
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+    }
+
+    /**
+     * 转换为 VO
+     * @param entity 实体
+     * @return VO
+     */
+    private AuthVO toVo(AuthEntity entity) {
+        AuthVO vo = new AuthVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
+    }
+    /**
+     * 删除用户
+     * @param id 用户 ID
+     */
+    @Override
+    public void deleteUser(Integer id) {
+        authMapper.deleteById(id);
+        evictDetailCache(id);
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
 }

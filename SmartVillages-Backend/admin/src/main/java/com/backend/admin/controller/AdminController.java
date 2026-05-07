@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,18 +20,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.Map;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.GrantedAuthority;
-import java.util.stream.Collectors;
 import jakarta.validation.Valid;
 import com.backend.auth.dto.AuthDTO;
 import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
 import com.backend.admin.vo.MeVO;
-import com.backend.common.context.LoginUserContext;;
+import com.backend.common.context.LoginUserContext;
 /**
  * 管理员侧 HTTP 接口：当前登录信息、用户分页与状态维护。
  * <p>
@@ -133,5 +129,32 @@ public class AdminController {
     public Result<String> uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request) {
         UploadVO uploadVO = adminService.uploadCadreAvatar(avatar, request);
         return Result.success(uploadVO.getFileUrl());
+    }
+
+
+    /**
+     * @author chenyang
+     * &#064;date 2026/5/7
+     * &#064;description 查看用户详细信息
+     * @param id 用户 ID
+     * @return 用户详细信息
+     */
+    @Operation(summary = "查看用户详细信息")
+    @GetMapping("/users/{id}")
+    public Result<AuthVO> getUserDetail(@PathVariable Integer id) {
+        return Result.success(adminService.getUserDetail(id));
+    }
+    /**
+     * @author chenyang
+     * &#064;date 2026/5/7
+     * &#064;description 删除用户
+     * @param id 用户 ID
+     * @return 删除结果
+     */
+    @Operation(summary = "删除用户")
+    @DeleteMapping("/users/{id}")
+    public Result<String> deleteUser(@PathVariable Integer id) {
+        adminService.deleteUser(id);
+        return Result.success("删除用户成功");
     }
 }

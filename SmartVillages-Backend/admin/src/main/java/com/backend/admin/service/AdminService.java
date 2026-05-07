@@ -22,4 +22,11 @@ public interface AdminService extends IService<AdminEntity> {
 
     // 上传头像
     UploadVO uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request);
+
+
+    // 查看用户详细信息
+    AuthVO getUserDetail(Integer id);
+    
+    // 删除用户
+    void deleteUser(Integer id);
 }   
