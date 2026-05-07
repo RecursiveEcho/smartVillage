@@ -73,7 +73,9 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     @Override
     public IPage<FeatureVO> getFeatureList(Long current, Long size, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request) {
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-        String listKey = redisJsonCacheTool.buildVersionedListPageKey(CACHE_LIST_KEY_PREFIX, ver, current, size);
+        String prefix = CACHE_LIST_KEY_PREFIX
+                + CacheKeyUtils.listFilterSegment(type, getSort, getCreateTime, startTime, endTime);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         FeaturePublishedPageCache cached = redisJsonCacheTool.getObject(listKey, FeaturePublishedPageCache.class);
         if (cached != null) {
             List<FeatureVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
@@ -89,7 +91,13 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         .le(endTime != null, FeatureEntity::getCreateTime, endTime)
         .orderByDesc(getSort != null, FeatureEntity::getSort,FeatureEntity::getCreateTime);
         IPage<FeatureEntity> entityPage = page(new Page<>(current, size), wrapper);
-        /* 转换为 VO */
+        FeaturePublishedPageCache toSave = new FeaturePublishedPageCache();
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toVo).toList());
+        toSave.setTotal(entityPage.getTotal());
+        toSave.setCurrent(entityPage.getCurrent());
+        toSave.setSize(entityPage.getSize());
+        toSave.setPages(entityPage.getPages());
+        redisJsonCacheTool.setListCacheObject(listKey, toSave);
         return entityPage.convert(this::toVo);
     }
 

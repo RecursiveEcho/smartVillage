@@ -57,7 +57,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     @Override
     public IPage<AuthVO> pageUsers(String username, String role, Integer status, Long current, Long size) {
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-        String listKey = redisJsonCacheTool.buildVersionedListPageKey(CACHE_LIST_KEY_PREFIX, ver, current, size);
+        String prefix = CACHE_LIST_KEY_PREFIX + CacheKeyUtils.listFilterSegment(username, role, status);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         AuthPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AuthPublishedPageCache.class);
         if (cached != null) {
             List<AuthVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();

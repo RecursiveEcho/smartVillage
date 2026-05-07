@@ -42,9 +42,12 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /** Redis 中单条详情 JSON 的 key 前缀 */
     private static final String CACHE_KEY_PREFIX = "announcement:detail:";
-    private static final String CACHE_LIST_KEY_PREFIX = "announcement:list:published:";
-    /** 列表缓存版本号：写操作 INCR 后，所有旧分页 key 自然失效（无需 KEYS 扫描） */
+    /** 列表缓存版本号：写操作 INCR 后，各列表分页 key 自然失效 */
     private static final String CACHE_LIST_VER_KEY = "announcement:list:published:ver";
+    private static final String CACHE_LIST_PUB_PREFIX = "announcement:list:published:";
+    private static final String CACHE_LIST_ADMIN_PREFIX = "announcement:list:admin:";
+    private static final String CACHE_LIST_PENDING_PREFIX = "announcement:list:pending:";
+    private static final String CACHE_LIST_AUDITED_PREFIX = "announcement:list:audited:";
 
     private static final int STATUS_PENDING = 0;
     /** 与前台列表、热门查询一致：仅 status=1 视为已发布 */
@@ -72,6 +75,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         entity.setCreateTime(null);
         /* 保存实体 */
         save(entity);
+        bumpPublishedListCacheVersion();
     }
 
     /// 前台列表：已发布 + 未删除，置顶优先再按发布时间倒序
@@ -79,9 +83,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     public IPage<AnnouncementVO> pagePublished(Long current, Long size) {
         /* 获取版本号 */
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-        /* 构建列表缓存 key */
-        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
-                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        String prefix = CACHE_LIST_PUB_PREFIX + CacheKeyUtils.listFilterSegment();
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
 
         AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
         // 列表「缓存穿透」：空页也写入 records=[]，命中后不再打库；records 为 null 时按空列表返回，避免坏 JSON 反复回源
@@ -284,8 +287,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             LocalDateTime startTime,
             LocalDateTime endTime) {
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
-                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        String prefix = CACHE_LIST_ADMIN_PREFIX
+                + CacheKeyUtils.listFilterSegment(status, title, type, isTop, startTime, endTime);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
         if (cached != null) {
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
@@ -323,8 +327,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             LocalDateTime startTime,
             LocalDateTime endTime) {
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
-                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        String prefix = CACHE_LIST_PENDING_PREFIX
+                + CacheKeyUtils.listFilterSegment(title, type, isTop, startTime, endTime);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
         if (cached != null) {
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
@@ -382,8 +387,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             LocalDateTime startTime,
             LocalDateTime endTime) {
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-        String listKey = redisJsonCacheTool.buildVersionedListPageKey(
-                CACHE_LIST_KEY_PREFIX, ver, current, size);
+        String prefix = CACHE_LIST_AUDITED_PREFIX
+                + CacheKeyUtils.listFilterSegment(title, type, isTop, startTime, endTime);
+        String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
         if (cached != null) {
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
@@ -424,7 +430,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         return vo;
     }
 
-    /** 使所有「已发布列表」分页缓存失效：版本号 +1，读侧使用新前缀 */
+    /** 使公告各列表分页缓存失效：版本号 +1，读侧使用新前缀 */
     private void bumpPublishedListCacheVersion() {
         redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
