@@ -13,7 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.backend.common.filter.JwtSecurityFilter;
-
+import com.backend.common.filter.TraceIdFilter;
 import java.util.List;
 /**
  * @author chengyang
@@ -25,6 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final TraceIdFilter traceIdFilter;
     private final JwtSecurityFilter jwtSecurityFilter;
 
     @Bean
@@ -43,8 +44,9 @@ public class SecurityConfig {
                 "/features/**",
                 "/announcements/**",
                 "/guest/**",
-                "/village-affairs/**"
-            ).permitAll()//白名单请求放行
+                "/village-affairs/**",
+                "/public/village-affairs/**"
+            ).permitAll()//白名单请求放行（前台村务公示为 /public/village-affairs）
             // 当前登录信息：只要已登录即可查询（管理员/村干部/村民都可）
             .requestMatchers("/admin/me","/media/page","/media/upload","/media/{id}").authenticated()
             // 留言：公开列表可读；创建/我的留言需登录
@@ -71,8 +73,9 @@ public class SecurityConfig {
             .requestMatchers("/villager/**").hasAnyAuthority("ROLE_VILLAGER")//村民请求需要认证
             .anyRequest().authenticated()//任何请求都需要认证
         )
-        //在UsernamePasswordAuthenticationFilter之前添加JwtSecurityFilter
-            .addFilterBefore(jwtSecurityFilter, UsernamePasswordAuthenticationFilter.class);
+            // 须先把 JwtSecurityFilter 挂到链上，才能用其 class 作为 TraceIdFilter 的定位锚点
+            .addFilterBefore(jwtSecurityFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(traceIdFilter, JwtSecurityFilter.class);
         return http.build();
     }
 
@@ -83,8 +86,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(List.of("token"));
-
+        configuration.setExposedHeaders(List.of("token","X-Trace-Id"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

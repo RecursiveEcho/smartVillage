@@ -3,8 +3,8 @@ package com.backend.common.result;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-
+import org.slf4j.MDC;
+import com.backend.common.trace.TraceConstants;
 @Data
 @NoArgsConstructor
 @Schema(description = "统一响应包装类")
@@ -20,18 +20,20 @@ public class Result<T> {
 
     @Schema(description = "响应消息", example = "success")
     private String message;
+    
+    @Schema(description = "追踪ID，用于链路追踪", example = "04552a3a476749d98ea34f3568e3f67c")
+    private String traceId;
 
     @Schema(description = "响应数据")
     private T data;
 
-//    @Schema(description = "追踪ID，用于链路追踪", example = "04552a3a476749d98ea34f3568e3f67c")
-//    private String traceId = MDC.get("traceId");
-
+    
     // 私有构造函数
     private Result(Integer code, String message, T data) {
         this.code = code;
         this.message = message;
         this.data = data;
+        this.traceId = MDC.get(TraceConstants.MDC_TRACE_ID);
     }
 
     // 成功响应
