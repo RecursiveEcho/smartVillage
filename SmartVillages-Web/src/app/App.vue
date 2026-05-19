@@ -1,7 +1,7 @@
 <template>
-  <LoginPage />
+  <RouterView />
 </template>
 
 <script setup>
-import LoginPage from "@/pages/auth/loginPage.vue"
+import { RouterView } from "vue-router"
 </script>

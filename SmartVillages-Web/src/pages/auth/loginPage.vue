@@ -34,6 +34,7 @@
           <button type="button" :disabled="loading.currentUser" @click="handleGetCurrentUser">
             {{ loading.currentUser ? "获取中" : "获取当前用户" }}
           </button>
+          <button type="button" @click="handleEnterSystem">进入系统</button>
           <button type="button" @click="handleClearLocalState">清空本地状态</button>
         </div>
       </form>
@@ -70,8 +71,13 @@
 <script setup>
 import { computed, reactive, ref } from "vue"
 
+import { useRoute, useRouter } from "vue-router"
+
 import { getCurrentUser, login } from "@/services/auth.api"
-import { getToken, removeToken, setToken } from "@/shared/auth/token"
+import { getToken, removeSavedUser, removeToken, setSavedUser, setToken } from "@/shared/auth/token"
+
+const route = useRoute()
+const router = useRouter()
 
 const form = reactive({
   username: "",
@@ -133,6 +139,7 @@ async function handleLogin() {
     loginResult.value = result
     currentUser.value = null
     setToken(result.token)
+    setSavedUser(result)
     syncToken()
     message.value = "登录成功，token 已保存"
   } catch (error) {
@@ -155,6 +162,7 @@ async function handleGetCurrentUser() {
 
   try {
     currentUser.value = await getCurrentUser()
+    setSavedUser(currentUser.value)
     message.value = "当前用户获取成功，请检查 Network 面板中的 token 请求头"
   } catch (error) {
     currentUser.value = null
@@ -167,10 +175,16 @@ async function handleGetCurrentUser() {
 
 function handleClearLocalState() {
   removeToken()
+  removeSavedUser()
   syncToken()
   loginResult.value = null
   currentUser.value = null
   clearFeedback()
   message.value = "本地 token 和页面预览数据已清空"
+}
+
+async function handleEnterSystem() {
+  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "/"
+  await router.push(redirect)
 }
 </script>

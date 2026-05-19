@@ -1,4 +1,4 @@
-import { getToken } from "@/shared/auth/token"
+import { getSavedUser, getToken } from "@/shared/auth/token"
 
 export function isAuthenticated() {
   return Boolean(getToken())
@@ -10,4 +10,8 @@ export function hasRequiredRole(userRole, requiredRoles) {
   }
 
   return requiredRoles.includes(userRole)
+}
+
+export function getSavedUserRole() {
+  return getSavedUser()?.role || ""
 }

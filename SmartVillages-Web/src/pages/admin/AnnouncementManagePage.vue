@@ -1,11 +1,13 @@
-<script setup>
-
-</script>
-
 <template>
-
+  <section>
+    <h2>公告管理</h2>
+    <p>当前路由：{{ route.fullPath }}</p>
+    <p>后续这里接入公告新增、编辑、上下架和审核。</p>
+  </section>
 </template>
 
-<style scoped>
+<script setup>
+import { useRoute } from "vue-router"
 
-</style>
+const route = useRoute()
+</script>
