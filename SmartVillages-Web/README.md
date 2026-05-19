@@ -23,43 +23,37 @@ npm run dev
 npm run build
 ```
 
-> 当前 `package.json` **仅声明 `vue` 依赖**，尚未引入 `vue-router`、`pinia`、`axios` 等；若下文中「规划目录」与你的分支不一致，以 **`package.json` + 实际文件树** 为准。
-
 ## 当前仓库中的目录（真实）
 
 ```text
 SmartVillages-Web/
 ├── index.html
 ├── package.json
-├── vite.config.js              # @ -> src；含 Vue 插件与 DevTools
+├── vite.config.js              # @ -> src；开发代理到后端
 ├── jsconfig.json
 └── src/
     ├── app/
-    │   ├── main.js             # createApp(App).mount('#app')
-    │   ├── App.vue             # 根组件（待接入路由/布局）
+    │   ├── main.js             # 路由 + 全局样式
+    │   ├── App.vue
+    │   ├── router/index.js
     │   └── layouts/
     │       ├── PublicLayout.vue
-    │       └── AdminLayout.vue
-    └── pages/
-        ├── auth/
-        │   └── loginPage.vue
-        ├── public/             # 门户侧页面占位
-        │   ├── HomePage.vue
-        │   ├── Announcement.vue
-        │   ├── FeaturePage.vue
-        │   └── InteractionPage.vue
-        └── admin/              # 后台侧页面占位
-            ├── DashboardPage.vue
-            ├── AnnouncementManagePage.vue
-            ├── MediaManagePage.vue
-            └── ManagementPage.vue
+    │       ├── AdminLayout.vue
+    │       └── VillageLayout.vue
+    ├── pages/
+    │   ├── auth/loginPage.vue
+    │   ├── public/             # 门户：公告/风采/村务/互动 + 详情页
+    │   ├── village/            # 村民中心：工单与我的留言
+    │   └── admin/              # 管理端：按角色显示菜单
+    ├── services/               # 按模块封装的 API
+    ├── shared/                 # http、token、session、工具函数
+    └── styles/theme.css
 ```
 
 ## 现状说明
 
-- **`src/app/main.js`** 仅挂载 **`App.vue`**，**未注册路由与全局状态**。
-- **`App.vue`** 当前为空模板，**各 `pages/` 与 `layouts/` 组件尚未被引用**；联调前需要在 `App.vue` 或路由视图中装配布局与页面。
-- 仓库内 **无** `.env.example`；后端地址与 **`token`** 请求头约定可在引入 HTTP 客户端后，用 Vite 环境变量（如 `VITE_API_BASE_URL`）统一配置。
+- 已接入 **vue-router、axios**，门户与 **`/admin`（管理员/村干部）**、**`/village`（村民）** 分栏；开发环境 **`apiBaseUrl` 为空**，通过 Vite **proxy** 同源访问后端，避免局域网 IP 打开页面时 CORS 失败。
+- 生产构建请配置 **`VITE_API_BASE_URL`** 为线上 API 根地址。
 
 ## 后续分层建议（与后端 monorepo 文档风格一致，按需采纳）
 

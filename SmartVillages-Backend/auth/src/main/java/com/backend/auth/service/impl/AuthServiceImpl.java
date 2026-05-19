@@ -1,22 +1,27 @@
 package com.backend.auth.service.impl;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+
+import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
+
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
 import com.backend.auth.service.AuthService;
 import com.backend.auth.vo.JwtResponse;
 import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
 import com.backend.common.result.Result;
 import com.backend.common.utils.JwtUtils;
+import com.backend.common.utils.RedisRateLimiter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
-import org.springframework.util.StringUtils;
-import com.backend.common.exception.BusinessException;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 
 /**
  * 认证业务：校验账号状态与密码（明文入参 -> 服务端 MD5 校验），签发 JWT。
@@ -26,6 +31,8 @@ import java.util.Objects;
 @Slf4j
 public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> implements AuthService {
 
+    private final HttpServletRequest request;
+    private final RedisRateLimiter redisRateLimiter;
     private final AuthMapper authMapper;
     private final JwtUtils jwtUtils;
 
@@ -34,6 +41,10 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
      */
     @Override
     public JwtResponse login(String username, String password) {
+        //限流检查
+        String clientIp= request.getRemoteAddr();
+        String rateKey= "rate_limit:login:"+clientIp+":"+username;
+        redisRateLimiter.check(rateKey,5);
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
@@ -42,11 +53,11 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-        /** 用户已逻辑删除 */
+        /* 用户已逻辑删除 */
         if (Objects.equals(user.getIsDeleted(), 1)) {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
-        /** 用户已禁用 */
+        /* 用户已禁用 */
         if (Objects.equals(user.getStatus(), 0)) {
             throw new BusinessException(ErrorCode.ACCOUNT_DISABLED);
         }
@@ -67,6 +78,28 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
         return Result.SUCCESS_MESSAGE;
     }
 
+    /** 绑定上传后的媒体 URL 到用户记录；目前仅支持头像（slot=AVATAR）。 */
+    @Override
+    public void bindUploadedMedia(Long userId, String slot, String mediaUrl,
+                                   String uploadedFileType, HttpServletRequest request) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "用户 ID 不能为空");
+        }
+        AuthEntity entity = getById(userId);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+        if (!"AVATAR".equalsIgnoreCase(slot.trim())) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "bindSlot 须为 AVATAR");
+        }
+        if (!"image".equals(uploadedFileType)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "头像仅支持图片");
+        }
+        entity.setAvatar(mediaUrl);
+        updateById(entity);
+
+    }
+
     /** 按用户名取一条记录；依赖库侧唯一约束或业务保证不重复 */
     private AuthEntity findByUsername(String username) {
         return authMapper.selectOne(
@@ -79,4 +112,6 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
           String hashedInput= DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8));
           return hashedInput.equals(storedMd5);
     }
+
+
 }

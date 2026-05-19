@@ -1,7 +1,6 @@
 package com.backend.feature.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.NotBlank;
@@ -13,7 +12,6 @@ import jakarta.validation.constraints.NotBlank;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "乡村风采创建DTO")
 public class HighlightCreateDTO {
 

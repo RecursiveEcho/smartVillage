@@ -2,7 +2,6 @@ package com.backend.media.dto;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
@@ -14,7 +13,6 @@ import jakarta.validation.constraints.NotBlank;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "上传DTO")
 public class UploadDTO {
 

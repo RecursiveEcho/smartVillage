@@ -1,33 +1,39 @@
 package com.backend.media.service.impl;
 
-import com.backend.common.context.LoginUserContext;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-import com.backend.media.service.MediaService;
-import com.backend.media.vo.UploadVO;
-import com.backend.media.tool.OssUploadTool;
-import com.backend.common.exception.BusinessException;
-import com.backend.common.enums.ErrorCode;
 import java.io.IOException;
-import org.springframework.beans.BeanUtils;
-import java.util.Objects;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import com.backend.media.vo.DetailVO;
-import com.backend.media.mapper.MediaMapper;
-import com.backend.media.entity.MediaEntity;
-import com.backend.media.dto.MediaListPageCache;
-import com.backend.media.vo.PageVO;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.backend.common.utils.RedisJsonCacheTool;
-import com.backend.common.utils.CacheKeyUtils;
-
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.backend.common.context.LoginUserContext;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.event.MediaBindAfterUploadEvent;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.media.dto.MediaListPageCache;
+import com.backend.media.entity.MediaEntity;
+import com.backend.media.mapper.MediaMapper;
+import com.backend.media.service.MediaService;
+import com.backend.media.tool.OssUploadTool;
+import com.backend.media.vo.DetailVO;
+import com.backend.media.vo.PageVO;
+import com.backend.media.vo.UploadVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 @Slf4j
 /*
   @author chenyang
@@ -39,12 +45,33 @@ import java.util.List;
 public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> implements MediaService {
     private final OssUploadTool ossUploadTool;
     private final RedisJsonCacheTool redisJsonCacheTool;
+    private final ApplicationEventPublisher eventPublisher;
     private static final String CACHE_KEY_PREFIX = "media:detail:";
     private static final String CACHE_LIST_VER_KEY = "media:list:ver";
     private static final String CACHE_LIST_PREFIX = "media:list:";
     @Override
-    public UploadVO upload(MultipartFile file, String fileType, String category, HttpServletRequest request) {
-        
+    @Transactional(rollbackFor = Exception.class)
+    public UploadVO upload(
+            MultipartFile file,
+            String fileType,
+            String category,
+            String usageRemark,
+            String bindTarget,
+            Long bindEntityId,
+            String bindSlot,
+            HttpServletRequest request) {
+
+        String remark = normalizeUsageRemark(usageRemark);
+
+        boolean anyBind = StringUtils.hasText(bindTarget) || bindEntityId != null || StringUtils.hasText(bindSlot);
+
+        boolean fullBind =
+                StringUtils.hasText(bindTarget) && bindEntityId != null && StringUtils.hasText(bindSlot);
+
+        if (anyBind && !fullBind) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "bindTarget、bindEntityId、bindSlot 需同时填写");
+        }
+
         // 判断文件大小是否超过1GB
         if (file.getSize() > 1024 * 1024 * 1024) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "文件大小不能超过1GB");
@@ -60,9 +87,12 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         }
 
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, file.getOriginalFilename());
-        UploadVO fromCache = redisJsonCacheTool.getObject(cacheKey, UploadVO.class);
-        if (fromCache != null) {
-            return fromCache;
+
+        if (!fullBind) {
+            UploadVO fromCache = redisJsonCacheTool.getObject(cacheKey, UploadVO.class);
+            if (fromCache != null) {
+                return fromCache;
+            }
         }
         try {
             // 获取当前用户ID
@@ -73,7 +103,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
                     file.getOriginalFilename(),
                     file.getContentType()
             );
-            
+
             // 保存媒体资源到数据库
             MediaEntity mediaEntity = new MediaEntity();
             mediaEntity.setFileName(file.getOriginalFilename());
@@ -81,20 +111,26 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
             mediaEntity.setFileType(fileType);
             mediaEntity.setFileSize(file.getSize());
             mediaEntity.setCategory(category);
-            mediaEntity.setUploadUser(LoginUserContext.getAuthId(request));
+            mediaEntity.setUsageRemark(remark);
+            Integer uid = LoginUserContext.getAuthId(request);
+            mediaEntity.setUploadUser(uid);
             this.save(mediaEntity);
             bumpListCacheVersion();
-            //写入缓存
-            redisJsonCacheTool.setObject(cacheKey, new UploadVO(
-                file.getOriginalFilename(),
-                file.getSize(),
-                uploadResult.url(),
-                uploadResult.objectKey()));
-            return new UploadVO(
-                file.getOriginalFilename(),
-                file.getSize(),
-                uploadResult.url(),
-                uploadResult.objectKey());
+            UploadVO cachedVo = buildUploadVo(file, uploadResult, remark, uid);
+            if (fullBind) {
+                eventPublisher.publishEvent(
+                        new MediaBindAfterUploadEvent(
+                                this,
+                                request,
+                                uploadResult.url(),
+                                fileType,
+                                bindTarget.trim(),
+                                bindEntityId,
+                                bindSlot.trim()));
+            } else {
+                redisJsonCacheTool.setObject(cacheKey, cachedVo);
+            }
+            return cachedVo;
         } catch (IOException e) {
             log.error("读取上传文件流失败，filename={}, fileType={}", file.getOriginalFilename(), fileType, e);
             throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
@@ -148,7 +184,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         MediaEntity mediaEntity = this.getById(id);
         if (mediaEntity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "媒体资源不存在");
-        } 
+        }
         this.removeById(id);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
         bumpListCacheVersion();
@@ -196,6 +232,32 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
     private PageVO toPageVo(MediaEntity entity) {
         PageVO vo = new PageVO();
         BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
+        return vo;
+    }
+
+    private static String normalizeUsageRemark(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String t = raw.trim();
+        if (t.length() > 200) {
+            return t.substring(0, 200);
+        }
+        return t;
+    }
+
+    private static UploadVO buildUploadVo(
+            MultipartFile file,
+            OssUploadTool.UploadResult uploadResult,
+            String usageRemark,
+            Integer uploadUserId) {
+        UploadVO vo = new UploadVO();
+        vo.setFileName(file.getOriginalFilename());
+        vo.setFileSize(file.getSize());
+        vo.setFileUrl(uploadResult.url());
+        vo.setObjectKey(uploadResult.objectKey());
+        vo.setUsageRemark(usageRemark);
+        vo.setUploadUserId(uploadUserId);
         return vo;
     }
 

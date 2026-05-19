@@ -8,21 +8,18 @@ import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
-import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import com.backend.media.service.MediaService;
 import com.backend.auth.dto.AuthDTO;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -126,15 +123,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         return createCaderVO;
     }
     
-    /**
-     * 上传头像
-     * @param avatar 头像文件
-     * @return 上传结果
-     */
-    @Override
-    public UploadVO uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request) {
-        return mediaService.upload(avatar, "image", "other", request);
-    }
+
     
 
     /**

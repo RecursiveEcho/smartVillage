@@ -19,10 +19,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import com.backend.auth.dto.AuthDTO;
-import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
 import com.backend.admin.vo.MeVO;
@@ -116,20 +114,7 @@ public class AdminController {
         return Result.success(createCaderVO);
     }
 
-    /**
-     * @author chenyang
-     * &#064;date 2026/4/21
-     * &#064;description 上传头像
-     * @param avatar 头像文件
-     * @param request HTTP 请求
-     * @return 上传结果
-     */
-    @Operation(summary = "上传头像")
-    @PostMapping(value = "/users/cadre/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Result<String> uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request) {
-        UploadVO uploadVO = adminService.uploadCadreAvatar(avatar, request);
-        return Result.success(uploadVO.getFileUrl());
-    }
+
 
 
     /**

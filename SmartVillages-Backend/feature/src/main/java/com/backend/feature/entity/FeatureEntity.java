@@ -1,7 +1,6 @@
 package com.backend.feature.entity;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -19,7 +18,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @TableName("feature")
 @Tag(name = "乡村风采", description = "乡村风采实体类")
 public class FeatureEntity {

@@ -14,10 +14,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-/**
- * 全局异常 → 统一 {@link Result}，与 {@link ErrorCode} 对齐。
+/*
+  全局异常 → 统一 {@link Result}，与 {@link ErrorCode} 对齐。
  */
 
 /**
@@ -73,6 +74,18 @@ public class GlobalExceptionHandler {
     public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         log.warn("请求体解析失败", e);
         return Result.error(ErrorCode.PARAM_INVALID.getCode(), ErrorCode.PARAM_INVALID.getMessage());
+    }
+
+    /**
+     * Spring/Tomcat 在解析 multipart 时即校验大小，早于 Controller；默认约 1MB 会触发此异常。
+     */
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public Result<?> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        log.warn("multipart 超过 spring.servlet.multipart 限制: {}", e.getMessage());
+        return Result.error(
+                ErrorCode.FILE_SIZE_EXCEEDED.getCode(),
+                "上传文件超过服务器允许的大小，请压缩或分片后重试；上限由 spring.servlet.multipart.max-file-size 配置。");
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)

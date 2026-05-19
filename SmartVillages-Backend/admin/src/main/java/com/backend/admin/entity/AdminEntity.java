@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -25,7 +24,6 @@ import java.util.List;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @TableName("admin")
 @Schema(description = "管理员实体类")
 public class AdminEntity {

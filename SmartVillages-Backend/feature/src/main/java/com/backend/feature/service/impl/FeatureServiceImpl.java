@@ -1,34 +1,42 @@
 package com.backend.feature.service.impl;
 
-import org.springframework.stereotype.Service;
-import com.backend.feature.entity.FeatureEntity;
-import com.backend.feature.mapper.FeatureMapper;
-import com.backend.feature.service.FeatureService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.backend.feature.dto.HighlightCreateDTO;
-import org.springframework.transaction.annotation.Transactional;
-import jakarta.servlet.http.HttpServletRequest;
-import com.backend.common.context.LoginUserContext;
-import org.springframework.util.StringUtils;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.backend.feature.vo.FeatureVO;
-import org.springframework.beans.BeanUtils;
-import com.backend.common.exception.BusinessException;
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.utils.CacheKeyUtils;
-import com.backend.common.utils.RedisJsonCacheTool;
-import lombok.RequiredArgsConstructor;
-import com.backend.feature.dto.FeaturePublishedPageCache;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Collections;
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import com.backend.common.context.LoginUserContext;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.feature.dto.FeaturePublishedPageCache;
+import com.backend.feature.dto.HighlightCreateDTO;
+import com.backend.feature.entity.FeatureEntity;
+import com.backend.feature.mapper.FeatureMapper;
+import com.backend.feature.service.FeatureService;
+import com.backend.feature.vo.FeatureVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+
 /**
  * @author chenyang
  * &#064;date 2026/4/23
@@ -43,9 +51,10 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     private static final String CACHE_LIST_VER_KEY = "feature:list:ver";
     private static final String CACHE_LIST_ADMIN_PREFIX = "feature:list:admin:";
     private static final String CACHE_LIST_ADMIN_VER_KEY = "feature:list:admin:ver";
-    private final RedisJsonCacheTool redisJsonCacheTool;
 
+    private final RedisJsonCacheTool redisJsonCacheTool;
     private final FeatureMapper featureMapper;
+    private final ObjectMapper objectMapper;
 
     /* 创建乡村风采 */
     @Override
@@ -112,10 +121,10 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         if (fromCache != null) {
             return fromCache;
         }
-        
+
         FeatureEntity entity = getById(id);
         if (entity == null||entity.getStatus()!=1) {
-            redisJsonCacheTool.isNullMarker(cacheKey);
+            redisJsonCacheTool.setNullMarker(cacheKey);
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
         LambdaUpdateWrapper<FeatureEntity> wrapper=new LambdaUpdateWrapper<FeatureEntity>()
@@ -182,12 +191,12 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         if(!Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
-        entity.setStatus(status);   
+        entity.setStatus(status);
         updateById(entity);
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
         bumpAdminListCacheVersion();
-    }   
+    }
 
     /* 管理端获取乡村风采列表 */
     @Override
@@ -222,6 +231,72 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         toSave.setPages(entityPage.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
         return entityPage.convert(this::toVo);
+    }
+
+    // 绑定上传后的媒体 URL 到乡村风采记录
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void bindUploadedMedia(
+            Long featureId, String slot, String mediaUrl, String uploadedFileType, HttpServletRequest request) {
+        if (featureId == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "风采 ID 不能为空");
+        }
+        if (!StringUtils.hasText(mediaUrl)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "媒体 URL 不能为空");
+        }
+        String s = slot == null ? "" : slot.trim().toUpperCase();
+        FeatureEntity entity = getById(featureId);
+        if (entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
+        }
+        if (!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
+            throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
+        }
+        String ft = uploadedFileType == null ? "" : uploadedFileType.trim().toLowerCase();
+        switch (s) {
+            case "COVER" -> {
+                if (!"image".equals(ft)) {
+                    throw new BusinessException(ErrorCode.PARAM_INVALID, "封面绑定仅支持图片（fileType=image）");
+                }
+                entity.setCover(mediaUrl);
+            }
+            case "VIDEO" -> {
+                if (!"video".equals(ft)) {
+                    throw new BusinessException(ErrorCode.PARAM_INVALID, "视频绑定仅支持视频（fileType=video）");
+                }
+                entity.setVideo(mediaUrl);
+            }
+            case "IMAGES_APPEND" -> {
+                if (!"image".equals(ft)) {
+                    throw new BusinessException(ErrorCode.PARAM_INVALID, "相册追加仅支持图片（fileType=image）");
+                }
+                entity.setImages(appendImagesJson(entity.getImages(), mediaUrl));
+            }
+            default -> throw new BusinessException(
+                    ErrorCode.PARAM_INVALID, "bindSlot 须为 COVER、VIDEO 或 IMAGES_APPEND");
+        }
+        updateById(entity);
+        evictDetailCache(featureId);
+        bumpPublishedListCacheVersion();
+        bumpAdminListCacheVersion();
+    }
+
+    private String appendImagesJson(String existing, String newUrl) {
+        List<String> urls = new ArrayList<>();
+        if (StringUtils.hasText(existing)) {
+            String trimmed = existing.trim();
+            try {
+                urls.addAll(objectMapper.readValue(trimmed, new TypeReference<List<String>>() {}));
+            } catch (JsonProcessingException e) {
+                urls.add(trimmed);
+            }
+        }
+        urls.add(newUrl);
+        try {
+            return objectMapper.writeValueAsString(urls);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "图片列表序列化失败");
+        }
     }
 
     /* 修改乡村风采 */
@@ -304,7 +379,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         result.put("Hidden",count(wrapper2));
         return result;
     }
-    
+
     /* 使所有「已发布列表」分页缓存失效：版本号 +1，读侧使用新前缀 */
     public void bumpPublishedListCacheVersion() {
         redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
@@ -313,7 +388,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     private void bumpAdminListCacheVersion() {
         redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_ADMIN_VER_KEY);
     }
-    
+
     /* 写操作后删除对应详情缓存，避免脏读 */
     private void evictDetailCache(Long id) {
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));

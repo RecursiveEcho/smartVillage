@@ -107,6 +107,8 @@ public class OssUploadTool {
         if (dotIndex < 0) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "文件名不合法");
         }
+        
+        //文件名
         String baseName = originalFileName.substring(0, dotIndex);
         // 文件名后缀
         String suffix = originalFileName.substring(dotIndex);

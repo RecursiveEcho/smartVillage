@@ -2,7 +2,6 @@ package com.backend.media.vo;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -13,7 +12,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "上传VO")
 public class UploadVO {
 
@@ -28,4 +26,10 @@ public class UploadVO {
     
     @Schema(description = "对象键")
     private String objectKey;
+
+    @Schema(description = "用途说明（入库后回显）")
+    private String usageRemark;
+
+    @Schema(description = "上传人账号 ID（当前登录用户）")
+    private Integer uploadUserId;
 }

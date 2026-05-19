@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 1GB
+      max-request-size: 1GB
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/smartVillage?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: root
@@ -10,6 +14,12 @@ spring:
       port: 6379
       password: your_redis_password
       database: 0
+
+cache:
+  ttl:
+    detail-minutes: 30
+    list-minutes: 10
+    null-marker-minutes: 2
 
 mybatis-plus:
   configuration:

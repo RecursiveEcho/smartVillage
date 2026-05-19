@@ -1,17 +1,18 @@
 package com.backend.announcement.entity;
 
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 /**
  * 公告表 {@code announcement} 实体：标题内容、类型、上下架与置顶、浏览量及审计字段。
@@ -62,6 +63,12 @@ public class AnnouncementEntity {
 
     @Schema(description = "创建人：关联后台用户ID")
     private Integer createUser;
+
+    @Schema(description="封面图片URL")
+    private String coverUrl;
+
+    @Schema(description ="图片列表JSON数组")
+    private String images;
 
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间：yyyy-MM-dd HH:mm:ss")

@@ -46,11 +46,16 @@ public class MediaController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<UploadVO> upload(
         @RequestParam("file") MultipartFile file,
-      @RequestParam("fileType") String fileType,
-        @RequestParam("category") String category,  
+        @RequestParam("fileType") String fileType,
+        @RequestParam("category") String category,
+        @RequestParam(value = "usageRemark", required = false) String usageRemark,
+        @RequestParam(value = "bindTarget", required = false) String bindTarget,
+        @RequestParam(value = "bindEntityId", required = false) Long bindEntityId,
+        @RequestParam(value = "bindSlot", required = false) String bindSlot,
         HttpServletRequest request
     ) {
-        UploadVO uploadVO = mediaService.upload(file, fileType,category, request);
+        UploadVO uploadVO = mediaService.upload(
+                file, fileType, category, usageRemark, bindTarget, bindEntityId, bindSlot, request);
         return Result.success(uploadVO);
     }
 

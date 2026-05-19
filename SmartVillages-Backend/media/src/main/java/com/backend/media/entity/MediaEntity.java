@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.baomidou.mybatisplus.annotation.TableLogic;
@@ -17,7 +16,6 @@ import java.time.LocalDateTime;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @TableName("media")
 @Schema(description = "媒体资源实体类")
 public class MediaEntity {
@@ -38,6 +36,9 @@ public class MediaEntity {
 
     @Schema(description = "分类：banner-轮播图/announcement-公告/feature-风采/other-其他")
     private String category;
+
+    @Schema(description = "用途说明：对应门户哪个模块/位置（如首页轮播第2张）")
+    private String usageRemark;
 
     @Schema(description = "上传用户")
     private Integer uploadUser;

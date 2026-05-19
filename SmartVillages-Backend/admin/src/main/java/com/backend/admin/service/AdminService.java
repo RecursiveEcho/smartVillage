@@ -4,11 +4,9 @@ import com.backend.admin.entity.AdminEntity;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.backend.auth.dto.AuthDTO;
-import com.backend.media.vo.UploadVO;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.web.multipart.MultipartFile;
+
 public interface AdminService extends IService<AdminEntity> {
 
     // 查询用户列表
@@ -19,9 +17,6 @@ public interface AdminService extends IService<AdminEntity> {
 
     // 创建村干部
     CreateCaderVO createCadre(AuthDTO authDTO);
-
-    // 上传头像
-    UploadVO uploadCadreAvatar(MultipartFile avatar, HttpServletRequest request);
 
 
     // 查看用户详细信息

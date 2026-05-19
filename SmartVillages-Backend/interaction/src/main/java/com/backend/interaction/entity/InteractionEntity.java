@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -19,7 +18,6 @@ import java.time.LocalDateTime;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @TableName("interaction")
 @Tag(name = "留言",description = "村民留言")
 public class InteractionEntity {

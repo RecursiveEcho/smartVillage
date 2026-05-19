@@ -1,5 +1,16 @@
 package com.backend.announcement.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import com.backend.announcement.dto.AnnouncementCreateDTO;
 import com.backend.announcement.dto.AnnouncementUpdateDTO;
 import com.backend.announcement.entity.AnnouncementEntity;
@@ -17,17 +28,12 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
@@ -58,6 +64,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     private final AnnouncementMapper announcementMapper;
     private final RedisJsonCacheTool redisJsonCacheTool;
+    private final ObjectMapper objectMapper;
 
     /** 新建默认待审核：浏览量 0、未删除 */
     @Override
@@ -99,8 +106,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
                 .orderByDesc(AnnouncementEntity::getIsTop)
                 .orderByDesc(AnnouncementEntity::getPublishTime);
-        
-                
+
+
         Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
 
         AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
@@ -417,7 +424,59 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         return page.convert(this::toVo);
     }
 
-    
+    //
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void bindUploadedMedia(Long announcementId, String mediaUrl, String slot,String uploadedFileType, HttpServletRequest request) {
+       if(announcementId == null || !StringUtils.hasText(mediaUrl) ||!StringUtils.hasText(uploadedFileType)) {
+           throw new BusinessException(ErrorCode.PARAM_MISSING);
+          }
+          AnnouncementEntity entity = getById(announcementId);
+          if(entity == null) {
+              throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
+          }
+          if(!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
+              throw new BusinessException(ErrorCode.NO_PERMISSION, "只能绑定自己的公告");
+          }
+          String ft=uploadedFileType.trim().toLowerCase();
+          switch(slot.trim().toUpperCase()){
+            case "COVER"->{
+              if(!"image".equals(ft)){
+                  throw new BusinessException(ErrorCode.PARAM_INVALID, "封面图片必须是图片类型");
+              }
+              entity.setCoverUrl(mediaUrl);
+            }
+            case "IMAGES_APPEND"->{
+              if(!"image".equals(ft)){
+                  throw new BusinessException(ErrorCode.PARAM_INVALID, "图片列表只能添加图片类型");
+              }
+              entity.setImages(appendImagesJson(entity.getImages(), mediaUrl));
+            }
+            default -> throw new BusinessException(ErrorCode.PARAM_INVALID, "未知的绑定槽位");
+          }
+          updateById(entity);
+          evictDetailCache(announcementId);
+          bumpPublishedListCacheVersion();
+        }
+
+        //图片列表追加：反序列化旧值（如果有且合法），追加新 URL，序列化回字符串
+        private String appendImagesJson(String existing,String newUrl){
+          List<String> urls=new ArrayList<>();
+          if(StringUtils.hasText(existing)){
+            String trimmed=existing.trim();
+            try {
+                urls.addAll(objectMapper.readValue(trimmed,new TypeReference<List<String>>(){}));
+            } catch (JsonProcessingException e) {
+              urls.add(trimmed);
+            }
+          }
+          urls.add(newUrl);
+          try {
+              return objectMapper.writeValueAsString(urls);
+          } catch (JsonProcessingException e) {
+              throw new BusinessException(ErrorCode.PARAM_INVALID,"图片列表序列化失败");
+        }
+      }
     /** 序列化 VO 写入 Redis */
     private void writeDetailCache(String cacheKey, AnnouncementVO vo) {
         redisJsonCacheTool.setObject(cacheKey, vo);

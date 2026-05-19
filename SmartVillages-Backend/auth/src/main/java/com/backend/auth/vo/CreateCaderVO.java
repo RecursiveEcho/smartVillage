@@ -1,6 +1,5 @@
 package com.backend.auth.vo;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -13,7 +12,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @Schema(description = "创建村干部VO")
 public class CreateCaderVO {
     @Schema(description = "ID")

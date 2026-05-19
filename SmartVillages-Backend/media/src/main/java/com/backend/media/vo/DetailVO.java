@@ -25,6 +25,9 @@ public class DetailVO {
     
     @Schema(description = "分类")
     private String category;
+
+    @Schema(description = "用途说明")
+    private String usageRemark;
     
     @Schema(description = "上传用户")
     private Integer uploadUser;

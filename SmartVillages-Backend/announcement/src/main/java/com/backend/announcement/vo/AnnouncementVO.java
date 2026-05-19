@@ -1,11 +1,11 @@
 package com.backend.announcement.vo;
 
+import java.time.LocalDateTime;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 /**
  * 公告对外展示字段。
@@ -52,6 +52,12 @@ public class AnnouncementVO {
 
     @Schema(description = "创建人")
     private Integer createUser;
+
+    @Schema(description="封面图片URL")
+    private String coverUrl;
+
+    @Schema(description="图片列表JSON数组")
+    private String images;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
