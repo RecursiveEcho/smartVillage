@@ -6,7 +6,9 @@ import { authRoutes } from "@/app/router/routes/auth.routes"
 import { featureRoutes } from "@/app/router/routes/feature.routes"
 import { interactionRoutes } from "@/app/router/routes/interaction.routes"
 import { managementRoutes } from "@/app/router/routes/management.routes"
-import { getSavedUserRole, isAuthenticated } from "@/shared/auth/guards"
+import { getCurrentUser } from "@/services/auth.api"
+import { getSavedUserRole, hasRequiredRole, isAuthenticated, normalizeRole } from "@/shared/auth/guards"
+import { removeSavedUser, removeToken, setSavedUser } from "@/shared/auth/token"
 
 const publicRoutes = [
   {
@@ -44,9 +46,10 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (to.meta?.guestOnly && isAuthenticated()) {
-    return getDefaultRouteByRole(getSavedUserRole())
+    const role = await resolveCurrentRole()
+    return getDefaultRouteByRole(role)
   }
 
   if (to.meta?.requiresAuth && !isAuthenticated()) {
@@ -59,9 +62,18 @@ router.beforeEach((to) => {
   }
 
   if (to.meta?.roles?.length) {
-    const role = getSavedUserRole()
+    const role = await resolveCurrentRole()
 
-    if (!role || !to.meta.roles.includes(role)) {
+    if (!role) {
+      return {
+        path: "/login",
+        query: {
+          redirect: to.fullPath,
+        },
+      }
+    }
+
+    if (!hasRequiredRole(role, to.meta.roles)) {
       return getDefaultRouteByRole(role)
     }
   }
@@ -79,6 +91,24 @@ function getDefaultRouteByRole(role) {
   }
 
   return "/"
+}
+
+async function resolveCurrentRole() {
+  const savedRole = getSavedUserRole()
+
+  if (savedRole) {
+    return savedRole
+  }
+
+  try {
+    const user = await getCurrentUser()
+    setSavedUser(user)
+    return normalizeRole(user?.role)
+  } catch {
+    removeToken()
+    removeSavedUser()
+    return ""
+  }
 }
 
 export default router

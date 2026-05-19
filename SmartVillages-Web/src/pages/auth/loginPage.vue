@@ -74,6 +74,7 @@ import { computed, reactive, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import { getCurrentUser, login } from "@/services/auth.api"
+import { normalizeRole } from "@/shared/auth/guards"
 import { getToken, removeSavedUser, removeToken, setSavedUser, setToken } from "@/shared/auth/token"
 
 const route = useRoute()
@@ -142,6 +143,7 @@ async function handleLogin() {
     setSavedUser(result)
     syncToken()
     message.value = "登录成功，token 已保存"
+    await router.push(getTargetRoute(result.role))
   } catch (error) {
     loginResult.value = null
     errorMessage.value = getErrorMessage(error)
@@ -184,7 +186,21 @@ function handleClearLocalState() {
 }
 
 async function handleEnterSystem() {
-  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "/"
+  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : getTargetRoute(loginResult.value?.role)
   await router.push(redirect)
+}
+
+function getTargetRoute(role) {
+  const normalizedRole = normalizeRole(role)
+
+  if (normalizedRole === "ADMIN") {
+    return "/admin"
+  }
+
+  if (normalizedRole === "CADRE") {
+    return "/cadre"
+  }
+
+  return "/"
 }
 </script>
