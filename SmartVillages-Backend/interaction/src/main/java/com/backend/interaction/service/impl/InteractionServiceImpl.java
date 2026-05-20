@@ -1,34 +1,41 @@
 package com.backend.interaction.service.impl;
 
-import com.backend.common.exception.BusinessException;
-import com.backend.common.enums.ErrorCode;
-import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.backend.interaction.entity.InteractionEntity;
+
+import com.backend.auth.entity.AuthEntity;
+import com.backend.auth.mapper.AuthMapper;
+import com.backend.common.context.LoginUserContext;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.common.utils.RedisRateLimiter;
 import com.backend.interaction.dto.InteractionCreateDTO;
+import com.backend.interaction.dto.InteractionPublishedPageCache;
+import com.backend.interaction.dto.ReplyInteractionDTO;
+import com.backend.interaction.entity.InteractionEntity;
 import com.backend.interaction.mapper.InteractionMapper;
 import com.backend.interaction.service.InteractionService;
-import com.backend.common.context.LoginUserContext;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.springframework.beans.BeanUtils;
-import jakarta.servlet.http.HttpServletRequest;
 import com.backend.interaction.vo.InteractionCreateVO;
+import com.backend.interaction.vo.InteractionDetailVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.time.LocalDateTime;
-import java.util.Objects;
-import java.util.List;
-import java.util.Collections;
-import com.backend.interaction.dto.ReplyInteractionDTO;
-import com.backend.interaction.vo.InteractionDetailVO;
-import com.backend.common.utils.RedisJsonCacheTool;
-import com.backend.common.utils.CacheKeyUtils;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.backend.interaction.dto.InteractionPublishedPageCache;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 /**
  * @author chenyang
  * &#064;date  2026/4/15
@@ -40,8 +47,10 @@ import com.backend.interaction.dto.InteractionPublishedPageCache;
 @Transactional(rollbackFor = Exception.class)
 public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, InteractionEntity> implements InteractionService {
 
+    private final RedisRateLimiter redisRateLimiter;
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final InteractionMapper interactionMapper;
+    private final AuthMapper authMapper;
     private static final String CACHE_KEY_PREFIX = "interaction:detail:";
     private static final String CACHE_LIST_VER_KEY = "interaction:list:ver";
     /** 村民端公开列表（无筛选） */
@@ -55,12 +64,20 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InteractionCreateVO createMessage(InteractionCreateDTO dto, HttpServletRequest request) {
+
+      // 限流：每人每分钟最多 5 次创建（根据用户 ID 和 IP 共同限流，防止账号共享导致的滥用）
+      String clientIp=request.getRemoteAddr();
+      Integer userId =LoginUserContext.getAuthId(request);
+      String rateKey = "rate_limit:interaction:create:" + userId + ":" + clientIp;
+      redisRateLimiter.check(rateKey,5);
+
         InteractionEntity entity = new InteractionEntity();
         entity.setUserId(LoginUserContext.getAuthId(request));
         BeanUtils.copyProperties(dto, entity);
         save(entity);
         InteractionCreateVO vo = new InteractionCreateVO();
         BeanUtils.copyProperties(entity, vo);
+        vo.setUsername(LoginUserContext.getUsername(request));
         redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, entity.getId()), vo);
         BumpListCacheVersion();
         return  vo;
@@ -72,24 +89,33 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
         String prefix = CACHE_LIST_PUB_PREFIX + CacheKeyUtils.listFilterSegment();
         String listCacheKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
+
         InteractionPublishedPageCache cached = redisJsonCacheTool.getObject(listCacheKey, InteractionPublishedPageCache.class);
+
         if (cached != null) {
             List<InteractionCreateVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+
+            enrichUsernames(rows);
             Page<InteractionCreateVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
             return hit;
         }
+
         LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
         .orderByDesc(InteractionEntity::getCreateTime);
         IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
+        List<InteractionCreateVO> voRows = entityPage.getRecords().stream().map(this::toVo).toList();
+        enrichUsernames(voRows);
         InteractionPublishedPageCache toSave = new InteractionPublishedPageCache();
-        toSave.setRecords(entityPage.getRecords().stream().map(this::toVo).toList());
+        toSave.setRecords(voRows);
         toSave.setTotal(entityPage.getTotal());
         toSave.setCurrent(entityPage.getCurrent());
         toSave.setSize(entityPage.getSize());
         toSave.setPages(entityPage.getPages());
         redisJsonCacheTool.setListCacheObject(listCacheKey, toSave);
-        return entityPage.convert(this::toVo);
+        Page<InteractionCreateVO> out = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
+        out.setRecords(voRows);
+        return out;
     }
 
     /* 回复村民留言 */
@@ -131,7 +157,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         return vo;
     }
 
-    
+
 
     /* 管理端获取村民留言列表 */
     @Override
@@ -241,7 +267,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
         BumpListCacheVersion();
-        return "撤回成功";   
+        return "撤回成功";
     }
 
     /*管理端处理村民留言 */
@@ -266,12 +292,40 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         }
         return entity;
     }
-    
+
     /* 转换为创建页VO */
     public InteractionCreateVO toVo(InteractionEntity entity) {
         InteractionCreateVO vo = new InteractionCreateVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
+    }
+
+    /** 批量补全公开列表中的留言者用户名（auth 表） */
+    private void enrichUsernames(List<InteractionCreateVO> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        Set<Integer> ids = rows.stream()
+                .map(InteractionCreateVO::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return;
+        }
+        List<AuthEntity> auths = authMapper.selectList(
+                new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
+        Map<Integer, String> idToName = auths.stream()
+                .filter(a -> a.getId() != null)
+                .collect(Collectors.toMap(AuthEntity::getId, AuthEntity::getUsername, (a, b) -> a));
+        for (InteractionCreateVO vo : rows) {
+            if (vo.getUserId() == null) {
+                continue;
+            }
+            String name = idToName.get(vo.getUserId());
+            if (name != null && !name.isBlank()) {
+                vo.setUsername(name);
+            }
+        }
     }
 
     /* 转换为详情页VO */
@@ -285,7 +339,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     public void BumpListCacheVersion() {
         redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     }
-    
+
     /* 尝试从缓存中加载并更新版本 */
     private InteractionDetailVO tryLoadAndBumpFromCache(Long id, String cacheKey) {
         InteractionDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, InteractionDetailVO.class);

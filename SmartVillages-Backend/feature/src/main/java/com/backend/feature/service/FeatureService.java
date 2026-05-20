@@ -7,8 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.backend.feature.vo.FeatureVO;
 import java.time.LocalDateTime;
-/**
- * @author chenyang
+/*
+  @author chenyang
  * &#064;date 2026/4/23
  * &#064;description 乡村风采服务接口
  */
@@ -41,4 +41,11 @@ public interface FeatureService extends IService<FeatureEntity> {
 
     /* 村民获取我的乡村风采 */
     Map<String,Long> getMyFeatureCount(HttpServletRequest request);
+
+    /**
+     * 将已上传媒体的 URL 绑定到指定风采（封面 / 视频 / 相册追加）。
+     * <p>
+     * slot：COVER | VIDEO | IMAGES_APPEND；权限与修改风采一致（仅创建人）。
+     */
+    void bindUploadedMedia(Long featureId, String slot, String mediaUrl, String uploadedFileType, HttpServletRequest request);
 }
