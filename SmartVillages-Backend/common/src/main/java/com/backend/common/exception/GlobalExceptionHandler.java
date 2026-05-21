@@ -1,10 +1,5 @@
 package com.backend.common.exception;
 
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.result.Result;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,6 +11,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.result.Result;
+
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 
 /*
   全局异常 → 统一 {@link Result}，与 {@link ErrorCode} 对齐。
@@ -36,6 +38,10 @@ public class GlobalExceptionHandler {
         if (e.getCode() == ErrorCode.NO_PERMISSION.getCode()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Result.error(ErrorCode.NO_PERMISSION.getCode(), ErrorCode.NO_PERMISSION.getMessage()));
+        }
+        if (e.getCode() == ErrorCode.RATE_LIMIT_EXCEEDED.getCode()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Result.fail(e.getCode(), e.getMessage()));
         }
         if (e.getCode() == ErrorCode.RESOURCE_NOT_FOUND.getCode()
                 || e.getCode() == ErrorCode.USER_NOT_FOUND.getCode()
