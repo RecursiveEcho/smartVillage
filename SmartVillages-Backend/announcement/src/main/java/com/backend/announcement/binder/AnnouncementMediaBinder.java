@@ -26,7 +26,7 @@ public class AnnouncementMediaBinder implements MediaBinder{
       event.getFileUrl(),
       event.getFileType(),
       event.getBindSlot(),
-      event.getRequest()
+      event.getUploadUserId()
     );
   }
 }

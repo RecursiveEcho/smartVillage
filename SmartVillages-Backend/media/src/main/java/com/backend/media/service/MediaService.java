@@ -65,9 +65,37 @@ public interface MediaService extends IService<MediaEntity> {
     /**
      *  启用/禁用媒体资源
      * @param id 媒体资源id
-     * @param status 状态 0-禁用 1-启用
+     * @param status 状态 1-启用 3-下架
+     * @param request 请求
      */
-    void updateStatus(Integer id, Integer status);
+    void updateStatus(Integer id, Integer status, HttpServletRequest request);
 
-    
+    /**
+     * 审核媒体资源
+     * @param id 媒体资源id
+     * @param status 审核结果：1-通过 2-拒绝
+     * @param request 请求
+     */
+    void auditMedia(Integer id, Integer status, HttpServletRequest request);
+
+    /**
+     * 待审核列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param fileType 文件类型
+     * @param category 分类
+     * @return 待审核分页结果
+     */
+    IPage<PageVO> pagePending(Long current, Long size, String fileType, String category);
+
+    /**
+     * 已审核列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param fileType 文件类型
+     * @param category 分类
+     * @return 已审核分页结果
+     */
+    IPage<PageVO> pageAudited(Long current, Long size, String fileType, String category);
+
 }

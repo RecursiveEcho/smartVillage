@@ -1,33 +1,35 @@
 package com.backend.admin.service.impl;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
+
 import com.backend.admin.dto.AuthPublishedPageCache;
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.mapper.AdminMapper;
 import com.backend.admin.service.AdminService;
+import com.backend.auth.dto.AuthDTO;
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.exception.BusinessException;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
+import com.backend.media.service.MediaService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import com.backend.media.service.MediaService;
-import com.backend.auth.dto.AuthDTO;
-import org.springframework.util.DigestUtils;
-import org.springframework.util.StringUtils;
-import java.nio.charset.StandardCharsets;
-import java.util.Objects;
-import java.util.Collections;
-import java.util.List;
 
-import com.backend.common.utils.RedisJsonCacheTool;
-import com.backend.common.utils.CacheKeyUtils;
+import lombok.RequiredArgsConstructor;
 /**
  * 管理员业务实现：继承 MyBatis-Plus 对 {@link AdminEntity} 的基础 CRUD，
  * 用户列表与状态变更实际读写 {@link AuthEntity}（认证账号表），与管理员扩展信息分离。
@@ -41,7 +43,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     private final MediaService mediaService;
 
     private final RedisJsonCacheTool redisJsonCacheTool;
-    
+
     private static final String CACHE_LIST_KEY_PREFIX = "admin:users:list:";
     private static final String CACHE_LIST_VER_KEY = "admin:users:ver";
 
@@ -101,6 +103,8 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         }
         entity.setStatus(status);
         authMapper.updateById(entity);
+        evictDetailCache(id);
+        bumpListCacheVersion();
     }
 
     /**
@@ -120,11 +124,12 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         authMapper.insert(entity);
         CreateCaderVO createCaderVO = new CreateCaderVO();
         BeanUtils.copyProperties(entity, createCaderVO);
+        bumpListCacheVersion();
         return createCaderVO;
     }
-    
 
-    
+
+
 
     /**
      * 查看用户详细信息
@@ -143,6 +148,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         }
         AuthEntity entity = authMapper.selectById(id);
         if (entity == null) {
+          redisJsonCacheTool.setNullMarker(cacheKey);
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
         }
         AuthVO vo = new AuthVO();
@@ -158,6 +164,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
     }
 
+    private void bumpListCacheVersion() {
+        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+    }
     /**
      * 转换为 VO
      * @param entity 实体

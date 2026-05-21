@@ -24,7 +24,7 @@ public class AuthMediaBinder implements MediaBinder {
                 event.getBindSlot(),
                 event.getFileUrl(),
                 event.getFileType(),
-                event.getRequest()
+                event.getUploadUserId()
         );
     }
 }

@@ -81,7 +81,7 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
     /** 绑定上传后的媒体 URL 到用户记录；目前仅支持头像（slot=AVATAR）。 */
     @Override
     public void bindUploadedMedia(Long userId, String slot, String mediaUrl,
-                                   String uploadedFileType, HttpServletRequest request) {
+                                   String uploadedFileType, Integer operatorUserId) {
         if (userId == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "用户 ID 不能为空");
         }

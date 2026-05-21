@@ -3,7 +3,6 @@ package com.backend.auth.service;
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.vo.JwtResponse;
 import com.baomidou.mybatisplus.extension.service.IService;
-import jakarta.servlet.http.HttpServletRequest;
 
 public interface AuthService extends IService<AuthEntity> {
 
@@ -15,5 +14,5 @@ public interface AuthService extends IService<AuthEntity> {
 
     // 上传绑定头像
     void bindUploadedMedia(Long userId, String slot, String mediaUrl,
-                           String uploadedFileType, HttpServletRequest request);
+                           String uploadedFileType, Integer operatorUserId);
 }

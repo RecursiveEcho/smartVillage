@@ -106,13 +106,66 @@ public class MediaController {
     /**
      * 启用/禁用媒体资源
      * @param id 媒体资源id
-     * @param status 状态 0-禁用 1-启用
+     * @param status 状态 1-启用 3-下架
      * @return 启用/禁用结果
      */
-    @Operation(summary = "启用/禁用媒体资源")
+    @Operation(summary = "启用/下架媒体资源")
     @PutMapping("/cadre/{id}/status")
-    public Result<String> updateStatus(@PathVariable Integer id, @RequestParam Integer status) {
-        mediaService.updateStatus(id, status);
+    public Result<String> updateStatus(@PathVariable Integer id, @RequestParam Integer status,
+                                       HttpServletRequest request) {
+        mediaService.updateStatus(id, status, request);
         return Result.success("操作媒体资源状态成功");
+    }
+
+    /**
+     * 审核媒体资源
+     * @param id 媒体资源id
+     * @param status 审核结果：1-通过 2-拒绝
+     * @return 审核结果
+     */
+    @Operation(summary = "审核媒体资源")
+    @PutMapping("/cadre/{id}/audit")
+    public Result<String> audit(@PathVariable Integer id, @RequestParam Integer status,
+                                 HttpServletRequest request) {
+        mediaService.auditMedia(id, status, request);
+        return Result.success("审核完成");
+    }
+
+    /**
+     * 待审核列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param fileType 文件类型
+     * @param category 分类
+     * @return 待审核分页结果
+     */
+    @Operation(summary = "待审核媒体列表")
+    @GetMapping("/cadre/pending")
+    public Result<IPage<PageVO>> pagePending(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String fileType,
+        @RequestParam(required = false) String category
+    ) {
+        return Result.success(mediaService.pagePending(current, size, fileType, category));
+    }
+
+    /**
+     * 已审核列表
+     * @param current 当前页
+     * @param size 每页条数
+     * @param fileType 文件类型
+     * @param category 分类
+     * @return 已审核分页结果
+     */
+    @Operation(summary = "已审核媒体列表")
+    @GetMapping("/cadre/audited")
+    public Result<IPage<PageVO>> pageAudited(
+        @RequestParam(defaultValue = "1") Long current,
+        @RequestParam(defaultValue = "10") Long size,
+        @RequestParam(required = false) String fileType,
+        @RequestParam(required = false) String category
+    ) {
+        return Result.success(mediaService.pageAudited(current, size, fileType, category));
     }
 }

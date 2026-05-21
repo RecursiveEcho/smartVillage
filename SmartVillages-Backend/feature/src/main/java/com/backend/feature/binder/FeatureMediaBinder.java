@@ -29,7 +29,7 @@ public class FeatureMediaBinder implements MediaBinder {
         event.getBindSlot(),
         event.getFileUrl(),
         event.getFileType(),
-        event.getRequest()
+        event.getUploadUserId()
       );
     }
 

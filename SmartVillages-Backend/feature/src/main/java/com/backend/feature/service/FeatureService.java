@@ -47,5 +47,5 @@ public interface FeatureService extends IService<FeatureEntity> {
      * <p>
      * slot：COVER | VIDEO | IMAGES_APPEND；权限与修改风采一致（仅创建人）。
      */
-    void bindUploadedMedia(Long featureId, String slot, String mediaUrl, String uploadedFileType, HttpServletRequest request);
+    void bindUploadedMedia(Long featureId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId);
 }
