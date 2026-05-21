@@ -1,32 +1,35 @@
 package com.backend.management.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.backend.common.context.LoginUserContext;
+import com.backend.common.enums.ErrorCode;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.ServiceTicketCreateDTO;
+import com.backend.management.dto.ServiceTicketDoneDTO;
 import com.backend.management.dto.ServiceTicketListPageCache;
 import com.backend.management.entity.VillageServiceTicketEntity;
 import com.backend.management.mapper.VillageServiceTicketMapper;
 import com.backend.management.service.VillageServiceTicketService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.backend.management.vo.ServiceTicketDetailVO;
 import com.backend.management.vo.ServiceTicketSimpleVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.backend.common.utils.RedisJsonCacheTool;
-import com.backend.common.exception.BusinessException;
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.utils.CacheKeyUtils;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.time.LocalDateTime;
-import com.backend.management.dto.ServiceTicketDoneDTO;
-import java.util.Map;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class VillageServiceTicketServiceImpl
@@ -104,11 +107,18 @@ public class VillageServiceTicketServiceImpl
     @Override
             public ServiceTicketDetailVO getMyDetail(Long id, HttpServletRequest request) {
             String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+            if(redisJsonCacheTool.isNullMarker(cacheKey)) {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+            }
             ServiceTicketDetailVO fromCache =redisJsonCacheTool.getObject(cacheKey,ServiceTicketDetailVO.class);
             if (fromCache != null) {
                 return fromCache;
             }
-            VillageServiceTicketEntity entity = requireById(id);
+            VillageServiceTicketEntity entity = getById(id);
+            if(entity == null) {
+                redisJsonCacheTool.setNullMarker(cacheKey);
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+            }
             if(!Objects.equals(entity.getApplicantId(), LoginUserContext.getAuthId(request))) {
                 throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
             }
@@ -125,7 +135,7 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
         public void closeMyTicket(Long id, HttpServletRequest request) {
-            VillageServiceTicketEntity entity = requireById(id);
+            VillageServiceTicketEntity entity = getById(id);
             if(!Objects.equals(entity.getApplicantId(), LoginUserContext.getAuthId(request))) {
                 throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
             }
@@ -186,11 +196,18 @@ public class VillageServiceTicketServiceImpl
     @Override
     public ServiceTicketDetailVO getServiceTicketDetail(Long id) {
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        if(redisJsonCacheTool.isNullMarker(cacheKey)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+         }
         ServiceTicketDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, ServiceTicketDetailVO.class);
         if (fromCache != null) {
             return fromCache;
         }
-        VillageServiceTicketEntity entity = requireById(id);
+        VillageServiceTicketEntity entity = getById(id);
+        if (entity == null) {
+            redisJsonCacheTool.setNullMarker(cacheKey);
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+        }
         ServiceTicketDetailVO vo = new ServiceTicketDetailVO();
         BeanUtils.copyProperties(entity, vo);
         redisJsonCacheTool.setObject(cacheKey, vo);
@@ -205,7 +222,10 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public void processingServiceTicket(Long id, ServiceTicketDoneDTO dto, HttpServletRequest request) {
-        VillageServiceTicketEntity entity = requireById(id);
+        VillageServiceTicketEntity entity = getById(id);
+        if(entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+        }
         if(entity.getStatus() == 1) {
             throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单正在处理中，无法处理");
         }
@@ -233,7 +253,10 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public void doneServiceTicket(Long id, HttpServletRequest request) {
-        VillageServiceTicketEntity entity = requireById(id);
+        VillageServiceTicketEntity entity = getById(id);
+        if(entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+        }
         if(entity.getStatus() != 1) {
             throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "民生服务工单正在处理中，无法办结");
         }
@@ -253,7 +276,10 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public void closeServiceTicket(Long id, HttpServletRequest request) {
-        VillageServiceTicketEntity entity = requireById(id);
+        VillageServiceTicketEntity entity = getById(id);
+        if(entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
+        }
         if(!Objects.equals(entity.getHandlerId(),LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此民生服务工单");
         }
@@ -265,7 +291,7 @@ public class VillageServiceTicketServiceImpl
     }
     /**
      * 后台获取民生服务工单统计
-     * @return 
+     * @return
      *      total: 总申请数
      *      pending: 待处理数
      *      processing: 处理中数
@@ -287,18 +313,7 @@ public class VillageServiceTicketServiceImpl
             "completed", count(completedWrapper)
         );
     }
-    /**
-     * 获取实体并校验是否存在
-     * @param id 民生服务工单id
-     * @return 实体
-     */
-    private VillageServiceTicketEntity requireById(Long id) {
-        VillageServiceTicketEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
-        }
-        return entity;
-    }
+
 
     private ServiceTicketSimpleVO toTicketSimpleVo(VillageServiceTicketEntity entity) {
         ServiceTicketSimpleVO vo = new ServiceTicketSimpleVO();

@@ -53,6 +53,12 @@ public class AnnouncementVO {
     @Schema(description = "创建人")
     private Integer createUser;
 
+    @Schema(description="创建人用户名")
+    private String createUserName;
+
+    @Schema(description="审核人昵称")
+    private String auditUserName;
+
     @Schema(description="封面图片URL")
     private String coverUrl;
 

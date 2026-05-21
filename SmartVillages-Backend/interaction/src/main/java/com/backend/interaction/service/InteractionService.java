@@ -22,7 +22,7 @@ public interface InteractionService extends IService<InteractionEntity> {
     InteractionCreateVO createMessage(InteractionCreateDTO dto, HttpServletRequest request);
 
     // 获取村民留言列表
-    IPage<InteractionCreateVO> getMessageList(Long current, Long size);
+    IPage<InteractionDetailVO> getMessageList(Long current, Long size);
 
     // 回复村民留言
     String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request);

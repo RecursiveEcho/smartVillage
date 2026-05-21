@@ -1,5 +1,12 @@
 package com.backend.management.service.impl;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
@@ -16,15 +23,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -48,11 +48,11 @@ public class VillagePartyServiceImpl
         BeanUtils.copyProperties(dto, entity);
         save(entity);
         Integer id=entity.getId();
-        redisJsonCacheTool.setObject(CACHE_KEY_PREFIX, id);
+          redisJsonCacheTool.setObject(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id), entity);
         bumpListCacheVersion();
         return id;
     }
-    
+
     /**
      * 分页查询党建组织信息列表
      * @param current 当前页
@@ -98,12 +98,16 @@ public class VillagePartyServiceImpl
     @Override
     public VillagePartyDetailVO getDetail(Integer id) {
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+        if(redisJsonCacheTool.isNullMarker(cacheKey)) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
+         }
         VillagePartyDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillagePartyDetailVO.class);
         if (fromCache != null) {
             return fromCache;
         }
         VillagePartyEntity entity = getById(id);
         if (entity == null) {
+            redisJsonCacheTool.setNullMarker(cacheKey);
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
         }
         VillagePartyDetailVO vo = new VillagePartyDetailVO();

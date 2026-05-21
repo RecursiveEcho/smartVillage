@@ -1,7 +1,17 @@
 package com.backend.management.service.impl;
 
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillageHouseLandCreateDTO;
 import com.backend.management.dto.VillageHouseLandListPageCache;
 import com.backend.management.dto.VillageHouseLandUpdateDTO;
@@ -14,25 +24,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import com.backend.common.utils.RedisJsonCacheTool;
-import com.backend.common.utils.CacheKeyUtils;
 
 @Service
 @RequiredArgsConstructor
 public class VillageHouseLandServiceImpl
         extends ServiceImpl<VillageHouseLandMapper, VillageHouseLandEntity>
         implements VillageHouseLandService {
-        
+
     private static final String CACHE_KEY_PREFIX = "village_house_land:";
     private static final String CACHE_LIST_VER_KEY = "village-house-land:list:ver";
     private static final String CACHE_LIST_PREFIX = "village-house-land:list:";
@@ -100,28 +100,17 @@ public class VillageHouseLandServiceImpl
     @Override
     public VillageHouseLandDetailVO getVillageHouseLandDetail(Integer id) {
         String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
-        VillageHouseLandDetailVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
-        if (fromCache != null) {
-            return fromCache;
-        }
-        VillageHouseLandEntity entity = villageHouseLandMapper.selectById(id);
-        if (entity == null) {
+        if(redisJsonCacheTool.isNullMarker(cacheKey)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
-        }
-        VillageHouseLandDetailVO vo = new VillageHouseLandDetailVO();
-        BeanUtils.copyProperties(entity, vo);
-        redisJsonCacheTool.setObject(cacheKey, vo);
-        return vo;
-    }
-    private VillageHouseLandDetailVO tryLoadAndBumpFromCache(Integer id, String cacheKey) {
+         }
         VillageHouseLandDetailVO fromCache = redisJsonCacheTool.getObject(cacheKey, VillageHouseLandDetailVO.class);
         if (fromCache != null) {
             return fromCache;
         }
         VillageHouseLandEntity entity = villageHouseLandMapper.selectById(id);
         if (entity == null) {
-            redisJsonCacheTool.delete(cacheKey);
-            return null;
+            redisJsonCacheTool.setNullMarker(cacheKey);
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
         }
         VillageHouseLandDetailVO vo = new VillageHouseLandDetailVO();
         BeanUtils.copyProperties(entity, vo);

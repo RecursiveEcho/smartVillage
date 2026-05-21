@@ -1,12 +1,7 @@
 package com.backend.interaction.service.impl;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -85,7 +80,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
 
     /* 获取村民留言列表 */
     @Override
-    public IPage<InteractionCreateVO> getMessageList(Long current, Long size) {
+    public IPage<InteractionDetailVO> getMessageList(Long current, Long size) {
         String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
         String prefix = CACHE_LIST_PUB_PREFIX + CacheKeyUtils.listFilterSegment();
         String listCacheKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
@@ -93,10 +88,10 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         InteractionPublishedPageCache cached = redisJsonCacheTool.getObject(listCacheKey, InteractionPublishedPageCache.class);
 
         if (cached != null) {
-            List<InteractionCreateVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+            List<InteractionDetailVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
 
             enrichUsernames(rows);
-            Page<InteractionCreateVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+            Page<InteractionDetailVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
             return hit;
         }
@@ -104,7 +99,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         LambdaQueryWrapper<InteractionEntity> wrapper = new LambdaQueryWrapper<InteractionEntity>()
         .orderByDesc(InteractionEntity::getCreateTime);
         IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
-        List<InteractionCreateVO> voRows = entityPage.getRecords().stream().map(this::toVo).toList();
+        List<InteractionDetailVO> voRows = entityPage.getRecords().stream().map(this::toVo).toList();
         enrichUsernames(voRows);
         InteractionPublishedPageCache toSave = new InteractionPublishedPageCache();
         toSave.setRecords(voRows);
@@ -113,7 +108,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         toSave.setSize(entityPage.getSize());
         toSave.setPages(entityPage.getPages());
         redisJsonCacheTool.setListCacheObject(listCacheKey, toSave);
-        Page<InteractionCreateVO> out = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
+        Page<InteractionDetailVO> out = new Page<>(entityPage.getCurrent(), entityPage.getSize(), entityPage.getTotal());
         out.setRecords(voRows);
         return out;
     }
@@ -167,7 +162,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         String listCacheKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         InteractionPublishedPageCache cached = redisJsonCacheTool.getObject(listCacheKey, InteractionPublishedPageCache.class);
         if (cached != null) {
-            List<InteractionDetailVO> rows = cached.getDetailRecords() != null ? cached.getDetailRecords() : Collections.emptyList();
+            List<InteractionDetailVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<InteractionDetailVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
             return hit;
@@ -180,7 +175,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         .orderByDesc(InteractionEntity::getCreateTime);
         IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
         InteractionPublishedPageCache toSave = new InteractionPublishedPageCache();
-        toSave.setDetailRecords(entityPage.getRecords().stream().map(this::toDetailVo).toList());
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toDetailVo).toList());
         toSave.setTotal(entityPage.getTotal());
         toSave.setCurrent(entityPage.getCurrent());
         toSave.setSize(entityPage.getSize());
@@ -198,7 +193,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         String listCacheKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
         InteractionPublishedPageCache cached = redisJsonCacheTool.getObject(listCacheKey, InteractionPublishedPageCache.class);
         if (cached != null) {
-            List<InteractionDetailVO> rows = cached.getDetailRecords() != null ? cached.getDetailRecords() : Collections.emptyList();
+            List<InteractionDetailVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<InteractionDetailVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
             return hit;
@@ -208,7 +203,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
         .orderByDesc(InteractionEntity::getCreateTime);
         IPage<InteractionEntity> entityPage = page(new Page<>(current, size), wrapper);
         InteractionPublishedPageCache toSave = new InteractionPublishedPageCache();
-        toSave.setDetailRecords(entityPage.getRecords().stream().map(this::toDetailVo).toList());
+        toSave.setRecords(entityPage.getRecords().stream().map(this::toDetailVo).toList());
         toSave.setTotal(entityPage.getTotal());
         toSave.setCurrent(entityPage.getCurrent());
         toSave.setSize(entityPage.getSize());
@@ -294,36 +289,39 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     }
 
     /* 转换为创建页VO */
-    public InteractionCreateVO toVo(InteractionEntity entity) {
-        InteractionCreateVO vo = new InteractionCreateVO();
+    public InteractionDetailVO toVo(InteractionEntity entity) {
+        InteractionDetailVO vo = new InteractionDetailVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
     }
 
     /** 批量补全公开列表中的留言者用户名（auth 表） */
-    private void enrichUsernames(List<InteractionCreateVO> rows) {
+    private void enrichUsernames(List<InteractionDetailVO> rows) {
         if (rows == null || rows.isEmpty()) {
             return;
         }
-        Set<Integer> ids = rows.stream()
-                .map(InteractionCreateVO::getUserId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<Integer> ids = new HashSet<>();
+        for(InteractionDetailVO vo:rows){
+            if(vo.getUserId()!=null) ids.add(vo.getUserId());
+            if(vo.getReplyUser()!=null) ids.add(vo.getReplyUser());
+        }
         if (ids.isEmpty()) {
             return;
         }
         List<AuthEntity> auths = authMapper.selectList(
                 new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
-        Map<Integer, String> idToName = auths.stream()
-                .filter(a -> a.getId() != null)
-                .collect(Collectors.toMap(AuthEntity::getId, AuthEntity::getUsername, (a, b) -> a));
-        for (InteractionCreateVO vo : rows) {
-            if (vo.getUserId() == null) {
-                continue;
+        Map<Integer, String> idToName = new HashMap<>();
+        for (AuthEntity a : auths) {
+            if (a.getId() != null) {
+                idToName.put(a.getId(), a.getUsername());
             }
-            String name = idToName.get(vo.getUserId());
-            if (name != null && !name.isBlank()) {
-                vo.setUsername(name);
+        }
+        for (InteractionDetailVO vo : rows) {
+            if (vo.getUserId()!= null) {
+                vo.setUsername(idToName.get(vo.getUserId()));
+            }
+            if(vo.getReplyUsername()!= null){
+                vo.setReplyUsername(idToName.get(vo.getReplyUser()));
             }
         }
     }

@@ -2,8 +2,8 @@ package com.backend.feature.vo;
 
 import java.time.LocalDateTime;
 
-import lombok.Data;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
 @Data
 @Schema(description = "乡村风采VO")
 public class FeatureVO {
@@ -25,12 +25,15 @@ public class FeatureVO {
 
     @Schema(description = "视频")
     private String video;
-    
+
     @Schema(description = "图片")
     private String images;
 
     @Schema(description = "创建用户")
     private Integer createUser;
+
+    @Schema(description = "创建人姓名")
+    private String createUserName;
 
     @Schema(description = "浏览次数")
     private Integer viewCount;

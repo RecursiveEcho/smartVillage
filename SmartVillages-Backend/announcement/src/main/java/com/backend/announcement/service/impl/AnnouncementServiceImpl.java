@@ -3,8 +3,12 @@ package com.backend.announcement.service.impl;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -18,6 +22,8 @@ import com.backend.announcement.mapper.AnnouncementMapper;
 import com.backend.announcement.service.AnnouncementService;
 import com.backend.announcement.vo.AnnouncementPublishedPageCache;
 import com.backend.announcement.vo.AnnouncementVO;
+import com.backend.auth.entity.AuthEntity;
+import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
@@ -62,9 +68,11 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     private static final int STATUS_OFFLINE = 3;
     private static final int DEFAULT_HOT_LIMIT = 5;
 
+
     private final AnnouncementMapper announcementMapper;
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final ObjectMapper objectMapper;
+     private final AuthMapper authMapper;
 
     /** 新建默认待审核：浏览量 0、未删除 */
     @Override
@@ -99,6 +107,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
+            enrichUsernames(rows);
             return hit;
         }
 
@@ -117,8 +126,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         toSave.setSize(page.getSize());
         toSave.setPages(page.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
-
-        return page.convert(this::toVo);
+        IPage<AnnouncementVO> result = page.convert(this::toVo);
+        enrichUsernames(result.getRecords());
+        return result;
     }
 
     /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
@@ -184,6 +194,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         // 缓存命中：DB 原子 +1，并同步返回值与缓存
         AnnouncementVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
         if (fromCache != null) {
+          enrichUsername(fromCache);
             return fromCache;
         }
 
@@ -208,9 +219,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         // 同步返回值中的浏览量（entity 是更新前的对象）
         int currentViewCount = entity.getViewCount() == null ? 0 : entity.getViewCount();
         entity.setViewCount(currentViewCount + 1);
-
         AnnouncementVO vo = toVo(entity);
         writeDetailCache(cacheKey, vo);
+        enrichUsername(vo);
         return vo;
     }
 
@@ -241,6 +252,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         vo.setViewCount(current + 1);
         // 更新缓存
         writeDetailCache(cacheKey, vo);
+        enrichUsername(vo);
         return vo;
     }
 
@@ -251,7 +263,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         if (entity == null) {
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
-        return toVo(entity);
+        AnnouncementVO vo = toVo(entity);
+        enrichUsername(vo);
+        return vo;
     }
 
     /** 已发布列表按浏览量降序，浏览量相同时按创建时间升序，限制条数 */
@@ -266,7 +280,10 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
                 .orderByAsc(AnnouncementEntity::getCreateTime)
                 .last("limit " + n);
         /* 转换为 VO 并返回 */
-        return announcementMapper.selectList(wrapper).stream().map(this::toVo).toList();
+               List<AnnouncementVO> list = announcementMapper.selectList(wrapper).stream().map(this::toVo).toList();
+        enrichUsernames(list);
+        return list;
+
     }
 
     /* 逻辑删除并清理缓存 */
@@ -302,6 +319,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
+            enrichUsernames(rows);
             return hit;
         }
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
@@ -320,7 +338,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         toSave.setSize(page.getSize());
         toSave.setPages(page.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
-        return page.convert(this::toVo);
+          IPage<AnnouncementVO> result = page.convert(this::toVo);
+          enrichUsernames(result.getRecords());
+        return result;
     }
 
     /* 管理员待审核公告 */
@@ -342,6 +362,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
+            enrichUsernames(rows);
             return hit;
         }
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
@@ -360,7 +381,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         toSave.setSize(page.getSize());
         toSave.setPages(page.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
-        return page.convert(this::toVo);
+          IPage<AnnouncementVO> result =page.convert(this::toVo);
+          enrichUsernames(result.getRecords());
+        return result;
     }
 
     /* 管理员审核公告 */
@@ -402,6 +425,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
+            enrichUsernames(rows);
             return hit;
         }
         LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
@@ -421,13 +445,15 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         toSave.setSize(page.getSize());
         toSave.setPages(page.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
-        return page.convert(this::toVo);
+        IPage<AnnouncementVO> result= page.convert(this::toVo);
+        enrichUsernames(result.getRecords());
+        return result;
     }
 
-    //
+    // 绑定已上传的媒体文件 URL（封面或图片列表追加），并清除详情缓存
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void bindUploadedMedia(Long announcementId, String mediaUrl, String slot,String uploadedFileType, HttpServletRequest request) {
+    public void bindUploadedMedia(Long announcementId, String mediaUrl, String slot,String uploadedFileType, Integer operatorUserId) {
        if(announcementId == null || !StringUtils.hasText(mediaUrl) ||!StringUtils.hasText(uploadedFileType)) {
            throw new BusinessException(ErrorCode.PARAM_MISSING);
           }
@@ -435,7 +461,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
           if(entity == null) {
               throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
           }
-          if(!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
+          if(!Objects.equals(entity.getCreateUser(), operatorUserId)) {
               throw new BusinessException(ErrorCode.NO_PERMISSION, "只能绑定自己的公告");
           }
           String ft=uploadedFileType.trim().toLowerCase();
@@ -511,4 +537,45 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
             throw new BusinessException(ErrorCode.STATUS_INVALID);
         }
     }
+
+     /** 批量填充创建人、审核人姓名 */
+     private void enrichUsernames(List<AnnouncementVO> rows){
+      /* 收集用户ID */
+      if(rows==null||rows.isEmpty()){
+        return;
+      }
+      Set<Integer> ids=new HashSet<>();
+      for(AnnouncementVO vo:rows){
+        if(vo.getCreateUser()!=null) ids.add(vo.getCreateUser());
+        if(vo.getAuditUser()!=null) ids.add(vo.getAuditUser());
+      }
+
+      if(ids.isEmpty()){
+        return;
+      }
+      List<AuthEntity> auths = authMapper.selectList(
+        new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId,ids));
+
+          Map<Integer,String> idToName =new HashMap<>();
+
+          for(AuthEntity a:auths){
+            if(a.getId()!=null){
+            idToName.put(a.getId(),a.getUsername());
+            }
+          }
+          for(AnnouncementVO vo:rows){
+            if(vo.getCreateUser()!=null){
+              vo.setCreateUserName(idToName.get(vo.getCreateUser()));
+            }
+            if(vo.getAuditUser()!=null){
+              vo.setAuditUserName(idToName.get(vo.getAuditUser()));
+            }
+          }
+     }
+
+     /* 单条 VO 填充用户名 */
+     private void enrichUsername(AnnouncementVO vo){
+      if(vo==null) return;
+      enrichUsernames(Collections.singletonList(vo));
+     }
 }

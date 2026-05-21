@@ -4,16 +4,19 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.beans.BeanUtils;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.backend.auth.entity.AuthEntity;
+import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
@@ -52,6 +55,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     private static final String CACHE_LIST_ADMIN_PREFIX = "feature:list:admin:";
     private static final String CACHE_LIST_ADMIN_VER_KEY = "feature:list:admin:ver";
 
+    private final AuthMapper authMapper;
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final FeatureMapper featureMapper;
     private final ObjectMapper objectMapper;
@@ -90,6 +94,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
             List<FeatureVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<FeatureVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
+            enrivchUsernames(rows);
             return hit;
         }
         LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
@@ -107,7 +112,9 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         toSave.setSize(entityPage.getSize());
         toSave.setPages(entityPage.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
-        return entityPage.convert(this::toVo);
+        IPage<FeatureVO> result= entityPage.convert(this::toVo);
+        enrivchUsernames(result.getRecords());
+        return result;
     }
 
     /* 获取乡村风采详情 */
@@ -119,6 +126,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         }
         FeatureVO fromCache = tryLoadAndBumpFromCache(id, cacheKey);
         if (fromCache != null) {
+           enrivchUsername(fromCache);
             return fromCache;
         }
 
@@ -143,6 +151,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         BeanUtils.copyProperties(entity, vo);
         redisJsonCacheTool.setObject(cacheKey, vo);
         bumpPublishedListCacheVersion();
+        enrivchUsername(vo);
         return vo;
     }
 
@@ -210,6 +219,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
             List<FeatureVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
             Page<FeatureVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
             hit.setRecords(rows);
+            enrivchUsernames(rows);
             return hit;
         }
         LambdaQueryWrapper<FeatureEntity> wrapper = new LambdaQueryWrapper<FeatureEntity>()
@@ -230,14 +240,16 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         toSave.setSize(entityPage.getSize());
         toSave.setPages(entityPage.getPages());
         redisJsonCacheTool.setListCacheObject(listKey, toSave);
-        return entityPage.convert(this::toVo);
+        IPage<FeatureVO> result=entityPage.convert(this::toVo);
+        enrivchUsernames(result.getRecords());
+        return result;
     }
 
     // 绑定上传后的媒体 URL 到乡村风采记录
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void bindUploadedMedia(
-            Long featureId, String slot, String mediaUrl, String uploadedFileType, HttpServletRequest request) {
+            Long featureId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId) {
         if (featureId == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "风采 ID 不能为空");
         }
@@ -249,7 +261,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         if (entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
-        if (!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
+        if (!Objects.equals(entity.getCreateUser(), operatorUserId)) {
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
         String ft = uploadedFileType == null ? "" : uploadedFileType.trim().toLowerCase();
@@ -399,5 +411,39 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         FeatureVO vo = new FeatureVO();
         BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
         return vo;
+    }
+
+    private void enrivchUsernames(List<FeatureVO> rows){
+      if(rows==null||rows.isEmpty()){
+        return;
+      }
+      Set<Integer> ids =new HashSet<>();
+      for(FeatureVO vo:rows){
+        if(vo.getCreateUser()!=null){
+          ids.add(vo.getCreateUser());
+        }
+      }
+      if(ids.isEmpty()){
+        return;
+      }
+      List<AuthEntity> auths=authMapper.selectList(
+        new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId,ids));
+      Map<Integer,String> idNoName=new HashMap<>();
+      for(AuthEntity auth:auths){
+        if(auth.getId()!=null){
+          idNoName.put(auth.getId(),auth.getUsername());
+        }
+      }
+      for(FeatureVO vo:rows){
+        if(vo.getCreateUser()!=null){
+          vo.setCreateUserName(idNoName.get(vo.getCreateUser()));
+        }
+      }
+    }
+    private void enrivchUsername(FeatureVO vo){
+      if(vo==null){
+        return;
+      }
+      enrivchUsernames(Collections.singletonList(vo));
     }
 }

@@ -37,6 +37,9 @@ public class VillageAffairDetailVO {
     @Schema(description = "审核人")
     private Integer auditUserId;
 
+    @Schema(description = "审核人姓名")
+    private String auditUserName;
+
     @Schema(description = "审核时间")
     private LocalDateTime auditTime;
 
@@ -51,6 +54,9 @@ public class VillageAffairDetailVO {
 
     @Schema(description = "创建人")
     private Integer createUser;
+
+    @Schema(description = "创建人姓名")
+    private String createUserName;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

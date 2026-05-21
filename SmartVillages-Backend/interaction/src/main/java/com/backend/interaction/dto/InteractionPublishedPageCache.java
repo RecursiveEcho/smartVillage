@@ -2,7 +2,6 @@ package com.backend.interaction.dto;
 
 import java.util.List;
 
-import com.backend.interaction.vo.InteractionCreateVO;
 import com.backend.interaction.vo.InteractionDetailVO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,11 +14,8 @@ import lombok.Data;
 @Data
 @Schema(description = "村民留言已发布分页缓存")
 public class InteractionPublishedPageCache {
-    @Schema(description = "当前页数据")
-    List<InteractionCreateVO> records;
-
     @Schema(description = "详情页数据")
-    List<InteractionDetailVO> detailRecords;
+    List<InteractionDetailVO> records;
     @Schema(description = "总条数")
     Long total;
     @Schema(description = "当前页码")

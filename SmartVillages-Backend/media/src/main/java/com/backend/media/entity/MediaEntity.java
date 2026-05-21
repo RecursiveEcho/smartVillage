@@ -43,9 +43,23 @@ public class MediaEntity {
     @Schema(description = "上传用户")
     private Integer uploadUser;
 
-    @TableField(fill= FieldFill.INSERT)
-    @Schema(description = "状态：0-禁用 1-启用", defaultValue = "1")
+    @Schema(description = "状态：0-待审核 1-已通过 2-已拒绝 3-已下架")
     private Integer status;
+
+    @Schema(description = "审核时间")
+    private LocalDateTime auditTime;
+
+    @Schema(description = "审核人ID")
+    private Integer auditUser;
+
+    @Schema(description = "绑定目标模块：FEATURE/ANNOUNCEMENT/AUTH")
+    private String bindTarget;
+
+    @Schema(description = "绑定实体ID")
+    private Long bindEntityId;
+
+    @Schema(description = "绑定槽位：COVER/VIDEO/IMAGES_APPEND/AVATAR")
+    private String bindSlot;
 
     @TableField(fill= FieldFill.INSERT)
     @Schema(description = "创建时间")

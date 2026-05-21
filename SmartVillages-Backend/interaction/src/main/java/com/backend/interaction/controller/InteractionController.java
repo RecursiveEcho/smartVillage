@@ -58,7 +58,7 @@ public class InteractionController {
      */
     @Operation(summary="获取村民留言列表")
     @GetMapping("/interactions/messages")
-    public Result<IPage<InteractionCreateVO>> getMessageList(
+    public Result<IPage<InteractionDetailVO>> getMessageList(
     @RequestParam(defaultValue = "1") Long current,
     @RequestParam(defaultValue = "10") Long size) {
         return Result.success(interactionService.getMessageList(current, size));

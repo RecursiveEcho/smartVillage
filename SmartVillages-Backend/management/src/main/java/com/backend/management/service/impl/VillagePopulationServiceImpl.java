@@ -1,7 +1,18 @@
 package com.backend.management.service.impl;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillagePopulationCreateDTO;
 import com.backend.management.dto.VillagePopulationListPageCache;
 import com.backend.management.dto.VillagePopulationUpdateDTO;
@@ -10,20 +21,10 @@ import com.backend.management.mapper.VillagePopulationMapper;
 import com.backend.management.service.VillagePopulationService;
 import com.backend.management.vo.VillagePopulationDetailVO;
 import com.backend.management.vo.VillagePopulationSimpleVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import jakarta.servlet.http.HttpServletRequest;
-import com.backend.common.utils.CacheKeyUtils;
-import com.backend.common.utils.RedisJsonCacheTool;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
 
 import lombok.RequiredArgsConstructor;
 
@@ -97,8 +98,17 @@ public class VillagePopulationServiceImpl
      */
     @Override
     public VillagePopulationDetailVO getVillagePopulationDetail(Long id) {
+      String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
+      if(redisJsonCacheTool.isNullMarker(cacheKey)){
+          throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+      }
+      VillagePopulationDetailVO cached = redisJsonCacheTool.getObject(cacheKey, VillagePopulationDetailVO.class);
+      if(cached!=null){
+          return cached;
+      }
         VillagePopulationEntity entity = getById(id);
         if (entity == null) {
+          redisJsonCacheTool.setNullMarker(cacheKey);
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
         }
         VillagePopulationDetailVO vo = new VillagePopulationDetailVO();
