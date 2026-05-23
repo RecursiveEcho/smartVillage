@@ -42,6 +42,7 @@ public class AnnouncementEntity {
     @Schema(description = "类型：1-通知 2-公告 3-公示")
     private Integer type;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "状态：0-待审核 1-已通过 2-已拒绝 3-已下架")
     private Integer status;
 

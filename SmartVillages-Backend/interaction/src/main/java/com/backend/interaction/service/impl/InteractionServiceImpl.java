@@ -1,7 +1,14 @@
 package com.backend.interaction.service.impl;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import  java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -13,6 +20,7 @@ import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.common.utils.RedisRateLimiter;
 import com.backend.interaction.dto.InteractionCreateDTO;
@@ -46,6 +54,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final InteractionMapper interactionMapper;
     private final AuthMapper authMapper;
+    private final RedisDistributedLock redisDistributedLock;
     private static final String CACHE_KEY_PREFIX = "interaction:detail:";
     private static final String CACHE_LIST_VER_KEY = "interaction:list:ver";
     /** 村民端公开列表（无筛选） */
@@ -267,16 +276,53 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
 
     /*管理端处理村民留言 */
     @Override
-    public String processingMessage(Long id, HttpServletRequest request) {
+    public String processingMessage(Long id, Integer status, HttpServletRequest request) {
+      String lockKey = "lock:interaction:process:" + id;
+      String lockInstance = UUID.randomUUID().toString();
+        boolean lockAcquired = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!lockAcquired) {
+              throw new BusinessException(ErrorCode.SYSTEM_BUSY, "系统繁忙，请稍后再试");
+        }
+
         InteractionEntity entity = requireById(id);
         if (entity.getStatus() != null && entity.getStatus() == 3) {
             throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "留言已关闭，无法处理");
         }
-        entity.setStatus(1);
+        try {
+        entity.setStatus(status);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
         BumpListCacheVersion();
         return "处理成功";
+        } finally {
+            redisDistributedLock.unlock(lockKey, lockInstance);
+        }
+    }
+
+    /* 审核村民留言 */
+    @Override
+    public void reviewMessage(Long id, Integer reviewStatus) {
+      String lockKey = "lock:interaction:review:" + id;
+      String lockInstance = UUID.randomUUID().toString();
+        boolean lockAcquired = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!lockAcquired) {
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY, "系统繁忙，请稍后再试");
+        }
+         InteractionEntity entity = requireById(id);
+        if (entity.getStatus() != null && entity.getStatus() == 3) {
+            throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "留言已关闭，无法审核");
+        }
+        if (reviewStatus != 0 && reviewStatus != 1 && reviewStatus != 2) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "无效的审核状态");
+        }
+        try {
+        entity.setStatus(reviewStatus);
+        updateById(entity);
+        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+        BumpListCacheVersion();
+      } finally {
+            redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
 
     /* 获取实体 */

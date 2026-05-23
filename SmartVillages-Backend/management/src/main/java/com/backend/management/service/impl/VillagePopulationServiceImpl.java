@@ -2,7 +2,6 @@ package com.backend.management.service.impl;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -12,6 +11,7 @@ import org.springframework.util.StringUtils;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillagePopulationCreateDTO;
 import com.backend.management.dto.VillagePopulationListPageCache;
@@ -38,6 +38,7 @@ public class VillagePopulationServiceImpl
     private static final String CACHE_LIST_VER_KEY = "village-population:list:ver";
     private static final String CACHE_LIST_PREFIX = "village-population:list:";
     private final RedisJsonCacheTool redisJsonCacheTool;
+    private final RedisDistributedLock redisDistributedLock;
     /**
      * 创建人口台账
      * @param villagePopulationCreateDTO 人口台账创建DTO
@@ -122,17 +123,28 @@ public class VillagePopulationServiceImpl
      * @param id 人口台账id
      * @param villagePopulationUpdateDTO 人口台账更新DTO
      */
-    @Override
-    public void updateVillagePopulation(Long id, VillagePopulationUpdateDTO villagePopulationUpdateDTO) {
-        VillagePopulationEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
-        }
-        BeanUtils.copyProperties(villagePopulationUpdateDTO, entity);
-        updateById(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-        bumpListCacheVersion();
-    }
+   @Override
+      public void updateVillagePopulation(Long id, VillagePopulationUpdateDTO villagePopulationUpdateDTO) {
+          String lockKey = "lock:villagePopulation:update:" + id;
+          String lockInstance = RedisDistributedLock.generateInstanceId();
+          boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+          if (!locked) {
+              throw new BusinessException(ErrorCode.SYSTEM_BUSY, "人口台账正在被修改，请稍后再试");
+          }
+          try {
+              VillagePopulationEntity entity = getById(id);
+              if (entity == null) {
+                  throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+              }
+              BeanUtils.copyProperties(villagePopulationUpdateDTO, entity);
+              updateById(entity);
+              redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+              bumpListCacheVersion();
+          } finally {
+              redisDistributedLock.unlock(lockKey, lockInstance);
+          }
+      }
+
 
     /**
      * 删除人口台账
@@ -140,23 +152,32 @@ public class VillagePopulationServiceImpl
      */
     @Override
     public void deleteVillagePopulation(Long id) {
-        VillagePopulationEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+        String lockKey = "lock:villagePopulation:delete:" + id;
+        String lockInstance = RedisDistributedLock.generateInstanceId();
+        boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!locked) {
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY, "人口台账正在被操作，请稍后再试");
         }
-        removeById(id);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-        bumpListCacheVersion();
+        try {
+            VillagePopulationEntity entity = getById(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "人口台账不存在");
+            }
+            removeById(id);
+            redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+            bumpListCacheVersion();
+        } finally {
+            redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
-
-    private VillagePopulationSimpleVO toPopulationSimpleVo(VillagePopulationEntity entity) {
-        VillagePopulationSimpleVO vo = new VillagePopulationSimpleVO();
-        BeanUtils.copyProperties(Objects.requireNonNull(entity), vo);
-        return vo;
-    }
-
-    private void bumpListCacheVersion() {
+    private void bumpListCacheVersion(){
         redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+    }
+
+    private VillagePopulationSimpleVO toPopulationSimpleVo(VillagePopulationEntity entity){
+        VillagePopulationSimpleVO vo=new VillagePopulationSimpleVO();
+        BeanUtils.copyProperties(entity, vo);
+        return vo;
     }
 }
 

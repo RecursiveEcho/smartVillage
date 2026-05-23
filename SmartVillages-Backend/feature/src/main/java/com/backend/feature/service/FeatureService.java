@@ -1,18 +1,15 @@
 package com.backend.feature.service;
 
-import com.backend.feature.entity.FeatureEntity;
-import com.baomidou.mybatisplus.extension.service.IService;
-import com.backend.feature.dto.HighlightCreateDTO;
-import jakarta.servlet.http.HttpServletRequest;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.backend.feature.vo.FeatureVO;
 import java.time.LocalDateTime;
-/*
-  @author chenyang
- * &#064;date 2026/4/23
- * &#064;description 乡村风采服务接口
- */
 import java.util.Map;
+
+import com.backend.feature.dto.HighlightCreateDTO;
+import com.backend.feature.entity.FeatureEntity;
+import com.backend.feature.vo.FeatureVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.service.IService;
+
+import jakarta.servlet.http.HttpServletRequest;
 public interface FeatureService extends IService<FeatureEntity> {
 
     /* 创建乡村风采 */
@@ -48,4 +45,7 @@ public interface FeatureService extends IService<FeatureEntity> {
      * slot：COVER | VIDEO | IMAGES_APPEND；权限与修改风采一致（仅创建人）。
      */
     void bindUploadedMedia(Long featureId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId);
+
+      /* 审核乡村风采 */
+    void reviewFeature(Long id, Integer reviewStatus);
 }

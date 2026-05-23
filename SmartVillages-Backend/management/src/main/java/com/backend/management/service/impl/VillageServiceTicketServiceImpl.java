@@ -14,6 +14,7 @@ import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.ServiceTicketCreateDTO;
 import com.backend.management.dto.ServiceTicketDoneDTO;
@@ -41,6 +42,7 @@ public class VillageServiceTicketServiceImpl
     private static final String CACHE_LIST_MINE_PREFIX = "village-service-ticket:list:mine:";
     private static final String CACHE_LIST_CADRE_PREFIX = "village-service-ticket:list:cadre:";
     private final RedisJsonCacheTool redisJsonCacheTool;
+    private final RedisDistributedLock redisDistributedLock;
 
     /**
      * 创建民生服务工单
@@ -222,6 +224,12 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public void processingServiceTicket(Long id, ServiceTicketDoneDTO dto, HttpServletRequest request) {
+        String lockKey = "lock:village_service_ticket:processing:" + id;
+        String lockInstance = java.util.UUID.randomUUID().toString();
+        boolean lockAcquired = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!lockAcquired) {
+               throw new BusinessException(ErrorCode.SYSTEM_BUSY, "工单正在处理中，请稍后再试");
+        }
         VillageServiceTicketEntity entity = getById(id);
         if(entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
@@ -253,6 +261,12 @@ public class VillageServiceTicketServiceImpl
      */
     @Override
     public void doneServiceTicket(Long id, HttpServletRequest request) {
+      String lockKey= "lock:village_service_ticket:done:"+id;
+      String lockInstance = java.util.UUID.randomUUID().toString();
+      boolean lockAcquired = redisDistributedLock.tryLock(lockKey, lockInstance);
+      if(!lockAcquired) {
+          throw new BusinessException(ErrorCode.SYSTEM_BUSY, "工单正在处理中，请稍后再试");
+      }
         VillageServiceTicketEntity entity = getById(id);
         if(entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "民生服务工单不存在");
@@ -262,11 +276,15 @@ public class VillageServiceTicketServiceImpl
         }
         if(!Objects.equals(entity.getHandlerId(),LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.OPERATION_NOT_ALLOWED, "您没有权限操作此民生服务工单");
-        }
+          }
+          try{
         entity.setStatus(2);
         updateById(entity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
         bumpListCacheVersion();
+          } finally {
+              redisDistributedLock.unlock(lockKey, lockInstance);
+          }
     }
 
     /**

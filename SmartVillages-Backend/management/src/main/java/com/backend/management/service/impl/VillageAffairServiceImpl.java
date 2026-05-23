@@ -19,6 +19,7 @@ import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillageAffairAuditDTO;
 import com.backend.management.dto.VillageAffairCreateDTO;
@@ -52,7 +53,7 @@ public class VillageAffairServiceImpl
     private final VillageAffairMapper villageAffairMapper;
     private final AuthMapper authMapper;
     private final HttpServletRequest request;
-
+    private final RedisDistributedLock redisDistributedLock;
     /**
      * 创建村务事项/公示
      *
@@ -142,8 +143,15 @@ public class VillageAffairServiceImpl
      * @param id     村务事项/公示ID
      * @param dto    更新参数
      */
-    @Override
-    public void update(Integer id, VillageAffairUpdateDTO dto) {
+   @Override
+public void update(Integer id, VillageAffairUpdateDTO dto) {
+    String lockKey = "lock:villageAffair:update:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "村务事项正在被修改，请稍后再试");
+    }
+    try {
         VillageAffairEntity entity = getById(id);
         if (entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
@@ -152,7 +160,11 @@ public class VillageAffairServiceImpl
         updateById(entity);
         evictDetailCaches(id);
         bumpListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /**
      * 删除村务事项/公示
@@ -160,7 +172,14 @@ public class VillageAffairServiceImpl
      * @param id 村务事项/公示ID
      */
     @Override
-    public void delete(Integer id) {
+public void delete(Integer id) {
+    String lockKey = "lock:villageAffair:delete:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "村务事项正在被操作，请稍后再试");
+    }
+    try {
         VillageAffairEntity entity = getById(id);
         if (entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "村务事项/公示不存在");
@@ -168,7 +187,11 @@ public class VillageAffairServiceImpl
         removeById(id);
         evictDetailCaches(id);
         bumpListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /**
      * 审核村务事项/公示

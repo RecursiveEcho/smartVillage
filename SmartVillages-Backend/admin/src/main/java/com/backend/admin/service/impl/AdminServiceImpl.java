@@ -22,6 +22,7 @@ import com.backend.auth.vo.CreateCaderVO;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.media.service.MediaService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -40,8 +41,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
 
     private final AuthMapper authMapper;
     private static final String CACHE_KEY_PREFIX = "admin:users:detail:";
-    private final MediaService mediaService;
-
+    private final RedisDistributedLock redisDistributedLock;
     private final RedisJsonCacheTool redisJsonCacheTool;
 
     private static final String CACHE_LIST_KEY_PREFIX = "admin:users:list:";
@@ -90,14 +90,19 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
     /**
      * 校验用户存在且未逻辑删除后，更新其启用状态。
      */
-    @Override
-    public void updateUserStatus(Integer id, Integer status) {
+  @Override
+public void updateUserStatus(Integer id, Integer status) {
+    String lockKey = "lock:admin:user:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "用户正在被修改，请稍后再试");
+    }
+    try {
         AuthEntity entity = authMapper.selectById(id);
-        // 用户不存在
         if (entity == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
-        // 用户已逻辑删除
         if (Objects.equals(entity.getIsDeleted(), 1)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
         }
@@ -105,7 +110,11 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         authMapper.updateById(entity);
         evictDetailCache(id);
         bumpListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /**
      * 创建村干部账号
@@ -127,6 +136,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
         bumpListCacheVersion();
         return createCaderVO;
     }
+
 
 
 
@@ -182,9 +192,20 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity> impl
      * @param id 用户 ID
      */
     @Override
-    public void deleteUser(Integer id) {
+public void deleteUser(Integer id) {
+    String lockKey = "lock:admin:user:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "用户正在被操作，请稍后再试");
+    }
+    try {
         authMapper.deleteById(id);
         evictDetailCache(id);
         redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 }

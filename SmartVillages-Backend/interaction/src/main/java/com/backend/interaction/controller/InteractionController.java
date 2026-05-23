@@ -77,7 +77,7 @@ public class InteractionController {
     @Operation(summary="回复村民留言")
     @PutMapping("/cadre/interactions/messages/{id}/replies")
     public Result<String> replyMessage(
-        @PathVariable Long id, 
+        @PathVariable Long id,
         @RequestBody @Valid ReplyInteractionDTO dto, HttpServletRequest request) {
         return Result.success(interactionService.replyMessage(id, dto, request));
     }
@@ -112,10 +112,10 @@ public class InteractionController {
             @RequestParam(defaultValue = "10") Long size,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) 
+            @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
             LocalDateTime startTime,
-            @RequestParam(required = false) 
+            @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
             LocalDateTime endTime
         ) {
@@ -178,10 +178,15 @@ public class InteractionController {
      */
     @Operation(summary="管理端处理村民留言")
     @PostMapping("/cadre/interactions/messages/{id}/processing")
-    public Result<String> processingMessage(@PathVariable Long id, HttpServletRequest request) {
-        return Result.success(interactionService.processingMessage(id, request));
+    public Result<String> processingMessage(@PathVariable Long id, Integer status, HttpServletRequest request) {
+        return Result.success(interactionService.processingMessage(id, status, request));
     }
 
 
-
+    @Operation(summary="审核村民留言")
+    @PostMapping("/cadre/interactions/messages/{id}/review")
+    public Result<String> reviewMessage(@PathVariable Long id, @RequestParam Integer reviewStatus) {
+        interactionService.reviewMessage(id, reviewStatus);
+        return Result.success("村民留言审核成功");
+    }
 }

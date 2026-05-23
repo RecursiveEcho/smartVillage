@@ -21,6 +21,7 @@ import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.feature.dto.FeaturePublishedPageCache;
 import com.backend.feature.dto.HighlightCreateDTO;
@@ -37,7 +38,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.servlet.http.HttpServletRequest;
+import  jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -55,6 +56,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     private static final String CACHE_LIST_ADMIN_PREFIX = "feature:list:admin:";
     private static final String CACHE_LIST_ADMIN_VER_KEY = "feature:list:admin:ver";
 
+    private final RedisDistributedLock redisDistributedLock;
     private final AuthMapper authMapper;
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final FeatureMapper featureMapper;
@@ -77,7 +79,6 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         }
         entity.setCreateUser(LoginUserContext.getAuthId(request));
         save(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, entity.getId()));
         bumpPublishedListCacheVersion();
         bumpAdminListCacheVersion();
     }
@@ -191,13 +192,19 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
     /* 上下架乡村风采 */
     @Override
-    public void updateStatus(Long id, Integer status, HttpServletRequest request) {
+public void updateStatus(Long id, Integer status, HttpServletRequest request) {
+    String lockKey = "lock:status:feature:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "乡村风采正在被修改，请稍后再试");
+    }
+    try {
         FeatureEntity entity = getById(id);
-        /* 如果实体不存在，则抛出异常 */
-        if(entity == null) {
+        if (entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
-        if(!Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
+        if (!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
         entity.setStatus(status);
@@ -205,7 +212,11 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
         bumpAdminListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /* 管理端获取乡村风采列表 */
     @Override
@@ -250,6 +261,12 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     @Transactional(rollbackFor = Exception.class)
     public void bindUploadedMedia(
             Long featureId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId) {
+          String lockKey= "lock:bindUpload:"+featureId;
+          String lockInstance =RedisDistributedLock.generateInstanceId();
+          boolean locked =redisDistributedLock.tryLock(lockKey, lockInstance);
+          if(!locked){
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY,"上传功能业务繁忙");
+          }
         if (featureId == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "风采 ID 不能为空");
         }
@@ -264,6 +281,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         if (!Objects.equals(entity.getCreateUser(), operatorUserId)) {
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
+        try{
         String ft = uploadedFileType == null ? "" : uploadedFileType.trim().toLowerCase();
         switch (s) {
             case "COVER" -> {
@@ -291,6 +309,10 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         evictDetailCache(featureId);
         bumpPublishedListCacheVersion();
         bumpAdminListCacheVersion();
+      }
+      finally{
+        redisDistributedLock.unlock(lockKey, lockInstance);
+      }
     }
 
     private String appendImagesJson(String existing, String newUrl) {
@@ -313,49 +335,67 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
     /* 修改乡村风采 */
     @Override
-    public void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request) {
+public void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request) {
+    String lockKey = "lock:update:feature:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "乡村风采正在被修改，请稍后再试");
+    }
+    try {
         FeatureEntity entity = getById(id);
-        /* 如果实体不存在，则抛出异常 */
-        if(entity == null) {
+        if (entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
-        /* 如果创建用户不匹配，则抛出异常 */
-        if(!Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
+        if (!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());
         entity.setCover(dto.getCover());
-        if(dto.getVideo() != null) {
+        if (dto.getVideo() != null) {
             entity.setVideo(dto.getVideo());
         }
-        if(dto.getImages() != null) {
+        if (dto.getImages() != null) {
             entity.setImages(dto.getImages());
         }
         updateById(entity);
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
         bumpAdminListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /* 删除乡村风采 */
     @Override
-    public void deleteFeature(Long id, HttpServletRequest request) {
+public void deleteFeature(Long id, HttpServletRequest request) {
+    String lockKey = "lock:delete:feature:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "乡村风采正在被操作，请稍后再试");
+    }
+    try {
         FeatureEntity entity = getById(id);
-        /* 如果实体不存在，则抛出异常 */
-        if(entity == null) {
+        if (entity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
         }
-        /* 如果创建用户不匹配，则抛出异常 */
-        if(!Objects.equals(entity.getCreateUser(),LoginUserContext.getAuthId(request))){
+        if (!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有权限操作此乡村风采");
         }
         removeById(id);
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
         bumpAdminListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /* 类型统计 */
     @Override
@@ -390,6 +430,31 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         result.put("In reality",count(wrapper3));
         result.put("Hidden",count(wrapper2));
         return result;
+    }
+
+    // 乡村风采审核
+    @Override
+    public void reviewFeature(Long id, Integer reviewStatus) {
+        String lockKey = "lock:review:feature:" + id;
+        String lockInstance = RedisDistributedLock.generateInstanceId();
+        boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!locked) {
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY, "乡村风采正在被审核，请稍后再试");
+        }
+        FeatureEntity entity = getById(id);
+        /* 如果实体不存在，则抛出异常 */
+        if(entity == null) {
+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "乡村风采不存在");
+        }
+        try{
+        entity.setStatus(reviewStatus);
+        updateById(entity);
+        evictDetailCache(id);
+        bumpPublishedListCacheVersion();
+        bumpAdminListCacheVersion();
+        }finally {
+            redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
 
     /* 使所有「已发布列表」分页缓存失效：版本号 +1，读侧使用新前缀 */

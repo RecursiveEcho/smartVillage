@@ -16,16 +16,16 @@ import java.util.Set;
 @Component
 public class OssUploadTool {
 
-    @Value("${aliyun.oss.endpoint}")
+    @Value("${aliyun.oss.endpoint:}")
     private String endpoint;
 
-    @Value("${aliyun.oss.bucket-name}")
+    @Value("${aliyun.oss.bucket-name:}")
     private String bucketName;
 
-    @Value("${aliyun.oss.access-key-id}")
+    @Value("${aliyun.oss.access-key-id:}")
     private String accessKeyId;
 
-    @Value("${aliyun.oss.access-key-secret}")
+    @Value("${aliyun.oss.access-key-secret:}")
     private String accessKeySecret;
 
     // 文档类型

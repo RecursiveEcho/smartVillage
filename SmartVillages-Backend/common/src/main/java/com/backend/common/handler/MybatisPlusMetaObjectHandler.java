@@ -1,10 +1,11 @@
 package com.backend.common.handler;
 
-import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import java.time.LocalDateTime;
+
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 
 /**
  * MyBatis-Plus 自动填充处理器：
@@ -23,7 +24,7 @@ public class MybatisPlusMetaObjectHandler implements MetaObjectHandler {
         LocalDateTime now = LocalDateTime.now();
         this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
         this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
-        this.strictInsertFill(metaObject, "status", Integer.class, 1);
+        this.strictInsertFill(metaObject, "status", Integer.class, 0);
         this.strictInsertFill(metaObject, "sort", Integer.class, 0);
         // 设置逻辑删除
         Integer notDeleted = NOT_DELETED;

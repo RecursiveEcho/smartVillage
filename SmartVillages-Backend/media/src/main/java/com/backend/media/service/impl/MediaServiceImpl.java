@@ -24,6 +24,7 @@ import com.backend.common.enums.ErrorCode;
 import com.backend.common.event.MediaBindAfterUploadEvent;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.media.dto.MediaListPageCache;
 import com.backend.media.entity.MediaEntity;
@@ -48,6 +49,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> implements MediaService {
     private final OssUploadTool ossUploadTool;
     private final RedisJsonCacheTool redisJsonCacheTool;
+    private final RedisDistributedLock redisDistributedLock;
     private final ApplicationEventPublisher eventPublisher;
     private final AuthMapper authMapper;
     private static final String CACHE_KEY_PREFIX = "media:detail:";
@@ -201,21 +203,37 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
 
     @Override
     public void updateStatus(Integer id, Integer status, HttpServletRequest request) {
+      String lockKey = "lock:updateMediaStatus:"+id;
+      String lockInstance = RedisDistributedLock.generateInstanceId();
+      boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+      if(!locked){
+          throw new BusinessException(ErrorCode.SYSTEM_BUSY, "系统繁忙，请稍后再试");
+      }
         MediaEntity mediaEntity = this.getById(id);
         if (mediaEntity == null) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "媒体资源不存在");
         }
+        try{
         mediaEntity.setStatus(status);
         mediaEntity.setAuditTime(LocalDateTime.now());
         mediaEntity.setAuditUser(LoginUserContext.getAuthId(request));
         this.updateById(mediaEntity);
         redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
         bumpListCacheVersion();
+        } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void auditMedia(Integer id, Integer status, HttpServletRequest request) {
+      String lockKey ="lock:auditMedia:"+id;
+      String lockInstance = RedisDistributedLock.generateInstanceId();
+      boolean locked =redisDistributedLock.tryLock(lockKey,lockInstance);
+      if(!locked){
+      throw new BusinessException(ErrorCode.PARAM_INVALID, "该资源正在审核中，请稍后再试");
+      }
         if (status == null || (!Objects.equals(status, STATUS_APPROVED) && !Objects.equals(status, STATUS_REJECTED))) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "审核状态只能为1（通过）或2（拒绝）");
         }
@@ -223,6 +241,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
         if (entity == null) {
             throw new BusinessException(ErrorCode.MEDIA_NOT_FOUND);
         }
+      try{
         entity.setAuditTime(LocalDateTime.now());
         entity.setAuditUser(LoginUserContext.getAuthId(request));
         entity.setStatus(status);
@@ -244,6 +263,9 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity> impl
                             entity.getBindEntityId(),
                             entity.getBindSlot()));
         }
+      } finally {
+        redisDistributedLock.unlock(lockKey,lockInstance);
+      }
     }
 
     @Override

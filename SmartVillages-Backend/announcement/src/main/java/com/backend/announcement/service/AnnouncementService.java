@@ -1,15 +1,16 @@
 package com.backend.announcement.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import com.backend.announcement.dto.AnnouncementCreateDTO;
 import com.backend.announcement.dto.AnnouncementUpdateDTO;
 import com.backend.announcement.entity.AnnouncementEntity;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
-import jakarta.servlet.http.HttpServletRequest;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
 
 public interface AnnouncementService extends IService<AnnouncementEntity> {
 
@@ -70,4 +71,7 @@ public interface AnnouncementService extends IService<AnnouncementEntity> {
             Integer isTop,
             LocalDateTime startTime,
             LocalDateTime endTime);
+
+    //
+    void bindUploadedMedia(Long announcementId,String mediaUrl,String uploadedFileType,String slot,Integer operatorUserId);
 }

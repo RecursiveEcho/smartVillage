@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillageHouseLandCreateDTO;
 import com.backend.management.dto.VillageHouseLandListPageCache;
@@ -38,6 +39,8 @@ public class VillageHouseLandServiceImpl
     private static final String CACHE_LIST_PREFIX = "village-house-land:list:";
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final VillageHouseLandMapper villageHouseLandMapper;
+    private final RedisDistributedLock redisDistributedLock;
+
     /**
      * 创建房屋与土地台账
      * @param villageHouseLandCreateDTO 房屋与土地台账创建DTO
@@ -125,31 +128,53 @@ public class VillageHouseLandServiceImpl
      */
     @Override
     public void update(Integer id, VillageHouseLandUpdateDTO villageHouseLandUpdateDTO) {
-        VillageHouseLandEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+        String lockKey = "lock:villageHouseLand:update:" + id;
+        String lockInstance = RedisDistributedLock.generateInstanceId();
+        boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!locked) {
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY, "房屋与土地台账正在被修改，请稍后再试");
         }
-        BeanUtils.copyProperties(villageHouseLandUpdateDTO, entity);
-        updateById(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-        bumpListCacheVersion();
+        try {
+            VillageHouseLandEntity entity = getById(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+            }
+            BeanUtils.copyProperties(villageHouseLandUpdateDTO, entity);
+            updateById(entity);
+            redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+            bumpListCacheVersion();
+        } finally {
+            redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
+
 
     /**
      * 删除房屋与土地台账
      * @param id 房屋与土地台账id
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
+@Transactional(rollbackFor = Exception.class)
     public void delete(Integer id) {
-        VillageHouseLandEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+        String lockKey = "lock:villageHouseLand:delete:" + id;
+        String lockInstance = RedisDistributedLock.generateInstanceId();
+        boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+        if (!locked) {
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY, "房屋与土地台账正在被操作，请稍后再试");
         }
-        removeById(id);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-        bumpListCacheVersion();
+        try {
+            VillageHouseLandEntity entity = getById(id);
+            if (entity == null) {
+                throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "房屋与土地台账不存在");
+            }
+            removeById(id);
+            redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+            bumpListCacheVersion();
+        } finally {
+            redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
+
 
     private VillageHouseLandSimpleVO toHouseLandSimpleVo(VillageHouseLandEntity entity) {
         VillageHouseLandSimpleVO vo = new VillageHouseLandSimpleVO();

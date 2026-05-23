@@ -1,13 +1,15 @@
 package com.backend.media.entity;
 
+import java.time.LocalDateTime;
+
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import java.time.LocalDateTime;
 
 /**
  * @author chenyang
@@ -43,6 +45,7 @@ public class MediaEntity {
     @Schema(description = "上传用户")
     private Integer uploadUser;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "状态：0-待审核 1-已通过 2-已拒绝 3-已下架")
     private Integer status;
 

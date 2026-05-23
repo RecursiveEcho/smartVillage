@@ -28,6 +28,7 @@ import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -68,7 +69,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     private static final int STATUS_OFFLINE = 3;
     private static final int DEFAULT_HOT_LIMIT = 5;
 
-
+    private final RedisDistributedLock redisDistributedLock;
     private final AnnouncementMapper announcementMapper;
     private final RedisJsonCacheTool redisJsonCacheTool;
     private final ObjectMapper objectMapper;
@@ -82,7 +83,6 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         /* 设置标题、内容、状态、类型、是否置顶、浏览量（发布时间在“通过/上架”时写入） */
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
-        entity.setStatus(STATUS_PENDING);
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
         entity.setViewCount(0);
@@ -132,26 +132,35 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     }
 
     /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
+   @Override
+@Transactional(rollbackFor = Exception.class)
+public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
+    String lockKey = "lock:update:announcement:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "公告正在被修改，请稍后再试");
+    }
+    try {
         AnnouncementEntity entity = announcementMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
-        /* 设置标题、内容、类型、是否置顶 */
-        if(!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
+        if (!Objects.equals(entity.getCreateUser(), LoginUserContext.getAuthId(request))) {
             throw new BusinessException(ErrorCode.NO_PERMISSION);
         }
         entity.setTitle(dto.getTitle());
         entity.setContent(dto.getContent());
         entity.setType(dto.getType());
         entity.setIsTop(dto.getIsTop());
-        /* 更新实体并清除详情缓存 */
         updateById(entity);
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /** 上下架状态更新 */
     @Override
@@ -159,10 +168,17 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     public void updateStatus(Long id, Integer status, HttpServletRequest request) {
         /* 获取实体并校验 */
         validateStatus(status);
+        String lockKey="lock:status:announcement:"+id;
+        String lockInstance =RedisDistributedLock.generateInstanceId();
+        boolean locked=redisDistributedLock.tryLock(lockKey,lockInstance);
+        if(!locked){
+          throw new BusinessException(ErrorCode.SYSTEM_BUSY, "公告正在被修改，请稍后再试");
+        }
         AnnouncementEntity entity = announcementMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
+        try{
         /* 设置状态 */
         entity.setStatus(status);
         entity.setAuditUser(LoginUserContext.getAuthId(request));
@@ -179,6 +195,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         updateById(entity);
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
+      }finally{
+        redisDistributedLock.unlock(lockKey, lockInstance);
+      }
     }
 
     // 读详情：优先缓存；缓存未命中则查库校验、浏览量 +1、写缓存。
@@ -288,15 +307,25 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     /* 逻辑删除并清理缓存 */
     @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteAnnouncement(Long id) {
-        /* 删除实体并清除详情缓存 */
+@Transactional(rollbackFor = Exception.class)
+public void deleteAnnouncement(Long id) {
+    String lockKey = "lock:delete:announcement:" + id;
+    String lockInstance = RedisDistributedLock.generateInstanceId();
+    boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+    if (!locked) {
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "公告正在被操作，请稍后再试");
+    }
+    try {
         if (!removeById(id)) {
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
+    } finally {
+        redisDistributedLock.unlock(lockKey, lockInstance);
     }
+}
+
 
     /* 管理员分页查询公告 */
     @Override
@@ -391,10 +420,17 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Override
     public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
         validateStatus(status);
+        String lockKey ="lock:audit:announcement:"+id;
+        String lockInstance= RedisDistributedLock.generateInstanceId();
+        boolean locked=redisDistributedLock.tryLock(lockKey, lockInstance);
+        if(!locked){
+          throw new BusinessException(ErrorCode.SYSTEM_BUSY, "公告正在被审核，请稍后再试");
+        }
         AnnouncementEntity entity = announcementMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND);
         }
+        try{
         entity.setAuditTime(LocalDateTime.now());
         entity.setAuditUser(LoginUserContext.getAuthId(request));
         if (Objects.equals(status, STATUS_PUBLISHED)) {
@@ -404,6 +440,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
         updateById(entity);
         evictDetailCache(id);
         bumpPublishedListCacheVersion();
+        } finally {
+                redisDistributedLock.unlock(lockKey, lockInstance);
+        }
     }
 
     /* 管理员审核历史列表 */
@@ -454,6 +493,12 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void bindUploadedMedia(Long announcementId, String mediaUrl, String slot,String uploadedFileType, Integer operatorUserId) {
+      String lockKey= "lock:bindUpload:announcement:"+announcementId;
+      String lockInstance =RedisDistributedLock.generateInstanceId();
+      boolean locked =redisDistributedLock.tryLock(lockKey, lockInstance);
+      if(!locked){
+        throw new BusinessException(ErrorCode.SYSTEM_BUSY, "公告正在被修改，请稍后再试");
+      }
        if(announcementId == null || !StringUtils.hasText(mediaUrl) ||!StringUtils.hasText(uploadedFileType)) {
            throw new BusinessException(ErrorCode.PARAM_MISSING);
           }
@@ -464,6 +509,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
           if(!Objects.equals(entity.getCreateUser(), operatorUserId)) {
               throw new BusinessException(ErrorCode.NO_PERMISSION, "只能绑定自己的公告");
           }
+          try{
           String ft=uploadedFileType.trim().toLowerCase();
           switch(slot.trim().toUpperCase()){
             case "COVER"->{
@@ -483,6 +529,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
           updateById(entity);
           evictDetailCache(announcementId);
           bumpPublishedListCacheVersion();
+        } finally{
+          redisDistributedLock.unlock(lockKey, lockInstance);
+        }
         }
 
         //图片列表追加：反序列化旧值（如果有且合法），追加新 URL，序列化回字符串

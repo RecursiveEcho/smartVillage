@@ -1,15 +1,18 @@
 package com.backend.interaction.entity;
 
+import java.time.LocalDateTime;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 /**
  * @author chenyang
@@ -38,6 +41,7 @@ public class InteractionEntity {
     @Schema(description = "官方回复")
     private String reply;
 
+    @TableField(fill = FieldFill.INSERT)
     @Schema(description = "状态：0-待处理 1-处理中 2-已回复 3-已关闭")
     private Integer status;
 

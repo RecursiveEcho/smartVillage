@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
 import com.backend.management.dto.VillagePartyCreateDTO;
 import com.backend.management.dto.VillagePartyListPageCache;
@@ -23,7 +24,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -36,7 +36,7 @@ public class VillagePartyServiceImpl
     private static final String CACHE_LIST_VER_KEY = "village-party:list:ver";
     private static final String CACHE_LIST_PREFIX = "village-party:list:";
     private final RedisJsonCacheTool redisJsonCacheTool;
-
+    private final RedisDistributedLock redisDistributedLock;
     /**
      * 创建党组织
      * @param dto 党组织创建DTO
@@ -122,39 +122,60 @@ public class VillagePartyServiceImpl
      * @param dto 党建组织信息更新DTO
      */
     @Override
-    public void update(Integer id, VillagePartyUpdateDTO dto) {
-        VillagePartyEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
-        }
-        BeanUtils.copyProperties(dto, entity);
-        updateById(entity);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-        bumpListCacheVersion();
-    }
+      public void update(Integer id, VillagePartyUpdateDTO dto) {
+          String lockKey = "lock:villageParty:update:" + id;
+          String lockInstance = RedisDistributedLock.generateInstanceId();
+          boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+          if (!locked) {
+              throw new BusinessException(ErrorCode.SYSTEM_BUSY, "党建组织正在被修改，请稍后再试");
+          }
+          try {
+              VillagePartyEntity entity = getById(id);
+              if (entity == null) {
+                  throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
+              }
+              BeanUtils.copyProperties(dto, entity);
+              updateById(entity);
+              redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+              bumpListCacheVersion();
+          } finally {
+              redisDistributedLock.unlock(lockKey, lockInstance);
+          }
+      }
+
     /**
      * 删除党建组织信息
      * @param id 党建组织信息id
      */
     @Override
-    public void delete(Integer id) {
-        VillagePartyEntity entity = getById(id);
-        if (entity == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
+        public void delete(Integer id) {
+            String lockKey = "lock:villageParty:delete:" + id;
+            String lockInstance = RedisDistributedLock.generateInstanceId();
+            boolean locked = redisDistributedLock.tryLock(lockKey, lockInstance);
+            if (!locked) {
+                throw new BusinessException(ErrorCode.SYSTEM_BUSY, "党建组织正在被操作，请稍后再试");
+            }
+            try {
+                VillagePartyEntity entity = getById(id);
+                if (entity == null) {
+                    throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "党建组织信息不存在");
+                }
+                removeById(id);
+                redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
+                bumpListCacheVersion();
+            } finally {
+                redisDistributedLock.unlock(lockKey, lockInstance);
+            }
         }
-        removeById(id);
-        redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
-        bumpListCacheVersion();
-    }
 
-    private VillagePartySimpleVO toPartySimpleVo(VillagePartyEntity entity) {
-        VillagePartySimpleVO vo = new VillagePartySimpleVO();
-        BeanUtils.copyProperties(entity, vo);
-        return vo;
-    }
+        private void bumpListCacheVersion(){
+          redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
+        }
 
-    private void bumpListCacheVersion() {
-        redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
-    }
+        private VillagePartySimpleVO toPartySimpleVo(VillagePartyEntity entity){
+          VillagePartySimpleVO vo=new VillagePartySimpleVO();
+          BeanUtils.copyProperties(entity, vo);
+          return vo;
+        }
 }
 

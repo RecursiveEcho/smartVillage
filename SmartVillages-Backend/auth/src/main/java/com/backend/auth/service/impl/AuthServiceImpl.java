@@ -15,6 +15,7 @@ import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.result.Result;
 import com.backend.common.utils.JwtUtils;
+import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisRateLimiter;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -33,6 +34,7 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
 
     private final HttpServletRequest request;
     private final RedisRateLimiter redisRateLimiter;
+    private final RedisDistributedLock redisDistributedLock;
     private final AuthMapper authMapper;
     private final JwtUtils jwtUtils;
 
@@ -82,6 +84,12 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
     @Override
     public void bindUploadedMedia(Long userId, String slot, String mediaUrl,
                                    String uploadedFileType, Integer operatorUserId) {
+        String lockKey= "lock:bindUpload:user:"+userId;
+        String lockInstance =RedisDistributedLock.generateInstanceId();
+        boolean locked =redisDistributedLock.tryLock(lockKey, lockInstance);
+        if(!locked){
+            throw new BusinessException(ErrorCode.SYSTEM_BUSY,"上传功能业务繁忙");
+        }
         if (userId == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "用户 ID 不能为空");
         }
@@ -95,8 +103,12 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
         if (!"image".equals(uploadedFileType)) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "头像仅支持图片");
         }
+        try{
         entity.setAvatar(mediaUrl);
         updateById(entity);
+        }finally{
+        redisDistributedLock.unlock(lockKey, lockInstance);
+        }
 
     }
 
