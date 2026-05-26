@@ -6,13 +6,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 public interface AuthService extends IService<AuthEntity> {
 
-    // 登录
-    JwtResponse login(String username, String password);
+  /** 登录。 */
+  JwtResponse login(String username, String password);
 
-    // 登出
-    String logout();
+  /** 登出。 */
+  String logout();
 
-    // 上传绑定头像
-    void bindUploadedMedia(Long userId, String slot, String mediaUrl,
-                           String uploadedFileType, Integer operatorUserId);
+  /** 上传后绑定头像。 */
+  void bindUploadedMedia(
+      Long userId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId);
 }

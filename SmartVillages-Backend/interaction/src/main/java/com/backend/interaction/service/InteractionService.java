@@ -1,7 +1,5 @@
 package com.backend.interaction.service;
 
-import java.time.LocalDateTime;
-
 import com.backend.interaction.dto.InteractionCreateDTO;
 import com.backend.interaction.dto.ReplyInteractionDTO;
 import com.backend.interaction.entity.InteractionEntity;
@@ -9,44 +7,49 @@ import com.backend.interaction.vo.InteractionCreateVO;
 import com.backend.interaction.vo.InteractionDetailVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
-
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+
 /**
- * @author chenyang
- * &#064;date 2026/4/15
- * &#064;description 村民留言业务接口
+ * @author chenyang &#064;date 2026/4/15 &#064;description 村民留言业务接口
  */
 @Tag(name = "村民留言", description = "村民留言接口")
 public interface InteractionService extends IService<InteractionEntity> {
 
-    // 新增村民留言
-    InteractionCreateVO createMessage(InteractionCreateDTO dto, HttpServletRequest request);
+  /** 新增村民留言。 */
+  InteractionCreateVO createMessage(InteractionCreateDTO dto, HttpServletRequest request);
 
-    // 获取村民留言列表
-    IPage<InteractionDetailVO> getMessageList(Long current, Long size);
+  /** 获取村民留言列表。 */
+  IPage<InteractionDetailVO> getMessageList(Long current, Long size);
 
-    // 回复村民留言
-    String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request);
+  /** 回复村民留言。 */
+  String replyMessage(Long id, ReplyInteractionDTO dto, HttpServletRequest request);
 
-    /* 获取村民留言详情 */
-    InteractionDetailVO getMessageDetail(Long id);
+  /** 获取村民留言详情。 */
+  InteractionDetailVO getMessageDetail(Long id);
 
-    /* 管理端获取村民留言列表 */
-    IPage<InteractionDetailVO> getMessageListByCadre(Long current, Long size, Integer status, String type, LocalDateTime startTime, LocalDateTime endTime);
+  /** 管理端获取村民留言列表。 */
+  IPage<InteractionDetailVO> getMessageListByCadre(
+      Long current,
+      Long size,
+      Integer status,
+      String type,
+      LocalDateTime startTime,
+      LocalDateTime endTime);
 
-    /* 我的留言 */
-    IPage<InteractionDetailVO> getMyMessageList(HttpServletRequest request, Long current, Long size);
+  /** 我的留言。 */
+  IPage<InteractionDetailVO> getMyMessageList(HttpServletRequest request, Long current, Long size);
 
-    /*我的留言详细 */
-    InteractionDetailVO getMyMessageDetail(HttpServletRequest request, Long id);
+  /** 我的留言详细。 */
+  InteractionDetailVO getMyMessageDetail(HttpServletRequest request, Long id);
 
-    /*村民撤回留言 */
-    String withdrawMessage(HttpServletRequest request, Long id);
+  /** 村民撤回留言。 */
+  String withdrawMessage(HttpServletRequest request, Long id);
 
-    /*管理端处理村民留言 */
-    String processingMessage(Long id,Integer status, HttpServletRequest request);
+  /** 管理端处理村民留言。 */
+  String processingMessage(Long id, Integer status, HttpServletRequest request);
 
-    /* 审核村民留言 */
-    void reviewMessage(Long id, Integer reviewStatus);
+  /** 审核村民留言。 */
+  void reviewMessage(Long id, Integer reviewStatus);
 }

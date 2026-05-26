@@ -10,16 +10,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Schema(description = "当前登录用户信息")
 public class MeVO {
-    
-    @Schema(description = "用户ID")
-    private Integer id;
 
-    @Schema(description = "用户名")
-    private String username;
+  @Schema(description = "用户ID")
+  private Integer id;
 
-    @Schema(description = "角色")
-    private String role;
+  @Schema(description = "用户名")
+  private String username;
 
-    @Schema(description = "头像")
-    private String avatar;
+  @Schema(description = "角色")
+  private String role;
+
+  @Schema(description = "头像")
+  private String avatar;
 }

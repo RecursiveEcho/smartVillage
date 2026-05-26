@@ -8,15 +8,15 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 public class InteractionCreateVO {
-    @Schema(description = "留言者id")
-    private Integer userId;
+  @Schema(description = "留言者id")
+  private Integer userId;
 
-    @Schema(description = "留言者用户名（公开列表展示）")
-    private String username;
+  @Schema(description = "留言者用户名（公开列表展示）")
+  private String username;
 
-    @Schema(description = "留言内容")
-    private String content;
+  @Schema(description = "留言内容")
+  private String content;
 
-    @Schema(description = "类型：consult-咨询/complaint-投诉/suggest-建议")
-    private String type;
+  @Schema(description = "类型：consult-咨询/complaint-投诉/suggest-建议")
+  private String type;
 }

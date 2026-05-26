@@ -10,21 +10,20 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AuthMediaBinder implements MediaBinder {
 
-    private final AuthService authService;
+  private final AuthService authService;
 
-    @Override
-    public String getSupportedTarget() {
-        return "AUTH";
-    }
+  @Override
+  public String getSupportedTarget() {
+    return "AUTH";
+  }
 
-    @Override
-    public void bindMedia(MediaBindAfterUploadEvent event) {
-        authService.bindUploadedMedia(
-                event.getBindEntityId(),
-                event.getBindSlot(),
-                event.getFileUrl(),
-                event.getFileType(),
-                event.getUploadUserId()
-        );
-    }
+  @Override
+  public void bindMedia(MediaBindAfterUploadEvent event) {
+    authService.bindUploadedMedia(
+        event.getBindEntityId(),
+        event.getBindSlot(),
+        event.getFileUrl(),
+        event.getFileType(),
+        event.getUploadUserId());
+  }
 }

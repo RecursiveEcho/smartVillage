@@ -1,51 +1,73 @@
 package com.backend.feature.service;
 
-import java.time.LocalDateTime;
-import java.util.Map;
-
 import com.backend.feature.dto.HighlightCreateDTO;
 import com.backend.feature.entity.FeatureEntity;
 import com.backend.feature.vo.FeatureVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
-
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.util.Map;
+
 public interface FeatureService extends IService<FeatureEntity> {
 
-    /* 创建乡村风采 */
-    void createFeature(HighlightCreateDTO dto, HttpServletRequest request);
+  /** 创建乡村风采。 */
+  void createFeature(HighlightCreateDTO dto, HttpServletRequest request);
 
-    /* 获取乡村风采列表(村民可见) */
-    IPage<FeatureVO> getFeatureList(Long current, Long size, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request);
+  /** 获取乡村风采列表（村民可见）。 */
+  IPage<FeatureVO> getFeatureList(
+      Long current,
+      Long size,
+      String type,
+      Integer getSort,
+      LocalDateTime getCreateTime,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      HttpServletRequest request);
 
-    /* 获取乡村风采详情 */
-    FeatureVO getFeatureDetail(Long id);
+  /** 获取乡村风采详情。 */
+  FeatureVO getFeatureDetail(Long id);
 
-    /* 上下架乡村风采 */
-    void updateStatus(Long id, Integer status, HttpServletRequest request);
+  /** 上下架乡村风采。 */
+  void updateStatus(Long id, Integer status, HttpServletRequest request);
 
-    /* 管理端获取乡村风采列表 */
-    IPage<FeatureVO> getFeatureListByAdmin(Long current, Long size, Integer status, String title, String type, Integer getSort, LocalDateTime getCreateTime, LocalDateTime startTime, LocalDateTime endTime, HttpServletRequest request);
+  /** 管理端获取乡村风采列表。 */
+  IPage<FeatureVO> getFeatureListByAdmin(
+      Long current,
+      Long size,
+      Integer status,
+      String title,
+      String type,
+      Integer getSort,
+      LocalDateTime getCreateTime,
+      LocalDateTime startTime,
+      LocalDateTime endTime,
+      HttpServletRequest request);
 
-    /* 修改乡村风采 */
-    void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request);
+  /** 修改乡村风采。 */
+  void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request);
 
-    /* 删除乡村风采 */
-    void deleteFeature(Long id, HttpServletRequest request);
+  /** 删除乡村风采。 */
+  void deleteFeature(Long id, HttpServletRequest request);
 
-    /* 类型统计 */
-    Map<String,Long> getFeatureTypeStatistics();
+  /** 类型统计。 */
+  Map<String, Long> getFeatureTypeStatistics();
 
-    /* 村民获取我的乡村风采 */
-    Map<String,Long> getMyFeatureCount(HttpServletRequest request);
+  /** 村民获取我的乡村风采。 */
+  Map<String, Long> getMyFeatureCount(HttpServletRequest request);
 
-    /**
-     * 将已上传媒体的 URL 绑定到指定风采（封面 / 视频 / 相册追加）。
-     * <p>
-     * slot：COVER | VIDEO | IMAGES_APPEND；权限与修改风采一致（仅创建人）。
-     */
-    void bindUploadedMedia(Long featureId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId);
+  /**
+   * 将已上传媒体的 URL 绑定到指定风采（封面 / 视频 / 相册追加）。
+   *
+   * <p>slot：COVER | VIDEO | IMAGES_APPEND；权限与修改风采一致（仅创建人）。
+   */
+  void bindUploadedMedia(
+      Long featureId,
+      String slot,
+      String mediaUrl,
+      String uploadedFileType,
+      Integer operatorUserId);
 
-      /* 审核乡村风采 */
-    void reviewFeature(Long id, Integer reviewStatus);
+  /** 审核乡村风采。 */
+  void reviewFeature(Long id, Integer reviewStatus);
 }

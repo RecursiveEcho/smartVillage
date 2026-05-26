@@ -5,100 +5,112 @@ import com.backend.management.dto.ServiceTicketDoneDTO;
 import com.backend.management.entity.VillageServiceTicketEntity;
 import com.backend.management.vo.ServiceTicketDetailVO;
 import com.backend.management.vo.ServiceTicketSimpleVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import java.util.Map;
+
 /**
- * @author chenyang
- * &#064;date 2026/4/24
- * &#064;description 民生服务工单服务
+ * @author chenyang &#064;date 2026/4/24 &#064;description 民生服务工单服务
  */
 public interface VillageServiceTicketService extends IService<VillageServiceTicketEntity> {
 
-    /**
-     * 创建民生服务工单
-     * @param dto 民生服务工单创建DTO
-     * @param request 请求
-     * @return 民生服务工单ID
-     */
-    Integer create(ServiceTicketCreateDTO dto, HttpServletRequest request);
+  /**
+   * 创建民生服务工单
+   *
+   * @param dto 民生服务工单创建DTO
+   * @param request 请求
+   * @return 民生服务工单ID
+   */
+  Integer create(ServiceTicketCreateDTO dto, HttpServletRequest request);
 
-    /**
-     * 获取民生服务工单列表
-     * @param current 当前页
-     * @param size 每页条数
-     * @param serviceType 服务类型
-     * @param status 状态
-     * @param request 请求
-     * @return 民生服务工单列表
-     */
-    IPage<ServiceTicketSimpleVO> getServiceTicketList(Long current, Long size, String serviceType, Integer status, HttpServletRequest request);
+  /**
+   * 获取民生服务工单列表
+   *
+   * @param current 当前页
+   * @param size 每页条数
+   * @param serviceType 服务类型
+   * @param status 状态
+   * @param request 请求
+   * @return 民生服务工单列表
+   */
+  IPage<ServiceTicketSimpleVO> getServiceTicketList(
+      Long current, Long size, String serviceType, Integer status, HttpServletRequest request);
 
-    /**
-     * 获取民生服务工单详情
-     * @param id 民生服务工单id
-     * @param request 请求
-     * @return 民生服务工单详情
-     */
-    ServiceTicketDetailVO getMyDetail(Long id, HttpServletRequest request);
+  /**
+   * 获取民生服务工单详情
+   *
+   * @param id 民生服务工单id
+   * @param request 请求
+   * @return 民生服务工单详情
+   */
+  ServiceTicketDetailVO getMyDetail(Long id, HttpServletRequest request);
 
-    /**
-     * 取消我的民生服务工单申请
-     * @param id 民生服务工单id
-     * @param request 请求
-     */
-    void closeMyTicket(Long id, HttpServletRequest request);
+  /**
+   * 取消我的民生服务工单申请
+   *
+   * @param id 民生服务工单id
+   * @param request 请求
+   */
+  void closeMyTicket(Long id, HttpServletRequest request);
 
-    /**
-     * 管理端获取民生服务工单列表
-     * @param status 状态
-     * @param serviceType 服务类型
-     * @param starTime 开始时间
-     * @param endTime 结束时间
-     * @param current 当前页
-     * @param size 每页条数
-     * @return 民生服务工单列表
-     */
-    IPage<ServiceTicketSimpleVO> pageCadre(Long current,Long size,String serviceType,Integer status,LocalDateTime starTime,LocalDateTime endTime);
+  /**
+   * 管理端获取民生服务工单列表
+   *
+   * @param status 状态
+   * @param serviceType 服务类型
+   * @param starTime 开始时间
+   * @param endTime 结束时间
+   * @param current 当前页
+   * @param size 每页条数
+   * @return 民生服务工单列表
+   */
+  IPage<ServiceTicketSimpleVO> pageCadre(
+      Long current,
+      Long size,
+      String serviceType,
+      Integer status,
+      LocalDateTime starTime,
+      LocalDateTime endTime);
 
-    /**
-     * 管理端获取民生服务工单详情
-     * @param id 民生服务工单id
-     * @return 民生服务工单详情
-     */
-    ServiceTicketDetailVO getServiceTicketDetail(Long id);
+  /**
+   * 管理端获取民生服务工单详情
+   *
+   * @param id 民生服务工单id
+   * @return 民生服务工单详情
+   */
+  ServiceTicketDetailVO getServiceTicketDetail(Long id);
 
-    /**
-     * 管理端处理民生服务工单申请
-     * @param id 民生服务工单id
-     * @param dto 民生服务工单处理DTO
-     * @param request 请求
-     */
-    void processingServiceTicket(Long id, ServiceTicketDoneDTO dto, HttpServletRequest request);
+  /**
+   * 管理端处理民生服务工单申请
+   *
+   * @param id 民生服务工单id
+   * @param dto 民生服务工单处理DTO
+   * @param request 请求
+   */
+  void processingServiceTicket(Long id, ServiceTicketDoneDTO dto, HttpServletRequest request);
 
-    /**
-     * 管理端办结民生服务工单申请
-     * @param id 民生服务工单id
-     * @param request 请求
-     */
-    void doneServiceTicket(Long id, HttpServletRequest request);
+  /**
+   * 管理端办结民生服务工单申请
+   *
+   * @param id 民生服务工单id
+   * @param request 请求
+   */
+  void doneServiceTicket(Long id, HttpServletRequest request);
 
-    /**管理端关闭工单
-     * @param id 民生服务工单id
-     * @param request 请求
-     */
-    void closeServiceTicket(Long id,HttpServletRequest request);
+  /**
+   * 管理端关闭工单
+   *
+   * @param id 民生服务工单id
+   * @param request 请求
+   */
+  void closeServiceTicket(Long id, HttpServletRequest request);
 
-    /**
-     * 后台获取民生服务工单统计
-     * @return 
-     *      total: 总申请数
-     *      pending: 待处理数
-     *      processing: 处理中数
-     *      completed: 已办结数
-     */
-    Map<String, Long> getServiceTicketStatistics();
+  /**
+   * 后台获取民生服务工单统计
+   *
+   * @return total: 总申请数 pending: 待处理数 processing: 处理中数 completed: 已办结数
+   */
+  Map<String, Long> getServiceTicketStatistics();
 }
-

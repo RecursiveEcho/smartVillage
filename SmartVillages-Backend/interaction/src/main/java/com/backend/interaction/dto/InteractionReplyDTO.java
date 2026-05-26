@@ -8,23 +8,22 @@ import lombok.NoArgsConstructor;
 
 /**
  * 官方回复DTO
- * @author chenyang
- * &#064;date 2026/4/15
- * &#064;description 官方回复DTO
+ *
+ * @author chenyang &#064;date 2026/4/15 &#064;description 官方回复DTO
  */
 @Data
 @NoArgsConstructor
 @Schema(description = "官方回复DTO")
 public class InteractionReplyDTO {
-    @Schema(description = "留言id")
-    @NotNull(message = "留言id不能为空")
-    private Integer userId;
+  @Schema(description = "留言id")
+  @NotNull(message = "留言id不能为空")
+  private Integer userId;
 
-    @Schema(description = "回复内容")
-    @NotBlank(message = "回复内容不能为空")
-    private String content;
+  @Schema(description = "回复内容")
+  @NotBlank(message = "回复内容不能为空")
+  private String content;
 
-    @Schema(description = "状态：0-待处理 1-处理中 2-已回复 3-已关闭")
-    @NotNull(message = "满意度不能为空")
-    private Integer status;
+  @Schema(description = "状态：0-待处理 1-处理中 2-已回复 3-已关闭")
+  @NotNull(message = "满意度不能为空")
+  private Integer status;
 }

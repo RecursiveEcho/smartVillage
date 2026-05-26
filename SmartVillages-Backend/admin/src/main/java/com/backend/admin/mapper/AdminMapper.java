@@ -7,9 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * {@link AdminEntity} 数据访问。
  *
- * @author chenyang
- * &#064;date 2026/4/7
+ * @author chenyang &#064;date 2026/4/7
  */
 @Mapper
-public interface AdminMapper extends BaseMapper<AdminEntity> {
-}
+public interface AdminMapper extends BaseMapper<AdminEntity> {}

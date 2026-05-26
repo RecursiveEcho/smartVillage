@@ -9,28 +9,26 @@ import lombok.NoArgsConstructor;
 /**
  * 后台更新公告正文与展示属性（路径参数携带 id）。
  *
- * @author chenyang
- * &#064;date 2026/4/9
- * &#064;description 公告更新 DTO
+ * @author chenyang &#064;date 2026/4/9 &#064;description 公告更新 DTO
  */
 @Data
 @NoArgsConstructor
 @Schema(description = "公告更新 DTO")
 public class AnnouncementUpdateDTO {
 
-    @Schema(description = "标题")
-    @NotBlank(message = "标题不能为空")
-    private String title;
+  @Schema(description = "标题")
+  @NotBlank(message = "标题不能为空")
+  private String title;
 
-    @Schema(description = "内容")
-    @NotBlank(message = "内容不能为空")
-    private String content;
+  @Schema(description = "内容")
+  @NotBlank(message = "内容不能为空")
+  private String content;
 
-    @Schema(description = "类型：1-通知 2-公告 3-公示")
-    @NotNull(message = "类型不能为空")
-    private Integer type;
+  @Schema(description = "类型：1-通知 2-公告 3-公示")
+  @NotNull(message = "类型不能为空")
+  private Integer type;
 
-    @Schema(description = "是否置顶：0-否 1-是")
-    @NotNull(message = "是否置顶不能为空")
-    private Integer isTop;
+  @Schema(description = "是否置顶：0-否 1-是")
+  @NotNull(message = "是否置顶不能为空")
+  private Integer isTop;
 }

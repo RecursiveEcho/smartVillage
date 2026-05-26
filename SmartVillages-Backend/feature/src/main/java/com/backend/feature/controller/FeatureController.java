@@ -1,8 +1,17 @@
 package com.backend.feature.controller;
 
+import com.backend.common.result.Result;
+import com.backend.feature.dto.HighlightCreateDTO;
+import com.backend.feature.service.FeatureService;
+import com.backend.feature.vo.FeatureVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,210 +22,221 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.backend.common.result.Result;
-import com.backend.feature.dto.HighlightCreateDTO;
-import com.backend.feature.service.FeatureService;
-import com.backend.feature.vo.FeatureVO;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 /**
- * @author chenyang
- * &#064;date 2026/4/23
- * &#064;description 乡村风采控制器
+ * @author chenyang &#064;date 2026/4/23 &#064;description 乡村风采控制器
  */
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "乡村风采", description = "乡村风采接口")
 public class FeatureController {
 
-    private final FeatureService featureService;
+  private final FeatureService featureService;
 
-    /*
-    * 创建乡村风采
-    * @author chenyang
-     * &#064;date 2026/4/23
-     * &#064;description 乡村风采创建
-     * @param dto 乡村风采创建DTO
-     * @return 乡村风采创建成功
-     */
-    @Operation(summary = "村干部创建乡村风采")
-    @PostMapping("/cadre/features")
-    public Result<String> createFeature(@Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
-        featureService.createFeature(dto, request);
-        return Result.success("乡村风采创建成功");
-    }
+  /*
+   * 创建乡村风采
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 乡村风采创建
+   * @param dto 乡村风采创建DTO
+   * @return 乡村风采创建成功
+   */
+  @Operation(summary = "村干部创建乡村风采")
+  @PostMapping("/cadre/features")
+  public Result<String> createFeature(
+      @Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
+    featureService.createFeature(dto, request);
+    return Result.success("乡村风采创建成功");
+  }
 
-    /*
-    * 获取乡村风采列表(村民可见)
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 乡村风采列表
-    * @param current 当前页
-    * @param size 每页条数
-    * @param type 类型
-    * @param getSort 排序
-    * @param getCreateTime 创建时间
-    * @param start 开始时间
-    * @param end 结束时间
-    * @param request HTTP请求
-    * @return 乡村风采列表
-    */
-    @Operation(summary = "获取乡村风采列表(村民可见)")
-    @GetMapping("/features")
-    public Result<IPage<FeatureVO>> getFeatureList(
-        @RequestParam(defaultValue = "1") Long current,
-        @RequestParam(defaultValue = "10") Long size,
-        @RequestParam(required = false) String type,
-        @RequestParam(required = false) Integer getSort,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime getCreateTime,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
-        HttpServletRequest request) {
-        return Result.success(featureService.getFeatureList(current, size, type, getSort, getCreateTime, startTime, endTime, request));
-    }
+  /*
+   * 获取乡村风采列表(村民可见)
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 乡村风采列表
+   * @param current 当前页
+   * @param size 每页条数
+   * @param type 类型
+   * @param getSort 排序
+   * @param getCreateTime 创建时间
+   * @param start 开始时间
+   * @param end 结束时间
+   * @param request HTTP请求
+   * @return 乡村风采列表
+   */
+  @Operation(summary = "获取乡村风采列表(村民可见)")
+  @GetMapping("/features")
+  public Result<IPage<FeatureVO>> getFeatureList(
+      @RequestParam(defaultValue = "1") Long current,
+      @RequestParam(defaultValue = "10") Long size,
+      @RequestParam(required = false) String type,
+      @RequestParam(required = false) Integer getSort,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+          LocalDateTime getCreateTime,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+          LocalDateTime startTime,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+          LocalDateTime endTime,
+      HttpServletRequest request) {
+    return Result.success(
+        featureService.getFeatureList(
+            current, size, type, getSort, getCreateTime, startTime, endTime, request));
+  }
 
-    /*
-    * 获取乡村风采详情
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#047;description 乡村风采详情
-    * @param id 乡村风采ID
-    * @return 乡村风采详情
-    */
-    @Operation(summary = "获取乡村风采详情")
-    @GetMapping("/features/{id}")
-    public Result<FeatureVO> getFeatureDetail(@PathVariable Long id) {
-        return Result.success(featureService.getFeatureDetail(id));
-    }
+  /*
+   * 获取乡村风采详情
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#047;description 乡村风采详情
+   * @param id 乡村风采ID
+   * @return 乡村风采详情
+   */
+  @Operation(summary = "获取乡村风采详情")
+  @GetMapping("/features/{id}")
+  public Result<FeatureVO> getFeatureDetail(@PathVariable Long id) {
+    return Result.success(featureService.getFeatureDetail(id));
+  }
 
-    /*
-    * 上下架乡村风采
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 上下架乡村风采
-    * @param id 乡村风采ID
-    * @param status 状态
-    * @param request HTTP请求
-    * @return 乡村风采上下架成功
-    */
-    @Operation(summary = "上下架乡村风采")
-    @PutMapping("/cadre/features/{id}/status")
-    public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
-        featureService.updateStatus(id, status, request);
-        return Result.success("乡村风采上下架成功");
-    }
+  /*
+   * 上下架乡村风采
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 上下架乡村风采
+   * @param id 乡村风采ID
+   * @param status 状态
+   * @param request HTTP请求
+   * @return 乡村风采上下架成功
+   */
+  @Operation(summary = "上下架乡村风采")
+  @PutMapping("/cadre/features/{id}/status")
+  public Result<String> updateStatus(
+      @PathVariable Long id, @RequestParam Integer status, HttpServletRequest request) {
+    featureService.updateStatus(id, status, request);
+    return Result.success("乡村风采上下架成功");
+  }
 
-    /*
-    * 管理端获取乡村风采列表
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 管理端获取乡村风采列表
-    * @param current 当前页
-    * @param size 每页条数
-    * @param title 标题
-    * @param type 类型
-    * @param getSort 排序
-    * @param getCreateTime 创建时间
-    * @param startTime 开始时间
-    * @param endTime 结束时间
-    * @param request HTTP请求
-    * @return 乡村风采列表
-    */
-    @Operation(summary = "管理端获取乡村风采列表")
-    @GetMapping("/cadre/features")
-    public Result<IPage<FeatureVO>> getFeatureListByAdmin(
-        @RequestParam(defaultValue = "1") Long current,
-        @RequestParam(defaultValue = "10") Long size,
-        @RequestParam(required = false) Integer status,
-        @RequestParam(required = false) String title,
-        @RequestParam(required = false) String type,
-        @RequestParam(required = false) Integer getSort,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime getCreateTime,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
-        HttpServletRequest request) {
-        return Result.success(featureService.getFeatureListByAdmin(current, size, status, title, type, getSort, getCreateTime, startTime, endTime, request));
-    }
+  /*
+   * 管理端获取乡村风采列表
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 管理端获取乡村风采列表
+   * @param current 当前页
+   * @param size 每页条数
+   * @param title 标题
+   * @param type 类型
+   * @param getSort 排序
+   * @param getCreateTime 创建时间
+   * @param startTime 开始时间
+   * @param endTime 结束时间
+   * @param request HTTP请求
+   * @return 乡村风采列表
+   */
+  @Operation(summary = "管理端获取乡村风采列表")
+  @GetMapping("/cadre/features")
+  public Result<IPage<FeatureVO>> getFeatureListByAdmin(
+      @RequestParam(defaultValue = "1") Long current,
+      @RequestParam(defaultValue = "10") Long size,
+      @RequestParam(required = false) Integer status,
+      @RequestParam(required = false) String title,
+      @RequestParam(required = false) String type,
+      @RequestParam(required = false) Integer getSort,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+          LocalDateTime getCreateTime,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+          LocalDateTime startTime,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+          LocalDateTime endTime,
+      HttpServletRequest request) {
+    return Result.success(
+        featureService.getFeatureListByAdmin(
+            current,
+            size,
+            status,
+            title,
+            type,
+            getSort,
+            getCreateTime,
+            startTime,
+            endTime,
+            request));
+  }
 
-    /*
-    * 修改乡村风采
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 修改乡村风采
-    * @param id 乡村风采ID
-    * @param dto 乡村风采修改DTO
-    * @param request HTTP请求
-    * @return 乡村风采修改成功
-    */
-    @Operation(summary = "修改乡村风采")
-    @PutMapping("/cadre/features/{id}")
-    public Result<String> updateFeature(@PathVariable Long id, @Valid @RequestBody HighlightCreateDTO dto, HttpServletRequest request) {
-        featureService.updateFeature(id, dto, request);
-        return Result.success("乡村风采修改成功");
-    }
+  /*
+   * 修改乡村风采
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 修改乡村风采
+   * @param id 乡村风采ID
+   * @param dto 乡村风采修改DTO
+   * @param request HTTP请求
+   * @return 乡村风采修改成功
+   */
+  @Operation(summary = "修改乡村风采")
+  @PutMapping("/cadre/features/{id}")
+  public Result<String> updateFeature(
+      @PathVariable Long id,
+      @Valid @RequestBody HighlightCreateDTO dto,
+      HttpServletRequest request) {
+    featureService.updateFeature(id, dto, request);
+    return Result.success("乡村风采修改成功");
+  }
 
-    /*
-    * 删除乡村风采
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 删除乡村风采
-    * @param id 乡村风采ID
-    * @param request HTTP请求
-    * @return 乡村风采删除成功
-    */
-    @Operation(summary = "删除乡村风采")
-    @DeleteMapping("/cadre/features/{id}")
-    public Result<String> deleteFeature(@PathVariable Long id, HttpServletRequest request) {
-        featureService.deleteFeature(id, request);
-        return Result.success("乡村风采删除成功");
-    }
+  /*
+   * 删除乡村风采
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 删除乡村风采
+   * @param id 乡村风采ID
+   * @param request HTTP请求
+   * @return 乡村风采删除成功
+   */
+  @Operation(summary = "删除乡村风采")
+  @DeleteMapping("/cadre/features/{id}")
+  public Result<String> deleteFeature(@PathVariable Long id, HttpServletRequest request) {
+    featureService.deleteFeature(id, request);
+    return Result.success("乡村风采删除成功");
+  }
 
-    /*
-    * 分类统计
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 分类统计
-    * @return 分类统计结果
-    */
-    @Operation(summary = "获取乡村风采分类统计")
-    @GetMapping("/features/statistics")
-    public Result<Map<String, Long>> getFeatureTypeStatistics() {
-        return Result.success(featureService.getFeatureTypeStatistics());
-    }
+  /*
+   * 分类统计
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 分类统计
+   * @return 分类统计结果
+   */
+  @Operation(summary = "获取乡村风采分类统计")
+  @GetMapping("/features/statistics")
+  public Result<Map<String, Long>> getFeatureTypeStatistics() {
+    return Result.success(featureService.getFeatureTypeStatistics());
+  }
 
-    /*
-    * 获取村民我的乡村风采
-    * @author chenyang
-    * &#064;date 2026/4/23
-    * &#064;description 获取村民我的乡村风采
-    * @param request HTTP请求
-    * @return 乡村风采列表
-    */
-    @Operation(summary ="村民获取我的乡村风采" )
-    @GetMapping("/cadre/features/summary")
-    public Result<Map<String,Long>> getMyFeatureCount(HttpServletRequest request) {
-        return Result.success(featureService.getMyFeatureCount(request));
-    }
+  /*
+   * 获取村民我的乡村风采
+   * @author chenyang
+   * &#064;date 2026/4/23
+   * &#064;description 获取村民我的乡村风采
+   * @param request HTTP请求
+   * @return 乡村风采列表
+   */
+  @Operation(summary = "村民获取我的乡村风采")
+  @GetMapping("/cadre/features/summary")
+  public Result<Map<String, Long>> getMyFeatureCount(HttpServletRequest request) {
+    return Result.success(featureService.getMyFeatureCount(request));
+  }
 
-    /*
-    * 审核乡村风采
-    * @author chenyang
-    * &#064;date 2026/5/23
-    * &#064;description 审核乡村风采
-    * @param id 乡村风采ID
-    * @param reviewStatus 审核状态  (0-待审核, 1-审核通过, 2-审核驳回)
-    * @param request HTTP请求
-    * @return 乡村风采审核成功
-    * */
-    @Operation(summary ="审核乡村风采" )
-    @PutMapping("/admin/features/{id}/review")
-    public Result<String> reviewFeature(@PathVariable Long id, @RequestParam Integer reviewStatus) {
-        featureService.reviewFeature(id, reviewStatus);
-        return Result.success("乡村风采审核成功");
-    }
+  /*
+   * 审核乡村风采
+   * @author chenyang
+   * &#064;date 2026/5/23
+   * &#064;description 审核乡村风采
+   * @param id 乡村风采ID
+   * @param reviewStatus 审核状态  (0-待审核, 1-审核通过, 2-审核驳回)
+   * @param request HTTP请求
+   * @return 乡村风采审核成功
+   * */
+  @Operation(summary = "审核乡村风采")
+  @PutMapping("/admin/features/{id}/review")
+  public Result<String> reviewFeature(@PathVariable Long id, @RequestParam Integer reviewStatus) {
+    featureService.reviewFeature(id, reviewStatus);
+    return Result.success("乡村风采审核成功");
+  }
 }

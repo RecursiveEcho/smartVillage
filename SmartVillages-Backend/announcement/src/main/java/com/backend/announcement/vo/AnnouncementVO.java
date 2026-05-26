@@ -1,8 +1,7 @@
 package com.backend.announcement.vo;
 
-import java.time.LocalDateTime;
-
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,9 +9,7 @@ import lombok.NoArgsConstructor;
 /**
  * 公告对外展示字段。
  *
- * @author chenyang
- * &#064;date 2026/4/8
- * &#064;description 公告 VO
+ * @author chenyang &#064;date 2026/4/8 &#064;description 公告 VO
  */
 @Data
 @NoArgsConstructor
@@ -20,54 +17,54 @@ import lombok.NoArgsConstructor;
 @Schema(description = "公告 VO")
 public class AnnouncementVO {
 
-    @Schema(description = "ID")
-    private Integer id;
+  @Schema(description = "ID")
+  private Integer id;
 
-    @Schema(description = "标题")
-    private String title;
+  @Schema(description = "标题")
+  private String title;
 
-    @Schema(description = "内容")
-    private String content;
+  @Schema(description = "内容")
+  private String content;
 
-    @Schema(description = "状态")
-    private Integer status;
+  @Schema(description = "状态")
+  private Integer status;
 
-    @Schema(description = "类型")
-    private Integer type;
+  @Schema(description = "类型")
+  private Integer type;
 
-    @Schema(description = "是否置顶")
-    private Integer isTop;
+  @Schema(description = "是否置顶")
+  private Integer isTop;
 
-    @Schema(description = "发布时间")
-    private LocalDateTime publishTime;
+  @Schema(description = "发布时间")
+  private LocalDateTime publishTime;
 
-    @Schema(description = "审核时间")
-    private LocalDateTime auditTime;
+  @Schema(description = "审核时间")
+  private LocalDateTime auditTime;
 
-    @Schema(description = "审核人")
-    private Integer auditUser;
+  @Schema(description = "审核人")
+  private Integer auditUser;
 
-    @Schema(description = "浏览次数")
-    private Integer viewCount;
+  @Schema(description = "浏览次数")
+  private Integer viewCount;
 
-    @Schema(description = "创建人")
-    private Integer createUser;
+  @Schema(description = "创建人")
+  private Integer createUser;
 
-    @Schema(description="创建人用户名")
-    private String createUserName;
+  @Schema(description = "创建人用户名")
+  private String createUserName;
 
-    @Schema(description="审核人昵称")
-    private String auditUserName;
+  @Schema(description = "审核人昵称")
+  private String auditUserName;
 
-    @Schema(description="封面图片URL")
-    private String coverUrl;
+  @Schema(description = "封面图片URL")
+  private String coverUrl;
 
-    @Schema(description="图片列表JSON数组")
-    private String images;
+  @Schema(description = "图片列表JSON数组")
+  private String images;
 
-    @Schema(description = "创建时间")
-    private LocalDateTime createTime;
+  @Schema(description = "创建时间")
+  private LocalDateTime createTime;
 
-    @Schema(description = "更新时间")
-    private LocalDateTime updateTime;
+  @Schema(description = "更新时间")
+  private LocalDateTime updateTime;
 }

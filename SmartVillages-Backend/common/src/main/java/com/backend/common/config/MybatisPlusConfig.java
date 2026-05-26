@@ -7,20 +7,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * @author chenyang
- * &#064;date 2026/4/3
- * &#064;description MybatisPlus 配置类（分页插件等）
+ * @author chenyang &#064;date 2026/4/3 &#064;description MybatisPlus 配置类（分页插件等）
  */
 @Configuration
 public class MybatisPlusConfig {
 
-    /**
-     * 分页插件：配合 {@code Page} + {@code BaseMapper#selectPage} 生成带 LIMIT 的 SQL。
-     */
-    @Bean
-    public MybatisPlusInterceptor mybatisPlusInterceptor() {
-        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
-        return interceptor;
-    }
+  /** 分页插件：配合 {@code Page} + {@code BaseMapper#selectPage} 生成带 LIMIT 的 SQL。 */
+  @Bean
+  public MybatisPlusInterceptor mybatisPlusInterceptor() {
+    MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+    interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+    return interceptor;
+  }
 }

@@ -7,15 +7,14 @@ import lombok.NoArgsConstructor;
 
 /**
  * 回复村民留言DTO
- * @author chenyang
- * &#064;date 2026/4/22
- * &#064;description 回复村民留言DTO
+ *
+ * @author chenyang &#064;date 2026/4/22 &#064;description 回复村民留言DTO
  */
 @Data
 @NoArgsConstructor
 @Schema(description = "回复村民留言DTO")
 public class ReplyInteractionDTO {
-    @Schema(description = "回复内容")
-    @NotBlank(message = "回复内容不能为空")
-    private String reply;
+  @Schema(description = "回复内容")
+  @NotBlank(message = "回复内容不能为空")
+  private String reply;
 }
