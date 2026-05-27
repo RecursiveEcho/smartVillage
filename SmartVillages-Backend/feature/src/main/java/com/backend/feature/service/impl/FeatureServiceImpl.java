@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.backend.common.aop.OperationLog;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -133,6 +134,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
   /** 获取乡村风采详情。 */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public FeatureVO getFeatureDetail(Long id) {
     String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
     FeatureVO fromCache = redisJsonCacheTool.getObject(cacheKey, FeatureVO.class,()->{
@@ -168,6 +170,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
   /** 上下架乡村风采。 */
   @Override
+  @OperationLog("更新乡村风采状态")
+  @Transactional(rollbackFor = Exception.class)
   public void updateStatus(Long id, Integer status, HttpServletRequest request) {
     String lockKey = "lock:status:feature:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -330,6 +334,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
   /** 修改乡村风采。 */
   @Override
+  @OperationLog("更新乡村风采")
+  @Transactional(rollbackFor = Exception.class)
   public void updateFeature(Long id, HighlightCreateDTO dto, HttpServletRequest request) {
     String lockKey = "lock:update:feature:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -366,6 +372,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
   /** 删除乡村风采。 */
   @Override
+  @OperationLog("删除乡村风采")
+  @Transactional(rollbackFor = Exception.class)
   public void deleteFeature(Long id, HttpServletRequest request) {
     String lockKey = "lock:delete:feature:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -431,6 +439,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
 
   /** 乡村风采审核。 */
   @Override
+  @OperationLog("审核乡村风采")
+  @Transactional(rollbackFor = Exception.class)
   public void reviewFeature(Long id, Integer reviewStatus) {
     String lockKey = "lock:review:feature:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();

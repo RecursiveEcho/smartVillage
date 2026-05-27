@@ -18,6 +18,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
@@ -74,6 +75,7 @@ public class AuthServiceImpl extends ServiceImpl<AuthMapper, AuthEntity> impleme
 
   /** 绑定上传后的媒体 URL 到用户记录；目前仅支持头像（slot=AVATAR）。 */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void bindUploadedMedia(
       Long userId, String slot, String mediaUrl, String uploadedFileType, Integer operatorUserId) {
     String lockKey = "lock:bindUpload:user:" + userId;

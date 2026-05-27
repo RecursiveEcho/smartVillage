@@ -24,6 +24,7 @@ import com.backend.announcement.vo.AnnouncementPublishedPageCache;
 import com.backend.announcement.vo.AnnouncementVO;
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
+import com.backend.common.aop.OperationLog;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
@@ -141,6 +142,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
   /* 校验标题/内容/类型后整行更新，并清除详情缓存 */
   @Override
+  @OperationLog("更新公告")
   @Transactional(rollbackFor = Exception.class)
   public void updateAnnouncement(Long id, AnnouncementUpdateDTO dto, HttpServletRequest request) {
     String lockKey = "lock:update:announcement:" + id;
@@ -171,6 +173,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
   /** 上下架状态更新 */
   @Override
+  @OperationLog("更新公告状态")
   @Transactional(rollbackFor = Exception.class)
   public void updateStatus(Long id, Integer status, HttpServletRequest request) {
     /* 获取实体并校验 */
@@ -400,8 +403,9 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
   }
 
   /* 管理员审核公告 */
-  @Transactional(rollbackFor = Exception.class)
   @Override
+  @OperationLog("审核公告")
+  @Transactional(rollbackFor = Exception.class)
   public void auditAnnouncement(Long id, Integer status, HttpServletRequest request) {
     validateStatus(status);
     String lockKey = "lock:audit:announcement:" + id;

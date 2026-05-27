@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import com.backend.common.aop.OperationLog;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -287,6 +288,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
 
   /** 管理端处理村民留言。 */
   @Override
+  @OperationLog("处理留言互动")
   public String processingMessage(Long id, Integer status, HttpServletRequest request) {
     String lockKey = "lock:interaction:process:" + id;
     String lockInstance = UUID.randomUUID().toString();
@@ -312,6 +314,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
 
   /** 审核村民留言。 */
   @Override
+  @OperationLog("审核留言互动")
   public void reviewMessage(Long id, Integer reviewStatus) {
     String lockKey = "lock:interaction:review:" + id;
     String lockInstance = UUID.randomUUID().toString();

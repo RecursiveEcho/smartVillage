@@ -1,5 +1,6 @@
 package com.backend.management.service.impl;
 
+import com.backend.common.aop.OperationLog;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
@@ -22,6 +23,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -40,8 +42,9 @@ public class VillagePartyServiceImpl extends ServiceImpl<VillagePartyMapper, Vil
    *
    * @param dto 党组织创建DTO
    * @return 党组织ID
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public Integer create(VillagePartyCreateDTO dto) {
     VillagePartyEntity entity = new VillagePartyEntity();
     BeanUtils.copyProperties(dto, entity);
@@ -132,8 +135,10 @@ public class VillagePartyServiceImpl extends ServiceImpl<VillagePartyMapper, Vil
    *
    * @param id 党建组织信息id
    * @param dto 党建组织信息更新DTO
-   */
+  */
   @Override
+  @OperationLog("更新党建组织信息")
+  @Transactional(rollbackFor = Exception.class)
   public void update(Integer id, VillagePartyUpdateDTO dto) {
     String lockKey = "lock:villageParty:update:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -159,8 +164,10 @@ public class VillagePartyServiceImpl extends ServiceImpl<VillagePartyMapper, Vil
    * 删除党建组织信息
    *
    * @param id 党建组织信息id
-   */
+  */
   @Override
+  @OperationLog("删除党建组织信息")
+  @Transactional(rollbackFor = Exception.class)
   public void delete(Integer id) {
     String lockKey = "lock:villageParty:delete:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();

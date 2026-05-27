@@ -10,6 +10,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.backend.common.aop.OperationLog;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
@@ -148,8 +149,9 @@ public class VillageServiceTicketServiceImpl
    *
    * @param id 民生服务工单id
    * @param request 请求
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void closeMyTicket(Long id, HttpServletRequest request) {
     VillageServiceTicketEntity entity = getById(id);
     if (!Objects.equals(entity.getApplicantId(), LoginUserContext.getAuthId(request))) {
@@ -250,8 +252,10 @@ public class VillageServiceTicketServiceImpl
    * @param id 民生服务工单id
    * @param dto 民生服务工单处理DTO
    * @param request 请求
-   */
+  */
   @Override
+  @OperationLog("处理民生工单")
+  @Transactional(rollbackFor = Exception.class)
   public void processingServiceTicket(
       Long id, ServiceTicketDoneDTO dto, HttpServletRequest request) {
     String lockKey = "lock:village_service_ticket:processing:" + id;
@@ -293,8 +297,10 @@ public class VillageServiceTicketServiceImpl
    *
    * @param id 民生服务工单id
    * @param request 请求
-   */
+  */
   @Override
+  @OperationLog("办结民生工单")
+  @Transactional(rollbackFor = Exception.class)
   public void doneServiceTicket(Long id, HttpServletRequest request) {
     String lockKey = "lock:village_service_ticket:done:" + id;
     String lockInstance = java.util.UUID.randomUUID().toString();
@@ -327,8 +333,9 @@ public class VillageServiceTicketServiceImpl
    *
    * @param id 民生服务工单id
    * @param request 请求
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void closeServiceTicket(Long id, HttpServletRequest request) {
     VillageServiceTicketEntity entity = getById(id);
     if (entity == null) {

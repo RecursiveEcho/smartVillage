@@ -1,5 +1,6 @@
 package com.backend.management.service.impl;
 
+import com.backend.common.aop.OperationLog;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
@@ -145,8 +146,10 @@ public class VillagePopulationServiceImpl
    *
    * @param id 人口台账id
    * @param villagePopulationUpdateDTO 人口台账更新DTO
-   */
+  */
   @Override
+  @OperationLog("更新人口台账")
+  @Transactional(rollbackFor = Exception.class)
   public void updateVillagePopulation(
       Long id, VillagePopulationUpdateDTO villagePopulationUpdateDTO) {
     String lockKey = "lock:villagePopulation:update:" + id;
@@ -173,8 +176,10 @@ public class VillagePopulationServiceImpl
    * 删除人口台账
    *
    * @param id 人口台账id
-   */
+  */
   @Override
+  @OperationLog("删除人口台账")
+  @Transactional(rollbackFor = Exception.class)
   public void deleteVillagePopulation(Long id) {
     String lockKey = "lock:villagePopulation:delete:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();

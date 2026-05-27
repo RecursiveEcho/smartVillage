@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
@@ -94,6 +95,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
 
   /** 校验用户存在且未逻辑删除后，更新其启用状态。 */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void updateUserStatus(Integer id, Integer status) {
     String lockKey = "lock:admin:user:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -123,9 +125,10 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
    *
    * @param authDTO 用户认证 DTO
    * @return 创建后的村干部信息
-   */
+  */
   @Override
   @SuppressWarnings("null")
+  @Transactional(rollbackFor = Exception.class)
   public CreateCaderVO createCadre(AuthDTO authDTO) {
     AuthEntity entity = new AuthEntity();
     String password =
@@ -195,8 +198,9 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
    * 删除用户。
    *
    * @param id 用户 ID
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void deleteUser(Integer id) {
     String lockKey = "lock:admin:user:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();

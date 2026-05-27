@@ -17,9 +17,10 @@ spring:
 
 cache:
   ttl:
-    detail-minutes: 30
+    detail-minutes: 5
     list-minutes: 10
     null-marker-minutes: 2
+    detail-jitter-seconds: 300
 
 mybatis-plus:
   configuration:

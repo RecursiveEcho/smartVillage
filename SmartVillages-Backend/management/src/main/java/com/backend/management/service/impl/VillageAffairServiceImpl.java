@@ -1,7 +1,22 @@
 package com.backend.management.service.impl;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
+import com.backend.common.aop.OperationLog;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
@@ -21,19 +36,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -56,8 +61,9 @@ public class VillageAffairServiceImpl extends ServiceImpl<VillageAffairMapper, V
    *
    * @param dto 创建参数
    * @return 村务事项/公示ID
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public Integer create(VillageAffairCreateDTO dto) {
     VillageAffairEntity entity = new VillageAffairEntity();
     BeanUtils.copyProperties(dto, entity);
@@ -145,8 +151,9 @@ public class VillageAffairServiceImpl extends ServiceImpl<VillageAffairMapper, V
    *
    * @param id 村务事项/公示ID
    * @param dto 更新参数
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void update(Integer id, VillageAffairUpdateDTO dto) {
     String lockKey = "lock:villageAffair:update:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -172,8 +179,9 @@ public class VillageAffairServiceImpl extends ServiceImpl<VillageAffairMapper, V
    * 删除村务事项/公示
    *
    * @param id 村务事项/公示ID
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void delete(Integer id) {
     String lockKey = "lock:villageAffair:delete:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -199,8 +207,10 @@ public class VillageAffairServiceImpl extends ServiceImpl<VillageAffairMapper, V
    *
    * @param id 村务事项/公示ID
    * @param dto 审核参数
-   */
+  */
   @Override
+  @OperationLog("审核村务事项")
+  @Transactional(rollbackFor = Exception.class)
   public void audit(Integer id, VillageAffairAuditDTO dto) {
     String lockKey = "lock:audit:affair:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();

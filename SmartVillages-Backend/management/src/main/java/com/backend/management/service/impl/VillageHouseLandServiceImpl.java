@@ -137,8 +137,9 @@ public class VillageHouseLandServiceImpl
    *
    * @param id 房屋与土地台账id
    * @param villageHouseLandUpdateDTO 房屋与土地台账更新DTO
-   */
+  */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void update(Integer id, VillageHouseLandUpdateDTO villageHouseLandUpdateDTO) {
     String lockKey = "lock:villageHouseLand:update:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
