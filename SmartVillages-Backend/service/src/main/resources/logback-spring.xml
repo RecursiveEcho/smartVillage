@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 与 TraceConstants.MDC_TRACE_ID（traceId）一致，由 TraceIdFilter 写入 MDC -->
+    <property name="CONSOLE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %X{traceId} %logger{36} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %X{traceId} %logger{36} - %msg%n"/>
+
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    <logger name="com.backend.common.utils" level="DEBUG"/>
+    <logger name="com.backend.common.utils.RedisDistributedLock" level="DEBUG"/>
+</configuration>

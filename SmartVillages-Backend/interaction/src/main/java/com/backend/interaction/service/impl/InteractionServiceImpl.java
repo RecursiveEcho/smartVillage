@@ -15,11 +15,10 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.backend.auth.entity.AuthEntity;
-import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.support.AuthUserQueryService;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
@@ -56,7 +55,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
   private final RedisRateLimiter redisRateLimiter;
   private final RedisJsonCacheTool redisJsonCacheTool;
   private final InteractionMapper interactionMapper;
-  private final AuthMapper authMapper;
+  private final AuthUserQueryService authUserQueryService;
   private final RedisDistributedLock redisDistributedLock;
   private static final String CACHE_KEY_PREFIX = "interaction:detail:";
   private static final String CACHE_LIST_VER_KEY = "interaction:list:ver";
@@ -368,14 +367,7 @@ public class InteractionServiceImpl extends ServiceImpl<InteractionMapper, Inter
     if (ids.isEmpty()) {
       return;
     }
-    List<AuthEntity> auths =
-        authMapper.selectList(new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
-    Map<Integer, String> idToName = new HashMap<>();
-    for (AuthEntity a : auths) {
-      if (a.getId() != null) {
-        idToName.put(a.getId(), a.getUsername());
-      }
-    }
+    Map<Integer, String> idToName = new HashMap<>(authUserQueryService.getUsernameMap(ids));
     for (InteractionDetailVO vo : rows) {
       if (vo.getUserId() != null) {
         vo.setUsername(idToName.get(vo.getUserId()));

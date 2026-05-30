@@ -1,10 +1,12 @@
 package com.backend.announcement.binder;
 
+import org.springframework.stereotype.Component;
+
 import com.backend.announcement.service.AnnouncementService;
 import com.backend.common.binder.MediaBinder;
-import com.backend.common.event.MediaBindAfterUploadEvent;
+import com.backend.common.event.MediaBindMessage;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -18,12 +20,12 @@ public class AnnouncementMediaBinder implements MediaBinder {
   }
 
   @Override
-  public void bindMedia(MediaBindAfterUploadEvent event) {
+  public void bindMedia(MediaBindMessage message) {
     announcementService.bindUploadedMedia(
-        event.getBindEntityId(),
-        event.getFileUrl(),
-        event.getFileType(),
-        event.getBindSlot(),
-        event.getUploadUserId());
+        message.getBindEntityId(),
+        message.getFileUrl(),
+        message.getFileType(),
+        message.getBindSlot(),
+        message.getUploadUserId());
   }
 }

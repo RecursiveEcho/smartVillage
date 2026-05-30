@@ -1,10 +1,12 @@
 package com.backend.feature.binder;
 
-import com.backend.common.binder.MediaBinder;
-import com.backend.common.event.MediaBindAfterUploadEvent;
-import com.backend.feature.service.FeatureService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import com.backend.common.binder.MediaBinder;
+import com.backend.common.event.MediaBindMessage;
+import com.backend.feature.service.FeatureService;
+
+import lombok.RequiredArgsConstructor;
 
 /** Feature 模块的媒体绑定器，负责将上传的媒体绑定到 Feature 实体。 */
 @Component
@@ -19,12 +21,12 @@ public class FeatureMediaBinder implements MediaBinder {
   }
 
   @Override
-  public void bindMedia(MediaBindAfterUploadEvent event) {
+  public void bindMedia(MediaBindMessage message) {
     featureService.bindUploadedMedia(
-        event.getBindEntityId(),
-        event.getBindSlot(),
-        event.getFileUrl(),
-        event.getFileType(),
-        event.getUploadUserId());
+        message.getBindEntityId(),
+        message.getBindSlot(),
+        message.getFileUrl(),
+        message.getFileType(),
+        message.getUploadUserId());
   }
 }

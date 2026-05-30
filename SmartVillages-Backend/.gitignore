@@ -3,6 +3,7 @@ service/src/main/resources/application.yml
 **/application-local.yml
 **/application-dev.yml
 **/application-prod.yml
+**/application-example.yml
 
 # IDE
 .idea/

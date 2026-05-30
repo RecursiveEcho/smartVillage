@@ -1,10 +1,12 @@
 package com.backend.auth.binder;
 
+import org.springframework.stereotype.Component;
+
 import com.backend.auth.service.AuthService;
 import com.backend.common.binder.MediaBinder;
-import com.backend.common.event.MediaBindAfterUploadEvent;
+import com.backend.common.event.MediaBindMessage;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
@@ -18,12 +20,12 @@ public class AuthMediaBinder implements MediaBinder {
   }
 
   @Override
-  public void bindMedia(MediaBindAfterUploadEvent event) {
+  public void bindMedia(MediaBindMessage message) {
     authService.bindUploadedMedia(
-        event.getBindEntityId(),
-        event.getBindSlot(),
-        event.getFileUrl(),
-        event.getFileType(),
-        event.getUploadUserId());
+        message.getBindEntityId(),
+        message.getBindSlot(),
+        message.getFileUrl(),
+        message.getFileType(),
+        message.getUploadUserId());
   }
 }

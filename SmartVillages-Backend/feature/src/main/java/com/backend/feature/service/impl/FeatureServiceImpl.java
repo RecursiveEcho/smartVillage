@@ -10,17 +10,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.backend.common.aop.OperationLog;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.backend.auth.entity.AuthEntity;
-import com.backend.auth.mapper.AuthMapper;
+import com.backend.common.aop.OperationLog;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.support.AuthUserQueryService;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
@@ -59,7 +58,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
   private static final String CACHE_LIST_ADMIN_VER_KEY = "feature:list:admin:ver";
 
   private final RedisDistributedLock redisDistributedLock;
-  private final AuthMapper authMapper;
+  private final AuthUserQueryService authUserQueryService;
   private final RedisJsonCacheTool redisJsonCacheTool;
   private final FeatureMapper featureMapper;
   private final ObjectMapper objectMapper;
@@ -324,6 +323,7 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
         urls.add(trimmed);
       }
     }
+    if(!urls.contains(newUrl))
     urls.add(newUrl);
     try {
       return objectMapper.writeValueAsString(urls);
@@ -498,14 +498,8 @@ public class FeatureServiceImpl extends ServiceImpl<FeatureMapper, FeatureEntity
     if (ids.isEmpty()) {
       return;
     }
-    List<AuthEntity> auths =
-        authMapper.selectList(new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
     Map<Integer, String> idNoName = new HashMap<>();
-    for (AuthEntity auth : auths) {
-      if (auth.getId() != null) {
-        idNoName.put(auth.getId(), auth.getUsername());
-      }
-    }
+    idNoName.putAll(authUserQueryService.getUsernameMap(ids));
     for (FeatureVO vo : rows) {
       if (vo.getCreateUser() != null) {
         vo.setCreateUserName(idNoName.get(vo.getCreateUser()));

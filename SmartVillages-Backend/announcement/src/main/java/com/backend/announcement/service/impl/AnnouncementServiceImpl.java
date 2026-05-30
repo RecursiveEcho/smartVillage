@@ -22,12 +22,11 @@ import com.backend.announcement.mapper.AnnouncementMapper;
 import com.backend.announcement.service.AnnouncementService;
 import com.backend.announcement.vo.AnnouncementPublishedPageCache;
 import com.backend.announcement.vo.AnnouncementVO;
-import com.backend.auth.entity.AuthEntity;
-import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.aop.OperationLog;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.support.AuthUserQueryService;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
@@ -78,7 +77,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
   private final AnnouncementMapper announcementMapper;
   private final RedisJsonCacheTool redisJsonCacheTool;
   private final ObjectMapper objectMapper;
-  private final AuthMapper authMapper;
+  private final AuthUserQueryService authUserQueryService;
 
   /** 新建默认待审核：浏览量 0、未删除 */
   @Override
@@ -604,16 +603,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     if (ids.isEmpty()) {
       return;
     }
-    List<AuthEntity> auths =
-        authMapper.selectList(new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
-
-    Map<Integer, String> idToName = new HashMap<>();
-
-    for (AuthEntity a : auths) {
-      if (a.getId() != null) {
-        idToName.put(a.getId(), a.getUsername());
-      }
-    }
+    Map<Integer, String> idToName = new HashMap<>(authUserQueryService.getUsernameMap(ids));
     for (AnnouncementVO vo : rows) {
       if (vo.getCreateUser() != null) {
         vo.setCreateUserName(idToName.get(vo.getCreateUser()));

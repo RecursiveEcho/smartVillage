@@ -9,19 +9,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
-import org.springframework.beans.BeanUtils;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
-
-import com.backend.auth.entity.AuthEntity;
-import com.backend.auth.mapper.AuthMapper;
+import com.backend.common.support.AuthUserQueryService;
+import com.backend.common.config.RabbitMqConfig;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
-import com.backend.common.event.MediaBindAfterUploadEvent;
+import com.backend.common.event.MediaBindMessage;
 import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
@@ -38,6 +30,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.beans.BeanUtils;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -48,11 +46,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     implements MediaService {
+
   private final OssUploadTool ossUploadTool;
   private final RedisJsonCacheTool redisJsonCacheTool;
   private final RedisDistributedLock redisDistributedLock;
-  private final ApplicationEventPublisher eventPublisher;
-  private final AuthMapper authMapper;
+  private final RabbitTemplate rabbitTemplate;
+  private final AuthUserQueryService authUserQueryService;
   private static final String CACHE_KEY_PREFIX = "media:detail:";
   private static final String CACHE_LIST_VER_KEY = "media:list:ver";
   private static final String CACHE_LIST_PREFIX = "media:list:";
@@ -178,6 +177,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
 
   /** 删除媒体资源。 */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void delete(Integer id) {
     MediaEntity mediaEntity = this.getById(id);
     if (mediaEntity == null) {
@@ -210,6 +210,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
 
   /** 启用/禁用媒体资源。 */
   @Override
+  @Transactional(rollbackFor = Exception.class)
   public void updateStatus(Integer id, Integer status, HttpServletRequest request) {
     String lockKey = "lock:updateMediaStatus:" + id;
     String lockInstance = RedisDistributedLock.generateInstanceId();
@@ -263,15 +264,28 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
           && StringUtils.hasText(entity.getBindTarget())
           && entity.getBindEntityId() != null
           && StringUtils.hasText(entity.getBindSlot())) {
-        eventPublisher.publishEvent(
-            new MediaBindAfterUploadEvent(
-                this,
+        String bindTarget = entity.getBindTarget().trim().toUpperCase();
+        MediaBindMessage message =
+            new MediaBindMessage(
                 entity.getUploadUser(),
                 entity.getFileUrl(),
                 entity.getFileType(),
-                entity.getBindTarget(),
+                bindTarget,
                 entity.getBindEntityId(),
-                entity.getBindSlot()));
+                entity.getBindSlot());
+
+        String routingKey = resolveBindRoutingKey(bindTarget);
+        rabbitTemplate.convertAndSend(
+            RabbitMqConfig.MEDIA_BIND_EXCHANGE,
+            routingKey,
+            message);
+        log.info(
+            "media bind message sent, mediaId={}, target={}, routingKey={}, entityId={}, slot={}",
+            entity.getId(),
+            bindTarget,
+            routingKey,
+            entity.getBindEntityId(),
+            entity.getBindSlot());
       }
     } finally {
       redisDistributedLock.unlock(lockKey, lockInstance);
@@ -378,6 +392,14 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     return vo;
   }
 
+  private String resolveBindRoutingKey(String bindTarget) {
+    return switch (bindTarget) {
+      case "AUTH" -> RabbitMqConfig.MEDIA_BIND_AUTH_ROUTING_KEY;
+      case "ANNOUNCEMENT", "FEATURE" -> RabbitMqConfig.MEDIA_BIND_BUSINESS_ROUTING_KEY;
+      default -> throw new BusinessException(ErrorCode.PARAM_INVALID, "不支持的 bindTarget: " + bindTarget);
+    };
+  }
+
   private void bumpListCacheVersion() {
     redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
   }
@@ -390,12 +412,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
       if (vo.getAuditUser() != null) ids.add(vo.getAuditUser());
     }
     if (ids.isEmpty()) return;
-    List<AuthEntity> auths =
-        authMapper.selectList(new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
-    Map<Integer, String> idToName = new HashMap<>();
-    for (AuthEntity a : auths) {
-      if (a.getId() != null) idToName.put(a.getId(), a.getUsername());
-    }
+    Map<Integer, String> idToName = authUserQueryService.getUsernameMap(ids);
     for (PageVO vo : rows) {
       if (vo.getUploadUser() != null) vo.setUploadUserName(idToName.get(vo.getUploadUser()));
       if (vo.getAuditUser() != null) vo.setAuditUserName(idToName.get(vo.getAuditUser()));
@@ -408,12 +425,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     if (vo.getUploadUser() != null) ids.add(vo.getUploadUser());
     if (vo.getAuditUser() != null) ids.add(vo.getAuditUser());
     if (ids.isEmpty()) return;
-    List<AuthEntity> auths =
-        authMapper.selectList(new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
-    Map<Integer, String> idToName = new HashMap<>();
-    for (AuthEntity a : auths) {
-      if (a.getId() != null) idToName.put(a.getId(), a.getUsername());
-    }
+    Map<Integer, String> idToName = authUserQueryService.getUsernameMap(ids);
     if (vo.getUploadUser() != null) vo.setUploadUserName(idToName.get(vo.getUploadUser()));
     if (vo.getAuditUser() != null) vo.setAuditUserName(idToName.get(vo.getAuditUser()));
   }

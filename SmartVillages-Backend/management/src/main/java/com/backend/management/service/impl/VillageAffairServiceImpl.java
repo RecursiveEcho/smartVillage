@@ -14,12 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.backend.auth.entity.AuthEntity;
-import com.backend.auth.mapper.AuthMapper;
 import com.backend.common.aop.OperationLog;
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.support.AuthUserQueryService;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
@@ -52,7 +51,7 @@ public class VillageAffairServiceImpl extends ServiceImpl<VillageAffairMapper, V
   private static final String CACHE_LIST_PUBLIC_PREFIX = "village-affair:list:public:";
   private final RedisJsonCacheTool redisJsonCacheTool;
   private final VillageAffairMapper villageAffairMapper;
-  private final AuthMapper authMapper;
+  private final AuthUserQueryService authUserQueryService;
   private final HttpServletRequest request;
   private final RedisDistributedLock redisDistributedLock;
 
@@ -324,12 +323,7 @@ public class VillageAffairServiceImpl extends ServiceImpl<VillageAffairMapper, V
       if (vo.getAuditUserId() != null) ids.add(vo.getAuditUserId());
     }
     if (ids.isEmpty()) return;
-    List<AuthEntity> auths =
-        authMapper.selectList(new LambdaQueryWrapper<AuthEntity>().in(AuthEntity::getId, ids));
-    Map<Integer, String> idToName = new HashMap<>();
-    for (AuthEntity a : auths) {
-      if (a.getId() != null) idToName.put(a.getId(), a.getUsername());
-    }
+    Map<Integer, String> idToName = new HashMap<>(authUserQueryService.getUsernameMap(ids));
     for (VillageAffairDetailVO vo : rows) {
       if (vo.getCreateUser() != null) vo.setCreateUserName(idToName.get(vo.getCreateUser()));
       if (vo.getAuditUserId() != null) vo.setAuditUserName(idToName.get(vo.getAuditUserId()));
