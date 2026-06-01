@@ -1,26 +1,28 @@
-package com.backend.mediaservice.support;
+package com.backend.authservice.controller;
 
 import com.backend.auth.entity.AuthEntity;
 import com.backend.auth.mapper.AuthMapper;
-import com.backend.common.support.AuthUserQueryService;
+import com.backend.common.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-@Component
+@RestController
 @RequiredArgsConstructor
-public class LocalAuthUserQueryService implements AuthUserQueryService {
+public class AuthInternalController {
 
   private final AuthMapper authMapper;
 
-  @Override
-  public Map<Integer, String> getUsernameMap(Set<Integer> ids) {
+  @GetMapping("/internal/auth/usernames")
+  public Result<Map<Integer, String>> getUsernameMap(@RequestParam Set<Integer> ids) {
     if (ids == null || ids.isEmpty()) {
-      return Collections.emptyMap();
+      return Result.success(Collections.emptyMap());
     }
 
     Map<Integer, String> idToName = new HashMap<>();
@@ -33,6 +35,6 @@ public class LocalAuthUserQueryService implements AuthUserQueryService {
               }
             });
 
-    return idToName;
+    return Result.success(idToName);
   }
 }

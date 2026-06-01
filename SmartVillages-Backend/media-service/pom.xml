@@ -28,11 +28,6 @@
         </dependency>
         <dependency>
             <groupId>com.backend</groupId>
-            <artifactId>auth</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.backend</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -70,6 +65,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                   <mainClass>com.backend.mediaservice.MediaServiceApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

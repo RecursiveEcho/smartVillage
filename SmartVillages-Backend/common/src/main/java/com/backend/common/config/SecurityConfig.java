@@ -1,9 +1,7 @@
 package com.backend.common.config;
 
-import com.backend.common.filter.JwtSecurityFilter;
-import com.backend.common.filter.TraceIdFilter;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,6 +13,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.backend.common.filter.JwtSecurityFilter;
+import com.backend.common.filter.TraceIdFilter;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * @author chengyang &#064;date 2026/4/16 &#064;description SecurityFilterChain
@@ -46,7 +49,8 @@ public class SecurityConfig {
                         "/announcements/**",
                         "/guest/**",
                         "/village-affairs/**",
-                        "/public/village-affairs/**")
+                        "/public/village-affairs/**",
+                      "/internal/auth/usernames")
                     .permitAll() // 白名单请求放行（前台村务公示为 /public/village-affairs）
                     // 当前登录信息：只要已登录即可查询（管理员/村干部/村民都可）
                     .requestMatchers("/admin/me", "/media/page", "/media/upload", "/media/{id}")
