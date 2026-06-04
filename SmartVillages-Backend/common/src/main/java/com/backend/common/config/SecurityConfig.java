@@ -45,12 +45,13 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/webjars/**",
                         "/swagger-resources/**",
+                        "/auth/usernames",
                         "/features/**",
                         "/announcements/**",
                         "/guest/**",
                         "/village-affairs/**",
                         "/public/village-affairs/**",
-                      "/internal/auth/usernames")
+                        "/internal/auth/usernames")
                     .permitAll() // 白名单请求放行（前台村务公示为 /public/village-affairs）
                     // 当前登录信息：只要已登录即可查询（管理员/村干部/村民都可）
                     .requestMatchers("/admin/me", "/media/page", "/media/upload", "/media/{id}")
