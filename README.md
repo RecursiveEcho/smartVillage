@@ -1,36 +1,77 @@
-# SmartVillages
+# SmartVillages — 智慧乡村综合管理系统
 
-本仓库为 **monorepo**：后端（Spring Boot 多模块）与前端（Vue 3 + Vite）放在同一仓库中。
+本仓库为 **monorepo**，采用 **微服务架构**：后端按业务拆分为独立进程，前端为 Vue 3 + Vite 单页应用。
 
-## 目录结构（概览）
+## 目录结构
 
-```text
+```
 SmartVillages/
-├── SmartVillages-Backend/        # 后端：Spring Boot + Maven 多模块
-└── SmartVillages-Web/            # 前端：Vue 3 + Vite
+├── SmartVillages-Backend/        # 后端：Spring Boot 3 + Maven 多模块/多服务
+│   ├── common/                   #   公共库（无启动类）：安全、异常、工具类
+│   ├── common-lib/               #   纯 POJO/DTO 公共库（无 Spring 依赖）
+│   ├── auth/ / admin/ / announcement/ / feature/
+│   │   interaction/ / media/ / management/
+│   │                           #   业务 jar 模块，仅依赖 common
+│   ├── auth-service/             #   认证微服务（端口 8082）
+│   ├── business-service/         #   业务微服务（端口 8081）
+│   ├── media-service/            #   媒体微服务（端口 8083，含 RabbitMQ）
+│   ├── gateway-service/          #   Spring Cloud Gateway（端口 8080）
+│   ├── service/                  #   单进程启动模块（遗留，可独立使用）
+│   └── scripts/                  #   辅助工具（数据生成脚本等）
+├── SmartVillages-Web/            # 前端：Vue 3 + Vite
+└── 开发手册.md / 项目回顾.md      # 开发笔记
+```
+
+## 架构概览
+
+```
+                ┌──────────────┐
+                │  Gateway     │  ← 端口 8080（入口）
+                │  8080        │
+                └──────┬───────┘
+         ┌─────────────┼──────────────┐
+         ▼             ▼              ▼
+   ┌──────────┐ ┌───────────┐ ┌────────────┐
+   │ Auth     │ │ Business  │ │ Media      │
+   │ Service  │ │ Service   │ │ Service    │
+   │ 8082     │ │ 8081      │ │ 8083       │
+   └──────────┘ └───────────┘ └────────────┘
 ```
 
 ## 快速开始
 
-### 后端启动（SmartVillages-Backend）
+### 启动依赖
 
-构建：
+- **MySQL**：创建数据库 `smartVillage`，执行各模块 SQL（位于 `service/src/main/resources/sql/`）
+- **Redis**：默认 `localhost:6379`
+- **RabbitMQ**（仅 media-service 需要）：默认 `localhost:5672`
+
+### 微服务启动（推荐）
+
+按依赖顺序启动各个服务，或分别打包运行：
 
 ```bash
 cd SmartVillages-Backend
-./mvnw -pl service -am clean package
+
+# 构建所有模块
+./mvnw clean install -DskipTests
+
+# 依次启动（每个服务一个终端）
+java -jar gateway-service/target/gateway-service-0.0.1-SNAPSHOT.jar   # 网关 8080
+java -jar auth-service/target/auth-service-0.0.1-SNAPSHOT.jar         # 认证 8082
+java -jar business-service/target/business-service-0.0.1-SNAPSHOT.jar # 业务 8081
+java -jar media-service/target/media-service-0.0.1-SNAPSHOT.jar       # 媒体 8083
 ```
 
-运行（开发）：
+或者使用 Maven 插件逐个启动：
 
 ```bash
-cd SmartVillages-Backend
-./mvnw -pl service -am spring-boot:run
+./mvnw -pl gateway-service -am spring-boot:run   # 先启动网关
+./mvnw -pl auth-service -am spring-boot:run       # 再启动认证
+# 其它服务同理
 ```
 
-后端配置已改为 **环境变量优先**（避免敏感信息入库）。详细环境变量清单与示例账号请看后端说明：`SmartVillages-Backend/README.md`。
-
-### 前端启动（SmartVillages-Web）
+### 前端启动
 
 ```bash
 cd SmartVillages-Web
@@ -41,29 +82,17 @@ npm run dev
 构建：
 
 ```bash
-cd SmartVillages-Web
 npm run build
 ```
 
-## 文档入口
+## 联调约定
 
-- **后端详细说明**（鉴权、Spring Security、接口摘要）：`SmartVillages-Backend/README.md`
-- **前端现状与目录**：`SmartVillages-Web/README.md`
-- **开发手册**：根目录 `开发手册.md`；后端执行版见 `SmartVillages-Backend/开发手册.md`
+- **网关统一入口**：`http://localhost:8080`（所有请求经 Gateway 转发）
+- 请求头 **`token`**：携带 JWT 字符串
+- 登录：`POST /auth/login`，Body JSON：`username`、`password`
+- 接口文档（直连各微服务）：`http://<host>:<port>/doc.html`
 
-## 联调约定（摘要）
+## 各服务详细说明
 
-- 请求头 **`token`**：携带 JWT 字符串。
-- 登录：**`POST /auth/login`**，Body JSON：`username`、`password`；成功时 `data` 为 `{ "token": "..." }`（以实际 `JwtResponse` 为准）。
-- 登出：**`DELETE /auth/logout`**（无状态场景下多为客户端丢弃 token；接口路径以部署地址与 context-path 为准）。
-- 接口文档：浏览器打开 **`http://<host>:<port>/doc.html`**；OpenAPI JSON：**`/v3/api-docs`**。
-
-## 当前进度（概要）
-
-- 后端已接入 **Spring Security**：JWT 由 **`JwtSecurityFilter`** 解析并写入 **`SecurityContext`**，与 URL 级 **`hasAuthority("ROLE_*")`** 规则配合；业务代码仍可通过 **`LoginUserContext`** 从 `HttpServletRequest` 读取 `authId` / `username` / `role`（过滤器同步写入 request attribute）。
-- **管理员域**：`GET /admin/me`、分页用户 **`GET /admin/users`**、**`PUT /admin/users/{id}/status`**、创建村干部 **`POST /admin/cadre`** 等已落地（细节以后端 README 与 Knife4j 为准）。
-- **公告域**：前台只读 **`/announcements*`** 与村干部维护 **`/cadre/announcements*`** 等已接入（含 Redis 详情缓存等，见实现类注释）。
-- **留言域**：**`POST /interactions/messages`**（路径以 Controller 为准）。
-- 前端工程目前为 **Vue 3 最小入口 + 页面文件占位**，尚未接入 `vue-router` / `pinia` / 统一 HTTP 客户端；完整联调需按 `SmartVillages-Web/README.md` 中的规划逐步补齐。
-
-
+- [后端 README](SmartVillages-Backend/README.md)
+- [前端 README](SmartVillages-Web/README.md)

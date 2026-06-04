@@ -1,6 +1,11 @@
+server:
+  port: 8083
+
 spring:
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
+  application:
+    name: media-service
   servlet:
     multipart:
       max-file-size: 1GB
@@ -16,9 +21,22 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
       database: ${REDIS_DATABASE}
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: /
   web:
     resources:
       add-mappings: true
+
+cache:
+  ttl:
+    detail-minutes: 5
+    list-minutes: 10
+    null-marker-minutes: 2
+    detail-jitter-seconds: 300
 
 mybatis-plus:
   configuration:
@@ -35,7 +53,7 @@ knife4j:
 
 jwt:
   secret: smartVillages
-  expiration-ms: 86400000 # 24 小时（毫秒）
+  expiration-ms: 86400000
 
 aliyun:
   oss:
@@ -43,3 +61,6 @@ aliyun:
     bucket-name: ${OSS_BUCKET_NAME}
     access-key-id: ${OSS_ACCESS_KEY_ID}
     access-key-secret: ${OSS_ACCESS_KEY_SECRET}
+services:
+  auth:
+    url: http://localhost:8082

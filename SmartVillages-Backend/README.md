@@ -1,70 +1,141 @@
 # SmartVillages Backend（面试官版）
 
-> 目标：让面试官在 **1-2 分钟**内看懂“你做了什么、怎么跑、怎么验收、亮点在哪”。  
-> 如果你想复盘/照抄整个项目脚手架流程，请看：`开发手册.md`
+> 目标：让面试官在 **1-2 分钟**内看懂"你做了什么、怎么跑、怎么验收、亮点在哪"。
+> 复盘/脚手架流程请看 `开发手册.md`；详细权限边界见 `docs/PERMISSIONS.md`；演示脚本见 `docs/DEMO-SCRIPT.md`。
 
 ## 项目一句话
 
-智慧乡村综合管理系统后端：基于 **Spring Boot 3 + Maven 多模块**，实现 **Spring Security + JWT** 无状态鉴权与 **RBAC 三角色权限**，落地公告、互动留言、村务台账、民生服务工单等典型乡村治理业务闭环。
+智慧乡村综合管理系统后端：基于 **Spring Boot 3 + Maven 多模块 + Spring Cloud Gateway**，拆分为 **认证服务、业务服务、媒体服务** 三个子进程，通过 **Gateway 统一入口**，实现 **JWT 鉴权 + RBAC 三角色权限**，落地公告、互动留言、村务台账、民生服务工单等典型乡村治理业务闭环。
+
+## 架构演进：单体多模块 → 微服务
+
+```
+                ┌──────────────┐
+                │  Gateway     │  端口 8080（统一入口）
+                │  8080        │
+                └──────┬───────┘
+         ┌─────────────┼──────────────┐
+         ▼             ▼              ▼
+   ┌──────────┐ ┌───────────┐ ┌────────────┐
+   │ Auth     │ │ Business  │ │ Media      │
+   │ Service  │ │ Service   │ │ Service    │
+   │ 8082     │ │ 8081      │ │ 8083       │
+   └──────────┘ └───────────┘ └────────────┘
+```
+
+各微服务共享同一 Maven 父工程，依赖业务 jar 模块（`auth`、`admin`、`announcement`、`interaction`、`management`、`media`、`feature`）和公共库（`common`、`common-lib`）编译。
 
 ## 亮点（面试可讲）
 
-- **多模块边界清晰**：业务域拆分（`auth/admin/announcement/interaction/management/media/feature`），`common` 承载基础设施，`service` 单进程聚合启动。
-- **权限模型清晰**：`ROLE_ADMIN / ROLE_CADRE / ROLE_VILLAGER` 三角色职责边界明确，配合 `SecurityConfig` 的 URL 规则控制访问。
+- **微服务拆分**：单体 → 认证/业务/媒体三服务 + Gateway 路由网关，模块边界清晰，可独立部署扩缩。
+- **多模块复用**：业务 jar 库（`auth`/`admin`/`announcement` 等）+ `common` 公共库同时被多个微服务复用，避免拷贝代码。
+- **权限模型清晰**：`ROLE_ADMIN / ROLE_CADRE / ROLE_VILLAGER` 三角色职责明确，配合 Gateway + 各服务 `SecurityConfig` 控制访问。
 - **工程化规范**：统一返回 `Result`、统一业务异常 `BusinessException + GlobalExceptionHandler`、错误码枚举 `ErrorCode`。
 - **数据一致性**：逻辑删除 + 创建/更新时间自动填充（MyBatis-Plus）。
 - **性能意识**：Redis JSON 详情缓存（读缓存 + 更新/删除淘汰），适用于公告/台账详情等高频读接口。
-- **配置安全**：运行配置“环境变量优先”，避免密码/AccessKey/密钥硬编码进仓库。
+- **消息队列**：media-service 集成 RabbitMQ，支持异步媒体处理。
+- **配置安全**：运行配置"环境变量优先"，避免密码/AccessKey/密钥硬编码进仓库。
 
-## 模块说明（你交付的能力范围）
+## 模块与微服务对应
 
-- `auth`：登录/登出，签发 JWT
+### 微服务
+
+| 服务 | 端口 | 职责 | 关键依赖 |
+|------|------|------|----------|
+| `gateway-service` | 8080 | Spring Cloud Gateway，统一入口与路由转发 | 无业务依赖 |
+| `auth-service` | 8082 | 登录/登出、JWT 签发、管理员账号管理 | auth, admin, common |
+| `business-service` | 8081 | 公告、留言、风采、村务台账等业务 | announcement, feature, interaction, management, media, common |
+| `media-service` | 8083 | 文件上传、OSS 存储、媒体元数据管理（含 RabbitMQ） | media, common |
+
+### 业务 jar 模块（被微服务引用）
+
+- `auth`：登录/登出核心逻辑、密码校验、JWT 颁发
 - `admin`：账号管理（用户分页、启用禁用、创建村干部账号）
 - `announcement`：公告（公共端只读 + 村干部管理端）
 - `interaction`：留言互动（村民提交 + 干部处理）
 - `management`：村务治理台账（人口/房屋土地/党建组织/村务公示、民生服务工单等）
-- `media`：文件上传与访问（对接 OSS 等）
+- `media`：文件上传与存储模型层
 - `feature`：乡村风采内容（前台展示 + 干部维护）
+
+### 公共库
+
+- `common`：安全过滤器（JwtSecurityFilter）、统一返回（Result）、错误码（ErrorCode）、全局异常处理、工具类（JwtUtils、RedisJsonCacheTool）、通用配置（SecurityConfig、CORS、Knife4j）
+- `common-lib`：纯 POJO/DTO，无 Spring 依赖，用于跨服务数据传输
 
 ## 权限边界（RBAC）
 
-- **ROLE_ADMIN**：只负责账号管理
-- **ROLE_CADRE**：负责业务执行（公告、留言处理、村务台账、工单处理等）
-- **ROLE_VILLAGER**：前台浏览与反馈（提交留言/工单、查看自己的记录等）
+- **ROLE_ADMIN**（管理员）：只负责账号管理
+- **ROLE_CADRE**（村干部）：负责业务执行（公告、留言处理、村务台账、工单处理等）
+- **ROLE_VILLAGER**（村民）：前台浏览与反馈（提交留言/工单、查看自己的记录等）
 
-最终以 `common/src/main/java/com/backend/common/config/SecurityConfig.java` 为准。
+详细 URL 规则见 `common/src/main/java/com/backend/common/config/SecurityConfig.java`，摘要见 `docs/PERMISSIONS.md`。
 
 ## 运行与配置
 
-### 1）构建与启动
+### 启动依赖
+
+- MySQL：创建数据库 `smartVillage`
+- Redis（建议启动，公告/台账详情缓存会用；若不启用可能报错）
+- RabbitMQ（仅 media-service 需要，非必须时可不启动该服务）
+
+### 构建与启动
 
 ```bash
-./mvnw -pl service -am clean package
-./mvnw -pl service -am spring-boot:run
+cd SmartVillages-Backend
+
+# 构建所有模块
+./mvnw clean install -DskipTests
+
+# 微服务模式（建议，依次启动各服务）
+# 认证服务
+./mvnw -pl auth-service -am spring-boot:run
+# 业务服务（另一个终端）
+./mvnw -pl business-service -am spring-boot:run
+# 媒体服务
+./mvnw -pl media-service -am spring-boot:run
+# 网关
+./mvnw -pl gateway-service -am spring-boot:run
 ```
 
-### 2）环境变量（推荐）
+或者打包后运行：
+
+```bash
+./mvnw clean package -DskipTests
+java -jar gateway-service/target/gateway-service-0.0.1-SNAPSHOT.jar
+java -jar auth-service/target/auth-service-0.0.1-SNAPSHOT.jar
+java -jar business-service/target/business-service-0.0.1-SNAPSHOT.jar
+java -jar media-service/target/media-service-0.0.1-SNAPSHOT.jar
+```
+
+> 也保留单进程启动模块（`service`），可直接 `./mvnw -pl service -am spring-boot:run` 启动所有功能于同一进程。
+
+### 环境变量（推荐）
+
+各微服务的 `application.yml` 中已配置默认值，生产环境建议覆盖：
 
 - **MySQL**：`DB_URL`、`DB_USERNAME`、`DB_PASSWORD`
 - **Redis**：`REDIS_HOST`、`REDIS_PORT`、`REDIS_PASSWORD`、`REDIS_DB`
 - **JWT**：`JWT_SECRET`、`JWT_EXPIRE_MS`
 - **阿里云 OSS（可选）**：`ALIYUN_OSS_ENDPOINT`、`ALIYUN_OSS_BUCKET`、`ALIYUN_OSS_ACCESS_KEY_ID`、`ALIYUN_OSS_ACCESS_KEY_SECRET`
 
-示例模板：`service/src/main/resources/application-example.yml`
+### 初始化数据库
 
-### 3）初始化数据库
+SQL 目录：`service/src/main/resources/sql/`（按模块拆分），建议至少执行：
 
-SQL 目录：`service/src/main/resources/sql/`（按模块拆分）。  
-建议至少执行：`auth.sql`、`admin.sql`、`announcement.sql`、`interaction.sql`、`management.sql`（以及你需要的其它模块 SQL）。
+```
+auth.sql  admin.sql  announcement.sql  interaction.sql  management.sql
+feature.sql  media.sql  add_indexes.sql
+```
 
 ## 接口文档入口
 
-- Knife4j：`http://localhost:8080/doc.html`
-- OpenAPI：`http://localhost:8080/v3/api-docs`
+- Knife4j：`http://localhost:<port>/doc.html`（直连各微服务端口）
+- OpenAPI JSON：`http://localhost:<port>/v3/api-docs`
+- **网关统一入口**：`http://localhost:8080` + 路由前缀
 
 ## 示例账号（本地联调）
 
-来源：`service/src/main/resources/sql/auth.sql`（统一明文密码 `123456`）
+初始化数据来源：`service/src/main/resources/sql/auth.sql`（统一明文密码 `123456`）
 
 - 管理员：`admin`
 - 村干部：`cadre_wang`
@@ -72,259 +143,47 @@ SQL 目录：`service/src/main/resources/sql/`（按模块拆分）。
 
 ## 最短验收（面试 2 分钟演示）
 
-1. 打开 Knife4j：`/doc.html`（证明接口文档自解释）
-2. 登录：`POST /auth/login`（拿 token）
-3. 带 token 调一个业务接口（例如村干部管理端分页、公示管理、台账列表等），展示权限边界与返回结构 `Result`
+1. 启动网关 + 任一微服务
+2. 打开 Knife4j：`/doc.html`
+3. 登录：`POST /auth/login`（拿 token）
+4. 带 token 调一个业务接口（例如公告列表、台账列表），展示权限边界与统一返回结构 `Result`
 
-# SmartVillages Backend（后端）
+更多演示步骤见 `docs/DEMO-SCRIPT.md`。
 
-本目录为后端工程（Spring Boot + Maven 多模块）。仓库根目录 `README.md` 只保留整体使用方式；本文件承载后端的详细说明。
+## 目录结构
 
-## 工程概览
-
-根工程 Maven 坐标为 `com.backend:smartVillages`，采用 **多模块 + 单 Spring Boot 进程**（`service` 模块打包可执行 jar）。  
-各业务 jar **只依赖 `common`**；`common` 聚合 **Spring Web、Spring Security、MyBatis-Plus、Redis、Knife4j(OpenAPI3)、JJWT** 等（详见 `common/pom.xml` 与源码）。根包名为 **`com.backend.*`**。
-
-> **与代码严格对齐**：下列「接口摘要」「鉴权」与 **`SecurityConfig`** 一致；各子模块中若仍有 **空类、TODO**，表示尚未补全，本文**不将其描述为已交付功能**。
-
-## 快速开始
-
-构建：
-
-```bash
-./mvnw -pl service -am clean package
 ```
-
-运行（开发）：
-
-```bash
-./mvnw -pl service -am spring-boot:run
+SmartVillages-Backend/
+├── pom.xml                        # 父工程（packaging=pom），声明 modules & 依赖版本管理
+├── common/                        # 公共模块：安全、异常、统一返回、工具类、通用配置
+├── common-lib/                    # 纯 POJO/DTO，无 Spring 依赖
+├── auth/                          # 认证业务 jar
+├── admin/                         # 管理员业务 jar
+├── announcement/                  # 公告业务 jar
+├── feature/                       # 风采业务 jar
+├── interaction/                   # 留言业务 jar
+├── media/                         # 媒体业务 jar
+├── management/                    # 村务管理业务 jar
+├── auth-service/                  # 认证微服务（可独立部署）
+├── business-service/              # 业务微服务（聚合 announcement/feature/interaction/management/media）
+├── media-service/                 # 媒体微服务（含 RabbitMQ）
+├── gateway-service/               # Spring Cloud Gateway 路由网关
+├── service/                       # 遗留单进程启动模块
+├── docs/                          # 文档（权限边界、演示脚本、面试总结、API 导出等）
+└── scripts/                       # 辅助脚本（批量数据生成等）
 ```
-
-### 配置与环境变量（重要）
-
-后端运行配置位于 `service/src/main/resources/application.yml`，但已改为 **环境变量优先**，避免敏感信息写死在仓库里。
-
-可以直接在启动前设置这些环境变量（未设置时会使用 `application.yml` 里的默认值或空值）：
-
-- **MySQL**
-  - `DB_URL`：JDBC URL（默认 `jdbc:mysql://127.0.0.1:3306/smartVillage?...`）
-  - `DB_USERNAME`：用户名（默认 `root`）
-  - `DB_PASSWORD`：密码（默认空）
-- **Redis**
-  - `REDIS_HOST`（默认 `localhost`）
-  - `REDIS_PORT`（默认 `6379`）
-  - `REDIS_PASSWORD`（默认空）
-  - `REDIS_DB`（默认 `0`）
-- **JWT**
-  - `JWT_SECRET`（默认 `smartVillages`，生产务必替换）
-  - `JWT_EXPIRE_MS`（默认 `86400000`，24h）
-- **阿里云 OSS（可选，只有 media 上传相关才需要）**
-  - `ALIYUN_OSS_ENDPOINT`
-  - `ALIYUN_OSS_BUCKET`
-  - `ALIYUN_OSS_ACCESS_KEY_ID`
-  - `ALIYUN_OSS_ACCESS_KEY_SECRET`
-
-示例配置文件（仅供参考，不参与运行）：`service/src/main/resources/application-example.yml`
-
-SQL 初始化脚本：`service/src/main/resources/sql/`（按模块拆分）
-
-### 启动前置条件
-
-- MySQL：创建数据库 `smartVillage`（或你自定义并通过 `DB_URL` 指定），执行 `service/src/main/resources/sql/` 下的建表与初始化脚本
-- Redis：建议启动（公告详情、台账详情等会用到缓存）；若不启用，涉及缓存的功能可能运行报错
 
 ## 统一返回与错误约定
 
 | 能力 | 位置（`common`） | 说明 |
 |------|------------------|------|
-| **ErrorCode** | `enums/ErrorCode.java` | 按码段划分：`1xxx` 用户/认证，`2xxx` 权限，`3xxx` 文件/配置，`4xxx` 通用业务与村务域（`41xx` 等），`5xxx` 系统，`6xxx` 路由语义；**同一语义对应唯一数字**，新增时在对应段内递增。 |
-| **Result** | `result/Result.java` | 统一 JSON 字段 **`code` / `message` / `data`**；成功常用 **`code = 200`**（见类常量 `SUCCESS_CODE`）。业务失败可在 Controller 中 `Result.fail(...)` / `Result.error(...)`，或由 **`BusinessException`** 进入全局处理器后返回。 |
-| **GlobalExceptionHandler** | `exception/GlobalExceptionHandler.java` | 处理 **已进入 Spring MVC** 的异常并返回 `Result`：`BusinessException`、参数校验、404/405 等。Spring Security 在过滤器链上产生的 **401/403** 多为框架默认响应，**不一定**为 `Result` JSON。 |
+| **ErrorCode** | `enums/ErrorCode.java` | 按码段划分：`1xxx` 用户/认证，`2xxx` 权限，`3xxx` 文件/配置，`4xxx` 通用业务与村务域，`5xxx` 系统，`6xxx` 路由语义 |
+| **Result** | `result/Result.java` | 统一 JSON 字段 **`code` / `message` / `data`**；成功 `code = 200` |
+| **GlobalExceptionHandler** | `exception/GlobalExceptionHandler.java` | 处理 Spring MVC 异常并返回 `Result` |
 
-## 登录与鉴权（当前实现）
-
-### 接口（auth / admin，节选）
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| `POST` | `/auth/login` | 登录，Body：`application/json`（`username`、`password`），成功时 `data` 含 **`token`**（见 `JwtResponse`） |
-| `DELETE` | `/auth/logout` | 登出 v1（无状态：服务端不落会话；成功返回统一文案，前端清理本地 `token`） |
-| `GET` | `/admin/me` | 当前登录主体信息（需 **管理员** 权限） |
-| `GET` | `/admin/users` | 分页查询用户（管理员）；支持 `username`、`role`、`status`、`current`、`size` 等查询参数 |
-| `PUT` | `/admin/users/{id}/status` | 启用/禁用用户（管理员） |
-| `POST` | `/admin/cadre` | 创建村干部账号（管理员）；Body 见 `AuthDTO`（校验注解以类为准） |
-
-请求头：**`token`**（JWT 字符串）。JWT 的 `subject` 为 **`id:username:role`**。
-
-### JwtSecurityFilter + Spring Security
-
-1. **`JwtSecurityFilter`**（`common/filter/JwtSecurityFilter.java`）：若请求携带 **`token`** 且解析成功，则：  
-   - 向 `HttpServletRequest` 写入 **`authId` / `username` / `role`**（供 **`LoginUserContext`** 等使用）；  
-   - 向 **`SecurityContextHolder`** 写入 **`UsernamePasswordAuthenticationToken`**，`GrantedAuthority` 为 **`ROLE_` + 角色大写**（若 subject 中角色已带 `ROLE_` 前缀会规范化）。  
-   若 token 无效或解析失败，会 **清除 `SecurityContext`**，后续由 Spring Security 判定是否允许访问。
-2. **`SecurityConfig`**：通过 **`authorizeHttpRequests`** 配置 **匿名可访问路径** 与 **需认证/需特定角色** 的路径（源码为准，下表为便于阅读的摘要）。
-
-### authorizeHttpRequests 摘要（以 `SecurityConfig` 为准）
-
-| 规则 | 说明 |
-|------|------|
-| `permitAll` | 含 `/auth/login`、OpenAPI 与 Swagger 相关路径、`/announcements/**`、`/interactions/**`、预留的 `/guest/**` 等 |
-| `hasAuthority("ROLE_ADMIN")` | `/admin/users/**`、`/admin/me` |
-| `hasAuthority("ROLE_CADRE")` | `/cadre/announcements/**`、`/cadre/interactions/**` |
-| `hasAnyAuthority("ROLE_VILLAGER")` | `/villager/**`（预留路径，若暂无 Controller 则仅占位） |
-| `anyRequest().authenticated()` | 其余请求默认需登录（带有效 `token`） |
-
-**说明**：`InteractionController` 当前映射为 **`/interactions/**`**，且位于 `permitAll` 的 `/interactions/**` 下；若业务要求「留言必须登录」，需后续收紧规则并在服务层校验 `LoginUserContext.getAuthId(request)` 等非空语义（以产品决策为准）。
-
-### JWT 配置
-
-`service/src/main/resources/application.yml`：**`jwt.secret`**、**`jwt.expiration-ms`**（示例为 24 小时）。生产环境请改用环境变量或独立 profile，勿提交真实密钥。
-
-### 接口文档
-
-- Knife4j：`http://localhost:8080/doc.html`
-- OpenAPI JSON：`http://localhost:8080/v3/api-docs`
-
-> 端口以实际启动日志为准（默认通常是 8080）。
-
-## 示例账号（本地联调）
-
-初始化数据来源：`service/src/main/resources/sql/auth.sql`
-
-- **管理员（ROLE_ADMIN）**
-  - username：`admin`
-  - password：`123456`
-- **村干部（ROLE_CADRE）**
-  - username：`cadre_wang`
-  - password：`123456`
-- **村民（ROLE_VILLAGER）**
-  - username：`zhang_san` / `li_si`
-  - password：`123456`
-
-## 联调示例（curl）
-
-登录拿 token：
-
-```bash
-curl -X POST "http://localhost:8080/auth/login" \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"123456"}'
-```
-
-之后访问需登录接口时，在请求头带上 `token`：
-
-```bash
-curl "http://localhost:8080/cadre/village-affairs?current=1&size=10" \
-  -H "token: <JWT_TOKEN>"
-```
-
-## 业务模块接口线索（公告 / 留言）
-
-- **公告**：实现类集中在 **`AnnouncementController`** — 前台只读 **`GET /announcements`**、**`GET /announcements/hot`**、**`GET /announcements/{id}`**；村干部侧 **`/cadre/announcements` 系列**（增删改查、审核、分页等）。公告详情等使用 **Redis** 缓存（见 `AnnouncementServiceImpl`）。
-- **留言**：**`POST /interactions/messages`**（`InteractionController`），服务内使用 **`LoginUserContext.getAuthId(request)`** 写入用户关联字段。
-
-## 当前开发进度（阶段）
-
-- 已完成（主干）：登录颁发 JWT、登出接口；**Spring Security** 与 URL 级角色控制；管理员 **`/admin/me`、用户分页、状态变更、创建村干部**；公告模块前后台接口与 Redis 详情缓存；留言创建接口等。
-- 文档：README / 开发手册与当前 `SecurityConfig`、`JwtSecurityFilter`、主要 Controller 行为对齐；字段级细节以 OpenAPI 与源码为准。
-
-### 下一步建议
-
-1. 按产品需求收紧 **`/interactions/**`** 等匿名接口的权限边界，并补集成测试。
-2. 补齐 **`/villager/**`**、**`/guest/**`** 与 **management / media / feature** 等模块的路由与文档。
-3. 配置外置化（JWT、数据源、Redis）与多环境 profile。
-
-### 已踩坑提醒
+## 已踩坑提醒
 
 - `AuthServiceImpl` 中状态判断要用 `&&`，不要写成 `||`（否则会误判登录失败）。
-- 多模块改动后若运行结果像旧代码，先在后端根目录执行 `./mvnw install -DskipTests`。
-- **`SecurityConfig` 与业务路径** 需同步演进：新增 Controller 前缀时记得更新 `requestMatchers`，避免出现「能登录但接口 403/401」的错位。
-
-## 目录与模块（详细）
-
-```text
-SmartVillages-Backend/
-├── pom.xml                       # 父工程（packaging=pom），声明 modules & 依赖版本管理（Spring Boot 3.3.x）
-├── common/                       # 公共模块（无启动类）：横切能力与基础设施
-│   └── src/main/java/com/backend/common/
-│       ├── config/               # SecurityConfig、OpenAPI/CORS/MyBatisPlus 等（以源码为准）
-│       ├── enums/                # ErrorCode
-│       ├── exception/            # BusinessException + GlobalExceptionHandler
-│       ├── filter/               # JwtSecurityFilter：解析 token，写入 SecurityContext 与 request attribute
-│       ├── context/              # LoginUserContext：从 request 读取当前登录用户
-│       ├── result/               # Result
-│       └── utils/                # JwtUtils、RedisJsonCacheTool 等
-├── auth/                         # 认证域
-├── admin/                        # 管理员域
-├── announcement/                 # 公告域
-├── feature/                      # 风采域
-├── interaction/                  # 留言域
-├── media/                        # 媒体域
-├── management/                   # 村务管理域
-└── service/                      # 启动模块：聚合所有模块（单进程启动）
-    ├── pom.xml
-    └── src/main/
-        ├── java/com/backend/SmartVillagesApplication.java
-        └── resources/
-            ├── application.yml
-            └── sql/
-```
-
-## 模块职责说明
-- `auth`
-  - 做登录/登出、密码校验、JWT 颁发与续期策略。
-  - 维护账号基础能力（改密、找回密码、登录风控）。
-  - 认证相关功能统一归口到该模块。
-
-- `admin`
-  - 做后台管理能力：用户分页、账号状态管理、角色分配、后台个人信息。
-  - 承接“管理员操作别人数据”的用例（例如创建村干部账号）。
-  - 管理台权限菜单、操作审计等能力在该模块扩展。
-
-- `announcement`
-  - 做公告全链路：发布、编辑、上下架、审核、前台查询、热门列表。
-  - 维护公告业务规则（发布时间、置顶、状态流转）与公告相关缓存。
-  - 公告分类、附件、搜索排序等能力在该模块演进。
-
-- `interaction`
-  - 做村民互动链路：留言、回复、处理状态、可见性控制。
-  - 目前已有留言创建入口，后续可补列表、回复、管理员处理等接口。
-  - 村民与干部互动相关功能统一归口到该模块。
-
-- `management`
-  - 做村务治理数据域：党务、人口、土地、事项公示等台账能力。
-  - 该包现在偏骨架状态，优先补 `@RequestMapping`、分页查询、增删改查和统计接口。
-  - 村务管理后台核心功能在该模块实现。
-
-- `media`
-  - 做媒体资源域：图片/视频文件上传、存储、访问、元数据管理。
-  - 该包目前是占位，建议先补上传接口、文件类型校验、访问 URL 生成。
-  - 对接 OSS/MinIO/CDN 等能力在该模块落地。
-
-- `feature`
-  - 做乡村风采展示域：风采内容发布、列表、详情、推荐位管理。
-  - 当前是占位，建议先定义“风采内容模型 + 前后台接口”。
-  - 首页展示、专题内容等内容运营能力在该模块实现。
-
-- `common`
-  - 做全项目复用底座：安全过滤器、统一返回、错误码、全局异常、工具类、通用配置。
-  - 任何跨业务域会重复出现的能力，优先下沉到这里。
-  - 注意只放“通用能力”，不要把某个业务包的私有逻辑塞进来。
-
-- `service`
-  - 做应用启动与装配：启动类、配置文件、SQL 初始化资源。
-  - 负责把各模块聚合成单进程服务，不承载具体业务规则。
-  - 环境配置、多 profile、部署参数在该模块维护。
-
-### 模块速览
-
-- `auth`：让用户登录系统、拿到身份凭证（JWT），并处理退出登录。
-- `admin`：给管理员做用户与后台管理能力。
-- `announcement`：做公告的发、改、审、上架和查询。
-- `interaction`：做村民与干部的留言互动。
-- `management`：做村务核心台账与治理数据管理。
-- `media`：做图片视频等文件上传、存储、访问。
-- `feature`：做乡村风采等展示型内容管理。
-- `common`：放全项目通用能力（鉴权、异常、统一返回、工具类）。
-- `service`：负责应用启动、配置装配和模块聚合。
+- 多模块改动后若运行结果像旧代码，先执行 `./mvnw install -DskipTests`。
+- **SecurityConfig 与业务路径**需同步演进：新增 Controller 前缀时记得更新 `requestMatchers`。
+- 微服务间调用通过 `services.auth.url` 配置（见 `business-service/application.yml` 和 `media-service/application.yml`），而非 Feign，可根据需要升级。

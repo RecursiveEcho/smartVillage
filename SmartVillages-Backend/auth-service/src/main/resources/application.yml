@@ -1,10 +1,11 @@
+server:
+  port: 8082
+
 spring:
   config:
     import: optional:file:.env[.properties],optional:file:../.env[.properties]
-  servlet:
-    multipart:
-      max-file-size: 1GB
-      max-request-size: 1GB
+  application:
+    name: auth-service
   datasource:
     url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME}
@@ -16,9 +17,12 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
       database: ${REDIS_DATABASE}
-  web:
-    resources:
-      add-mappings: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: /
 
 mybatis-plus:
   configuration:
@@ -35,11 +39,4 @@ knife4j:
 
 jwt:
   secret: smartVillages
-  expiration-ms: 86400000 # 24 小时（毫秒）
-
-aliyun:
-  oss:
-    endpoint: ${OSS_ENDPOINT}
-    bucket-name: ${OSS_BUCKET_NAME}
-    access-key-id: ${OSS_ACCESS_KEY_ID}
-    access-key-secret: ${OSS_ACCESS_KEY_SECRET}
+  expiration-ms: 86400000
