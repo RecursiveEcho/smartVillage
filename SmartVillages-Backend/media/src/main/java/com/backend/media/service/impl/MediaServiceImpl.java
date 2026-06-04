@@ -3,18 +3,25 @@ package com.backend.media.service.impl;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import com.backend.common.support.AuthUserQueryService;
-import com.backend.common.config.RabbitMqConfig;
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.backend.common.context.LoginUserContext;
 import com.backend.common.enums.ErrorCode;
 import com.backend.common.event.MediaBindMessage;
 import com.backend.common.exception.BusinessException;
+import com.backend.common.mq.MediaBindMqNames;
+import com.backend.common.support.AuthUserQueryService;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
@@ -30,12 +37,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.springframework.beans.BeanUtils;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -277,7 +278,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
 
         String routingKey = resolveBindRoutingKey(bindTarget);
         rabbitTemplate.convertAndSend(
-            RabbitMqConfig.MEDIA_BIND_EXCHANGE,
+            MediaBindMqNames.MEDIA_BIND_EXCHANGE,
             routingKey,
             message);
         log.info(
@@ -395,8 +396,8 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
 
   private String resolveBindRoutingKey(String bindTarget) {
     return switch (bindTarget) {
-      case "AUTH" -> RabbitMqConfig.MEDIA_BIND_AUTH_ROUTING_KEY;
-      case "ANNOUNCEMENT", "FEATURE" -> RabbitMqConfig.MEDIA_BIND_BUSINESS_ROUTING_KEY;
+      case "AUTH" -> MediaBindMqNames.MEDIA_BIND_AUTH_ROUTING_KEY;
+      case "ANNOUNCEMENT", "FEATURE" -> MediaBindMqNames.MEDIA_BIND_BUSINESS_ROUTING_KEY;
       default -> throw new BusinessException(ErrorCode.PARAM_INVALID, "不支持的 bindTarget: " + bindTarget);
     };
   }

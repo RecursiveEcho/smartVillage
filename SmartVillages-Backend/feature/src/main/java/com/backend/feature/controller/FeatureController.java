@@ -234,7 +234,7 @@ public class FeatureController {
    * @return 乡村风采审核成功
    * */
   @Operation(summary = "审核乡村风采")
-  @PutMapping("/admin/features/{id}/review")
+  @PutMapping("/cadre/features/{id}/review")
   public Result<String> reviewFeature(@PathVariable Long id, @RequestParam Integer reviewStatus) {
     featureService.reviewFeature(id, reviewStatus);
     return Result.success("乡村风采审核成功");

@@ -1,17 +1,20 @@
 package com.backend.authservice.mq;
 
-import com.backend.common.binder.MediaBinder;
-import com.backend.common.config.RabbitMqConfig;
-import com.backend.common.enums.ErrorCode;
-import com.backend.common.event.MediaBindMessage;
-import com.backend.common.exception.BusinessException;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+
+import com.backend.common.binder.MediaBinder;
+import com.backend.common.event.MediaBindMessage;
+import com.backend.common.exception.BusinessException;
+import com.backend.common.mq.MediaBindMqNames;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -25,12 +28,12 @@ public class AuthMediaBindMqConsumer {
             .collect(Collectors.toMap(MediaBinder::getSupportedTarget, Function.identity()));
   }
 
-  @RabbitListener(queues = RabbitMqConfig.MEDIA_BIND_AUTH_QUEUE)
+  @RabbitListener(queues = MediaBindMqNames.MEDIA_BIND_AUTH_QUEUE)
   public void onMessage(MediaBindMessage message) {
     String target = message.getBindTarget().trim().toUpperCase();
     MediaBinder binder = binderMap.get(target);
     if (binder == null) {
-      throw new BusinessException(ErrorCode.PARAM_INVALID, "auth-service 不支持的 bindTarget: " + target);
+      throw new AmqpRejectAndDontRequeueException("auth-service 不支持的 bindTarget: " + target);
     }
 
     try {
@@ -40,7 +43,10 @@ public class AuthMediaBindMqConsumer {
           target,
           message.getBindEntityId(),
           message.getBindSlot());
-    } catch (Exception e) {
+      }catch(BusinessException e){
+        throw new AmqpRejectAndDontRequeueException("业务绑定失败，消息进入死信队列",e);
+
+    }catch (Exception e) {
       log.error(
           "auth media bind failed, target={}, entityId={}, slot={}, fileUrl={}",
           target,
