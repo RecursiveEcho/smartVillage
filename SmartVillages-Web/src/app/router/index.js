@@ -6,6 +6,7 @@ import { authRoutes } from "@/app/router/routes/auth.routes"
 import { featureRoutes } from "@/app/router/routes/feature.routes"
 import { interactionRoutes } from "@/app/router/routes/interaction.routes"
 import { managementRoutes } from "@/app/router/routes/management.routes"
+import { villageRoutes } from "@/app/router/routes/village.routes"
 import { getCurrentUser } from "@/services/auth.api"
 import { getSavedUserRole, hasRequiredRole, isAuthenticated, normalizeRole } from "@/shared/auth/guards"
 import { removeSavedUser, removeToken, setSavedUser } from "@/shared/auth/token"
@@ -35,6 +36,7 @@ const routes = [
   ...publicRoutes,
   ...adminRoutes,
   ...managementRoutes,
+  ...villageRoutes,
   {
     path: "/:pathMatch(.*)*",
     redirect: "/",
