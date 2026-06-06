@@ -28,6 +28,26 @@ public class OssUploadTool {
   @Value("${aliyun.oss.access-key-secret:}")
   private String accessKeySecret;
 
+  /**
+   * 初始化时验证配置
+   */
+  @jakarta.annotation.PostConstruct
+  public void init() {
+    if (!org.springframework.util.StringUtils.hasText(endpoint)) {
+      throw new IllegalStateException("阿里云 OSS endpoint 未配置，请在 application.yml 中设置 aliyun.oss.endpoint");
+    }
+    if (!org.springframework.util.StringUtils.hasText(bucketName)) {
+      throw new IllegalStateException("阿里云 OSS bucket-name 未配置，请在 application.yml 中设置 aliyun.oss.bucket-name");
+    }
+    if (!org.springframework.util.StringUtils.hasText(accessKeyId)) {
+      throw new IllegalStateException("阿里云 OSS access-key-id 未配置，请在 application.yml 中设置 aliyun.oss.access-key-id");
+    }
+    if (!org.springframework.util.StringUtils.hasText(accessKeySecret)) {
+      throw new IllegalStateException("阿里云 OSS access-key-secret 未配置，请在 application.yml 中设置 aliyun.oss.access-key-secret");
+    }
+    log.info("OSS配置加载成功: endpoint={}, bucket={}", endpoint, bucketName);
+  }
+
   /** 文档类型。 */
   private static final Set<String> DOCUMENT_CONTENT_TYPES =
       Set.of(

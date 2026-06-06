@@ -3,9 +3,23 @@ server:
 
 spring:
   config:
-    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+      - optional:nacos:${spring.application.name}.yaml
   application:
     name: business-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        file-extension: yaml
   servlet:
     multipart:
       max-file-size: 1GB
@@ -44,17 +58,9 @@ knife4j:
   setting:
     language: zh_cn
 
-jwt:
-  secret: smartVillages
-  expiration-ms: 86400000
-
 aliyun:
   oss:
     endpoint: ${OSS_ENDPOINT}
     bucket-name: ${OSS_BUCKET_NAME}
     access-key-id: ${OSS_ACCESS_KEY_ID}
     access-key-secret: ${OSS_ACCESS_KEY_SECRET}
-
-services:
-  auth:
-    url: http://localhost:8082

@@ -11,9 +11,9 @@ CREATE TABLE `auth` (
   `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除：0-未删除 1-已删除'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户认证表';
 
--- 假数据（本地/联调）
+-- 示例数据（仅用于本地开发、联调与验收演示；请勿直接作为正式环境初始账号导入）
 -- 加密方式：MD5；明文字节：UTF-8；输出：32 位小写十六进制（无 salt、无多次迭代）。
--- 联调统一明文密码：123456 → MD5 = e10adc3949ba59abbe56e057f20f883e
+-- 示例明文密码：123456 → MD5 = e10adc3949ba59abbe56e057f20f883e
 -- 登录校验：对输入密码做同上 MD5，与库中 password 字段比较（相等则通过）。
 INSERT INTO `auth` (`username`, `password`, `phone`, `role`, `avatar`, `status`, `is_deleted`) VALUES
 ('admin', 'e10adc3949ba59abbe56e057f20f883e', '13800001001', 'admin', '/upload/avatar/admin.png', 1, 0),

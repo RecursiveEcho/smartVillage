@@ -5,19 +5,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.backend.auth.entity.AuthEntity;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
-import org.springframework.util.StringUtils;
-
+import com.backend.admin.client.AuthAdminClient;
+import com.backend.common.result.Result;
 import com.backend.admin.dto.AuthPublishedPageCache;
 import com.backend.admin.entity.AdminEntity;
 import com.backend.admin.mapper.AdminMapper;
 import com.backend.admin.service.AdminService;
 import com.backend.auth.dto.AuthDTO;
-import com.backend.auth.entity.AuthEntity;
-import com.backend.auth.mapper.AuthMapper;
 import com.backend.auth.vo.AuthVO;
 import com.backend.auth.vo.CreateCaderVO;
 import com.backend.common.enums.ErrorCode;
@@ -25,7 +24,6 @@ import com.backend.common.exception.BusinessException;
 import com.backend.common.utils.CacheKeyUtils;
 import com.backend.common.utils.RedisDistributedLock;
 import com.backend.common.utils.RedisJsonCacheTool;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -43,10 +41,10 @@ import lombok.RequiredArgsConstructor;
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
     implements AdminService {
 
-  private final AuthMapper authMapper;
   private static final String CACHE_KEY_PREFIX = "admin:users:detail:";
   private final RedisDistributedLock redisDistributedLock;
   private final RedisJsonCacheTool redisJsonCacheTool;
+  private final AuthAdminClient authAdminClient;
 
   private static final String CACHE_LIST_KEY_PREFIX = "admin:users:list:";
   private static final String CACHE_LIST_VER_KEY = "admin:users:ver";
@@ -59,38 +57,38 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
    */
   @Override
   public IPage<AuthVO> pageUsers(
-      String username, String role, Integer status, Long current, Long size) {
+    String username, String role, Integer status, Long current, Long size) {
+
     String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
     String prefix = CACHE_LIST_KEY_PREFIX + CacheKeyUtils.listFilterSegment(username, role, status);
     String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
-    AuthPublishedPageCache cached =
-        redisJsonCacheTool.getObject(listKey, AuthPublishedPageCache.class);
+
+    AuthPublishedPageCache cached =redisJsonCacheTool.getObject(listKey, AuthPublishedPageCache.class);
+
     if (cached != null) {
-      List<AuthVO> rows =
-          cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+      List<AuthVO> rows =cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
       Page<AuthVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
       hit.setRecords(rows);
       return hit;
     }
 
-    LambdaQueryWrapper<AuthEntity> wrapper =
-        new LambdaQueryWrapper<AuthEntity>()
-            .like(StringUtils.hasText(username), AuthEntity::getUsername, username)
-            .eq(role != null, AuthEntity::getRole, role)
-            .eq(status != null, AuthEntity::getStatus, status)
-            .orderByDesc(AuthEntity::getStatus)
-            .orderByDesc(AuthEntity::getCreateTime)
-            .orderByAsc(AuthEntity::getId);
-    IPage<AuthEntity> entityPage = authMapper.selectPage(new Page<>(current, size), wrapper);
+    Result<Page<AuthVO>> result =authAdminClient.pageUsers(username, role, status, current, size);
+
+    Page<AuthVO> page = result.getData();
+
+    if(page == null) {
+      page = new Page<>(current, size);
+    }
 
     AuthPublishedPageCache toSave = new AuthPublishedPageCache();
-    toSave.setRecords(entityPage.getRecords().stream().map(this::toVo).toList());
-    toSave.setTotal(entityPage.getTotal());
-    toSave.setCurrent(entityPage.getCurrent());
-    toSave.setSize(entityPage.getSize());
-    toSave.setPages(entityPage.getPages());
+    toSave.setRecords(page.getRecords());
+    toSave.setTotal(page.getTotal());
+    toSave.setCurrent(page.getCurrent());
+    toSave.setSize(page.getSize());
+    toSave.setPages(page.getPages());
     redisJsonCacheTool.setListCacheObject(listKey, toSave);
-    return entityPage.convert(this::toVo);
+
+    return page;
   }
 
   /** 校验用户存在且未逻辑删除后，更新其启用状态。 */
@@ -104,15 +102,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
       throw new BusinessException(ErrorCode.SYSTEM_BUSY, "用户正在被修改，请稍后再试");
     }
     try {
-      AuthEntity entity = authMapper.selectById(id);
-      if (entity == null) {
-        throw new BusinessException(ErrorCode.USER_NOT_FOUND);
-      }
-      if (Objects.equals(entity.getIsDeleted(), 1)) {
-        throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
-      }
-      entity.setStatus(status);
-      authMapper.updateById(entity);
+      authAdminClient.updateUserStatus(id, status);
       evictDetailCache(id);
       bumpListCacheVersion();
     } finally {
@@ -130,17 +120,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
   @SuppressWarnings("null")
   @Transactional(rollbackFor = Exception.class)
   public CreateCaderVO createCadre(AuthDTO authDTO) {
-    AuthEntity entity = new AuthEntity();
-    String password =
-        DigestUtils.md5DigestAsHex(authDTO.getPassword().getBytes(StandardCharsets.UTF_8));
-    BeanUtils.copyProperties(authDTO, entity);
-    entity.setPassword(password);
-    entity.setRole("cadre");
-    entity.setStatus(1);
-    entity.setAvatar(authDTO.getAvatar());
-    authMapper.insert(entity);
-    CreateCaderVO createCaderVO = new CreateCaderVO();
-    BeanUtils.copyProperties(entity, createCaderVO);
+    CreateCaderVO createCaderVO= authAdminClient.createCadre(authDTO).getData();
     bumpListCacheVersion();
     return createCaderVO;
   }
@@ -155,12 +135,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
   public AuthVO getUserDetail(Integer id) {
     String cacheKey = CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id);
     AuthVO fromCache = redisJsonCacheTool.getObject(cacheKey, AuthVO.class,()->{
-        AuthEntity entity = authMapper.selectById(id);
-        if(entity == null) {
-          throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
-        }
-        AuthVO vo = new AuthVO();
-        BeanUtils.copyProperties(entity, vo);
+        AuthVO vo = authAdminClient.getUserDetail(id).getData();
         return vo;
     });
     if(fromCache == null) {
@@ -181,19 +156,6 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
   private void bumpListCacheVersion() {
     redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
   }
-
-  /**
-   * 转换为 VO。
-   *
-   * @param entity 实体
-   * @return VO
-   */
-  private AuthVO toVo(AuthEntity entity) {
-    AuthVO vo = new AuthVO();
-    BeanUtils.copyProperties(entity, vo);
-    return vo;
-  }
-
   /**
    * 删除用户。
    *
@@ -209,7 +171,7 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, AdminEntity>
       throw new BusinessException(ErrorCode.SYSTEM_BUSY, "用户正在被操作，请稍后再试");
     }
     try {
-      authMapper.deleteById(id);
+      authAdminClient.deleteUser(id);
       evictDetailCache(id);
       redisJsonCacheTool.bumpListCacheVersion(CACHE_LIST_VER_KEY);
     } finally {

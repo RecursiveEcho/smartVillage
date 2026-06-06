@@ -3,9 +3,23 @@ server:
 
 spring:
   config:
-    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+    import:
+    - optional:file:.env[.properties]
+    - optional:file:../.env[.properties]
+    - optional:nacos:${spring.application.name}.yaml
   application:
     name: auth-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        file-extension: yaml
   datasource:
     url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME}
@@ -39,4 +53,3 @@ knife4j:
 
 jwt:
   secret: smartVillages
-  expiration-ms: 86400000

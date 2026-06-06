@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: 8084
 
 spring:
   config:
@@ -8,7 +8,7 @@ spring:
     - optional:file:../.env[.properties]
     - optional:nacos:${spring.application.name}.yaml
   application:
-    name: media-service
+    name: admin-service
   cloud:
     nacos:
       discovery:
@@ -20,9 +20,6 @@ spring:
         username: ${NACOS_USERNAME:nacos}
         password: ${NACOS_PASSWORD:nacos}
         file-extension: yaml
-  servlet:
-    multipart:
-      max-request-size: 1GB
   datasource:
     url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf-8&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME}
@@ -40,16 +37,6 @@ spring:
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
     virtual-host: /
-  web:
-    resources:
-      add-mappings: true
-
-cache:
-  ttl:
-    detail-minutes: 5
-    list-minutes: 10
-    null-marker-minutes: 2
-    detail-jitter-seconds: 300
 
 mybatis-plus:
   configuration:
@@ -66,10 +53,3 @@ knife4j:
 
 jwt:
   secret: smartVillages
-
-aliyun:
-  oss:
-    endpoint: ${OSS_ENDPOINT}
-    bucket-name: ${OSS_BUCKET_NAME}
-    access-key-id: ${OSS_ACCESS_KEY_ID}
-    access-key-secret: ${OSS_ACCESS_KEY_SECRET}

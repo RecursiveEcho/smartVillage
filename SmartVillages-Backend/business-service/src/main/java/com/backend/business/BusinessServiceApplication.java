@@ -3,6 +3,7 @@ package com.backend.business;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @MapperScan({
@@ -20,6 +21,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
       "com.backend.management",
       "com.backend.business"
     })
+@EnableDiscoveryClient
 @EnableFeignClients(basePackages = "com.backend.business.client")
 public class BusinessServiceApplication {
 
