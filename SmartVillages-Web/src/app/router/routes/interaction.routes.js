@@ -17,4 +17,4 @@ export const interactionRoutes = [
       title: "我的留言",
     },
   },
-]
+];

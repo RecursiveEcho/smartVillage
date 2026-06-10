@@ -1,1 +1,1 @@
-export const mediaRoutes = []
+export const mediaRoutes = [];

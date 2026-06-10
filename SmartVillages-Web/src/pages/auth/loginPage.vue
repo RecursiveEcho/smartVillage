@@ -1,206 +1,298 @@
-<template>
-  <main>
-    <section>
-      <h1>SmartVillages 登录</h1>
-      <p>用于验证登录、token 保存、自动请求头和当前用户接口。</p>
-
-      <form @submit.prevent="handleLogin">
-        <div>
-          <label for="username">用户名</label>
-          <input
-            id="username"
-            v-model.trim="form.username"
-            autocomplete="username"
-            placeholder="请输入用户名"
-            type="text"
-          />
-        </div>
-
-        <div>
-          <label for="password">密码</label>
-          <input
-            id="password"
-            v-model="form.password"
-            autocomplete="current-password"
-            placeholder="请输入密码"
-            type="password"
-          />
-        </div>
-
-        <div>
-          <button type="submit" :disabled="loading.login">
-            {{ loading.login ? "登录中" : "登录" }}
-          </button>
-          <button type="button" :disabled="loading.currentUser" @click="handleGetCurrentUser">
-            {{ loading.currentUser ? "获取中" : "获取当前用户" }}
-          </button>
-          <button type="button" @click="handleEnterSystem">进入系统</button>
-          <button type="button" @click="handleClearLocalState">清空本地状态</button>
-        </div>
-      </form>
-    </section>
-
-    <section aria-live="polite">
-      <h2>操作状态</h2>
-      <p v-if="message">{{ message }}</p>
-      <p v-if="errorMessage">{{ errorMessage }}</p>
-      <p v-if="!message && !errorMessage">暂无操作结果</p>
-    </section>
-
-    <section>
-      <h2>联调预览</h2>
-
-      <article>
-        <h3>当前 token</h3>
-        <pre>{{ tokenPreview }}</pre>
-      </article>
-
-      <article>
-        <h3>登录结果</h3>
-        <pre>{{ loginResultText }}</pre>
-      </article>
-
-      <article>
-        <h3>当前用户</h3>
-        <pre>{{ currentUserText }}</pre>
-      </article>
-    </section>
-  </main>
-</template>
-
 <script setup>
-import { computed, reactive, ref } from "vue"
+import { reactive, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-import { useRoute, useRouter } from "vue-router"
+import { login } from "@/services/auth.api";
+import { setToken } from "@/shared/auth/token";
+import { currentUser, ensureUser, invalidateUserCache } from "@/shared/auth/session";
 
-import { getCurrentUser, login } from "@/services/auth.api"
-import { normalizeRole } from "@/shared/auth/guards"
-import { getToken, removeSavedUser, removeToken, setSavedUser, setToken } from "@/shared/auth/token"
+const route = useRoute();
+const router = useRouter();
 
-const route = useRoute()
-const router = useRouter()
-
-const form = reactive({
-  username: "",
-  password: "",
-})
-
-const loading = reactive({
-  login: false,
-  currentUser: false,
-})
-
-const message = ref("")
-const errorMessage = ref("")
-const loginResult = ref(null)
-const currentUser = ref(null)
-const tokenValue = ref(getToken())
-
-const tokenPreview = computed(() => tokenValue.value || "当前还没有 token")
-const loginResultText = computed(() => formatJson(loginResult.value))
-const currentUserText = computed(() => formatJson(currentUser.value))
-
-function formatJson(value) {
-  if (!value) {
-    return "暂无数据"
-  }
-
-  return JSON.stringify(value, null, 2)
-}
-
-function clearFeedback() {
-  message.value = ""
-  errorMessage.value = ""
-}
-
-function syncToken() {
-  tokenValue.value = getToken()
-}
-
-function getErrorMessage(error) {
-  return error?.message || "发生了未知错误"
-}
+const form = reactive({ username: "", password: "" });
+const loading = ref(false);
+const error = ref("");
 
 async function handleLogin() {
-  clearFeedback()
+  error.value = "";
 
-  if (!form.username || !form.password) {
-    errorMessage.value = "请先输入用户名和密码"
-    return
+  if (!form.username.trim() || !form.password) {
+    error.value = "请输入用户名和密码";
+    return;
   }
 
-  loading.login = true
-
+  loading.value = true;
   try {
-    const result = await login({
-      username: form.username,
-      password: form.password,
-    })
+    const result = await login({ username: form.username, password: form.password });
+    setToken(result.token);
+    invalidateUserCache();
+    await ensureUser();
 
-    loginResult.value = result
-    currentUser.value = null
-    setToken(result.token)
-    setSavedUser(result)
-    syncToken()
-    message.value = "登录成功，token 已保存"
-    await router.push(getTargetRoute(result.role))
-  } catch (error) {
-    loginResult.value = null
-    errorMessage.value = getErrorMessage(error)
+    const redirect = route.query.redirect || getDefaultRoute();
+    router.replace(redirect);
+  } catch (e) {
+    error.value = e?.message || "登录失败，请检查用户名和密码";
   } finally {
-    loading.login = false
+    loading.value = false;
   }
 }
 
-async function handleGetCurrentUser() {
-  clearFeedback()
-
-  if (!getToken()) {
-    errorMessage.value = "请先登录并保存 token"
-    return
-  }
-
-  loading.currentUser = true
-
-  try {
-    currentUser.value = await getCurrentUser()
-    setSavedUser(currentUser.value)
-    message.value = "当前用户获取成功，请检查 Network 面板中的 token 请求头"
-  } catch (error) {
-    currentUser.value = null
-    errorMessage.value = getErrorMessage(error)
-  } finally {
-    loading.currentUser = false
-    syncToken()
-  }
-}
-
-function handleClearLocalState() {
-  removeToken()
-  removeSavedUser()
-  syncToken()
-  loginResult.value = null
-  currentUser.value = null
-  clearFeedback()
-  message.value = "本地 token 和页面预览数据已清空"
-}
-
-async function handleEnterSystem() {
-  const redirect = typeof route.query.redirect === "string" ? route.query.redirect : getTargetRoute(loginResult.value?.role)
-  await router.push(redirect)
-}
-
-function getTargetRoute(role) {
-  const normalizedRole = normalizeRole(role)
-
-  if (normalizedRole === "ADMIN") {
-    return "/admin"
-  }
-
-  if (normalizedRole === "CADRE") {
-    return "/cadre"
-  }
-
-  return "/"
+function getDefaultRoute() {
+  const role = currentUser.value?.role?.replace(/^ROLE_/i, "").toUpperCase();
+  if (role === "ADMIN") return "/admin";
+  if (role === "CADRE") return "/cadre";
+  if (role === "VILLAGER") return "/village";
+  return "/";
 }
 </script>
+
+<template>
+  <div class="login-page">
+    <section class="login-hero">
+      <RouterLink to="/" class="brand">
+        <span class="brand-mark">SV</span>
+        <span>智慧乡村</span>
+      </RouterLink>
+
+      <div class="hero-copy">
+        <p>统一身份入口</p>
+        <h1>村务办理、民生工单和系统管理从这里进入</h1>
+        <div class="role-strip">
+          <span>村民中心</span>
+          <span>干部工作台</span>
+          <span>管理后台</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="login-panel" aria-label="登录表单">
+      <div class="panel-head">
+        <p>账号登录</p>
+        <h2>进入工作台</h2>
+      </div>
+
+      <form class="login-form" @submit.prevent="handleLogin">
+        <label class="form-item">
+          <span>用户名</span>
+          <input
+            v-model.trim="form.username"
+            type="text"
+            class="sv-input login-input"
+            placeholder="请输入用户名"
+            autocomplete="username"
+          />
+        </label>
+
+        <label class="form-item">
+          <span>密码</span>
+          <input
+            v-model="form.password"
+            type="password"
+            class="sv-input login-input"
+            placeholder="请输入密码"
+            autocomplete="current-password"
+          />
+        </label>
+
+        <p v-if="error" class="login-error">{{ error }}</p>
+
+        <button type="submit" class="sv-btn sv-btn--primary login-btn" :disabled="loading">
+          {{ loading ? "登录中..." : "登录" }}
+        </button>
+      </form>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.58fr);
+  background: var(--forest-950);
+}
+
+.login-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100vh;
+  padding: 36px clamp(28px, 6vw, 78px);
+  color: #fff;
+  background:
+    linear-gradient(140deg, rgba(16, 35, 28, 0.96), rgba(47, 101, 80, 0.86)),
+    var(--forest-950);
+  overflow: hidden;
+}
+
+.login-hero::after {
+  content: "";
+  position: absolute;
+  right: -8vw;
+  bottom: -14vw;
+  width: min(54vw, 620px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 48px rgba(255, 255, 255, 0.03),
+    inset 0 0 0 108px rgba(255, 255, 255, 0.025);
+}
+
+.brand {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 820;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.13);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  padding-bottom: 7vh;
+}
+
+.hero-copy p {
+  margin: 0 0 18px;
+  color: rgba(255, 255, 255, 0.68);
+  font-weight: 720;
+}
+
+.hero-copy h1 {
+  margin: 0;
+  font-size: clamp(34px, 6vw, 58px);
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.role-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 30px;
+}
+
+.role-strip span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login-panel {
+  align-self: center;
+  width: min(100% - 48px, 430px);
+  margin: 0 auto;
+  padding: 34px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.24);
+}
+
+.panel-head {
+  margin-bottom: 28px;
+}
+
+.panel-head p {
+  margin: 0 0 4px;
+  color: var(--text-placeholder);
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.panel-head h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.form-item span {
+  font-size: 14px;
+  font-weight: 720;
+  color: var(--text-secondary);
+}
+
+.login-input {
+  width: 100%;
+  height: 44px;
+}
+
+.login-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger);
+  background: var(--red-100);
+  padding: 9px 12px;
+  border-radius: var(--radius-control);
+}
+
+.login-btn {
+  width: 100%;
+  min-height: 46px;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+@media (max-width: 860px) {
+  .login-page {
+    grid-template-columns: 1fr;
+    background: var(--forest-950);
+  }
+
+  .login-hero {
+    min-height: 360px;
+    padding: 26px 24px 40px;
+  }
+
+  .hero-copy {
+    padding-bottom: 0;
+  }
+
+  .login-panel {
+    width: min(100% - 32px, 430px);
+    margin: -48px auto 40px;
+    position: relative;
+    z-index: 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-panel {
+    padding: 24px;
+  }
+}
+</style>

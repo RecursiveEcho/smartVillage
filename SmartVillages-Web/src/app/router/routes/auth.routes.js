@@ -8,4 +8,4 @@ export const authRoutes = [
       title: "登录",
     },
   },
-]
+];
