@@ -1,15 +1,19 @@
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:8090";
+const DEFAULT_API_BASE_URL = "/api";
 
 function normalizeBaseUrl(value) {
-  if (!value) {
+  if (value === undefined) {
     return DEFAULT_API_BASE_URL;
   }
-  return value.replace(/\/+$/, "");
+
+  const normalizedValue = String(value).trim();
+  if (!normalizedValue || normalizedValue === "/") {
+    return "";
+  }
+
+  return normalizedValue.replace(/\/+$/, "");
 }
 
-/** 开发环境走 Vite 代理（同源），避免用局域网 IP 打开页面时跨域失败 */
-export const apiBaseUrl = import.meta.env.DEV
-  ? ""
-  : normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL);
+/** 开发和生产都统一走 /api 前缀，避免页面路由和后端接口路径冲突 */
+export const apiBaseUrl = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL);
 
 export { DEFAULT_API_BASE_URL };

@@ -25,7 +25,8 @@ public class RedisDistributedLock {
         return redis.call('del',KEYS[1])
         else
           return 0;
-          end""";
+          end
+      """;
 
   private static final DefaultRedisScript<Long> UNLOCK =
       new DefaultRedisScript<>(UNLOCK_SCRIPT, Long.class);

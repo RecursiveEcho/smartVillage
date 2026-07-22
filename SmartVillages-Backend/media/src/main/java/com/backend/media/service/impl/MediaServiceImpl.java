@@ -262,6 +262,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
       redisJsonCacheTool.delete(CacheKeyUtils.detailKey(CACHE_KEY_PREFIX, id));
       bumpListCacheVersion();
 
+
       if (Objects.equals(status, STATUS_APPROVED)
           && StringUtils.hasText(entity.getBindTarget())
           && entity.getBindEntityId() != null
@@ -294,6 +295,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     }
   }
 
+  // 待审核媒体资源
   @Override
   public IPage<PageVO> pagePending(Long current, Long size, String fileType, String category) {
     String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
@@ -301,6 +303,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
         CACHE_LIST_PREFIX + CacheKeyUtils.listFilterSegment(fileType, category, STATUS_PENDING);
     String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
     MediaListPageCache cached = redisJsonCacheTool.getObject(listKey, MediaListPageCache.class);
+
     if (cached != null) {
       List<PageVO> rows =
           cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
@@ -309,6 +312,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
       enrichPageUsernames(rows);
       return hit;
     }
+
     LambdaQueryWrapper<MediaEntity> wrapper =
         new LambdaQueryWrapper<MediaEntity>()
             .eq(fileType != null, MediaEntity::getFileType, fileType)
@@ -328,6 +332,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     return result;
   }
 
+  //待审核分页
   @Override
   public IPage<PageVO> pageAudited(Long current, Long size, String fileType, String category) {
     String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
@@ -379,6 +384,7 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     return t;
   }
 
+  // 上传
   private static UploadVO buildUploadVo(
       MultipartFile file,
       OssUploadTool.UploadResult uploadResult,
@@ -394,6 +400,8 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, MediaEntity>
     return vo;
   }
 
+
+  // 绑定
   private String resolveBindRoutingKey(String bindTarget) {
     return switch (bindTarget) {
       case "AUTH" -> MediaBindMqNames.MEDIA_BIND_AUTH_ROUTING_KEY;

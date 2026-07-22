@@ -1,6 +1,7 @@
 package com.backend.common.config;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,6 +27,10 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+  @Value(
+      "${app.cors.allowed-origin-patterns:http://localhost,http://localhost:*,http://127.0.0.1,http://127.0.0.1:*,http://192.168.*,http://192.168.*:*,http://10.*,http://10.*:*,http://172.16.*,http://172.16.*:*,http://172.17.*,http://172.17.*:*,http://172.18.*,http://172.18.*:*,http://172.19.*,http://172.19.*:*,http://172.2*.*,http://172.2*.*:*,http://172.30.*,http://172.30.*:*,http://172.31.*,http://172.31.*:*}")
+  private String allowedOriginPatterns;
 
   private final TraceIdFilter traceIdFilter;
   private final JwtSecurityFilter jwtSecurityFilter;
@@ -51,7 +57,7 @@ public class SecurityConfig {
                         "/guest/**",
                         "/village-affairs/**",
                         "/public/village-affairs/**",
-                        "/internal/auth/usernames"
+                        "/internal/auth/**"
                       )
                     .permitAll() // 白名单请求放行（前台村务公示为 /public/village-affairs）
                     // 当前登录信息：只要已登录即可查询（管理员/村干部/村民都可）
@@ -97,7 +103,8 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+    // Deployment verification first: open CORS temporarily to isolate browser-origin issues.
+    configuration.setAllowedOriginPatterns(List.of("*"));
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("*"));
     configuration.setAllowCredentials(true);
@@ -105,5 +112,13 @@ public class SecurityConfig {
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
+  }
+
+  private List<String> parseAllowedOriginPatterns() {
+    return List.of(allowedOriginPatterns.split(","))
+        .stream()
+        .map(String::trim)
+        .filter(pattern -> !pattern.isEmpty())
+        .collect(Collectors.toList());
   }
 }

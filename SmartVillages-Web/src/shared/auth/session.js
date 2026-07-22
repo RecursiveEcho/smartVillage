@@ -1,5 +1,6 @@
 import { ref } from "vue";
 
+import { getCurrentUser } from "@/services/auth.api";
 import { getToken, removeSavedUser, setSavedUser } from "@/shared/auth/token";
 
 let cacheToken = null;
@@ -12,7 +13,7 @@ export function invalidateUserCache() {
   removeSavedUser();
 }
 
-/** 有 token 时请求 /admin/me（动态 import 避免与 http 拦截器循环依赖） */
+/** 有 token 时请求 /admin/me。 */
 export async function ensureUser() {
   const t = getToken();
   if (!t) {
@@ -23,7 +24,6 @@ export async function ensureUser() {
     return currentUser.value;
   }
   try {
-    const { getCurrentUser } = await import("@/services/auth.api");
     currentUser.value = await getCurrentUser();
     setSavedUser(currentUser.value);
     cacheToken = t;

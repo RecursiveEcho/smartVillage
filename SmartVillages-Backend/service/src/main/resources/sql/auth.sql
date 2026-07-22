@@ -17,6 +17,7 @@ CREATE TABLE `auth` (
 -- 登录校验：对输入密码做同上 MD5，与库中 password 字段比较（相等则通过）。
 INSERT INTO `auth` (`username`, `password`, `phone`, `role`, `avatar`, `status`, `is_deleted`) VALUES
 ('admin', 'e10adc3949ba59abbe56e057f20f883e', '13800001001', 'admin', '/upload/avatar/admin.png', 1, 0),
-('cadre_wang', 'e10adc3949ba59abbe56e057f20f883e', '13800001002', 'cadre', '/upload/avatar/cadre.png', 1, 0),
-('zhang_san', 'e10adc3949ba59abbe56e057f20f883e', '13800001003', 'villager', NULL, 1, 0),
-('li_si', 'e10adc3949ba59abbe56e057f20f883e', '13800001004', 'villager', '/upload/avatar/user4.jpg', 1, 0);
+('cadre_wang', 'e10adc3949ba59abbe56e057f20f883e', '13800001002', 'cadre', '/upload/avatar/cadre_wang.png', 1, 0),
+('villager_zhang', 'e10adc3949ba59abbe56e057f20f883e', '13800001003', 'villager', '/upload/avatar/villager_zhang.png', 1, 0),
+('villager_li', 'e10adc3949ba59abbe56e057f20f883e', '13800001004', 'villager', '/upload/avatar/villager_li.png', 1, 0),
+('cadre_liu', 'e10adc3949ba59abbe56e057f20f883e', '13800001005', 'cadre', '/upload/avatar/cadre_liu.png', 1, 0);

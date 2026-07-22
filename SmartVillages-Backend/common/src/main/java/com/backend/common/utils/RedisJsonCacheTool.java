@@ -73,6 +73,7 @@ public class RedisJsonCacheTool {
   }
 
 public <T> T getObject(String key, Class<T> type, Supplier<T> loader){
+
    String cached = stringRedisTemplate.opsForValue().get(key);
    if(isNullMarker(key)){
     log.debug("redis cache null marker hit, key={}", key);
@@ -92,6 +93,7 @@ public <T> T getObject(String key, Class<T> type, Supplier<T> loader){
    String lockKey="mutex:"+key;
    String instance=RedisDistributedLock.generateInstanceId();
    log.debug("redis cache miss, preparing loader with lockKey={}", lockKey);
+
    if(redisDistributedLock.tryLock(lockKey, instance)){
     try {
         log.debug("redis cache loader acquired lock, lockKey={}", lockKey);

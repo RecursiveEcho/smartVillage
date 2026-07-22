@@ -1,7 +1,12 @@
 import { unwrapResult } from "@/shared/api/result";
-import { invalidateUserCache } from "@/shared/auth/session";
 import { showFlash } from "@/shared/ui/flash";
 import { getToken, removeToken } from "@/shared/auth/token";
+
+let unauthorizedHandler = null;
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler;
+}
 
 function attachToken(config) {
   const token = getToken();
@@ -29,15 +34,8 @@ function normalizeHttpError(error) {
 
   if (status === 401 && !isAuthLoginRequest(cfg)) {
     removeToken();
-    invalidateUserCache();
+    unauthorizedHandler?.();
     error.message = "登录状态已失效，请重新登录";
-    import("@/app/router").then(({ default: router }) => {
-      if (router.currentRoute.value.name === "login") return;
-      router.replace({
-        name: "login",
-        query: { redirect: router.currentRoute.value.fullPath },
-      });
-    });
   } else if (status === 403) {
     error.message = "暂无权限访问";
     showFlash("暂无权限访问");

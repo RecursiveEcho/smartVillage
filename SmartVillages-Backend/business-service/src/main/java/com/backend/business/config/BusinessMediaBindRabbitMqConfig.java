@@ -1,5 +1,6 @@
 package com.backend.business.config;
 
+import com.backend.common.mq.MediaBindMqNames;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -10,7 +11,6 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.backend.common.mq.MediaBindMqNames;
 
 @Configuration
 public class BusinessMediaBindRabbitMqConfig {

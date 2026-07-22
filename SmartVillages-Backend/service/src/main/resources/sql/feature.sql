@@ -13,7 +13,7 @@ CREATE TABLE `feature` (
   `deleted` TINYINT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='乡村风采表';
 
--- 假数据：用于本地/联调验证列表、类型筛选、排序等
+-- 示例数据：仅用于本地开发、联调与功能验证，请按正式内容要求替换后再部署
 INSERT INTO `feature` (`title`, `content`, `type`, `images`, `sort`, `status`, `deleted`) VALUES
 ('村口荷塘', '夏季荷花盛开，是村民散步的好去处。', 'scenery', '["/upload/feature/lotus_1.jpg","/upload/feature/lotus_2.jpg"]', 100, 1, 0),
 ('高山茶园', '有机种植，云雾缭绕。', 'scenery', '["/upload/feature/tea_1.jpg"]', 80, 1, 0),
