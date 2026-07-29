@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +46,9 @@ import lombok.RequiredArgsConstructor;
 /**
  * 公告业务：CRUD、前台分页/热门、详情浏览量与 Redis 详情缓存。
  *
- * <p>状态约定：0-待审核 1-已通过(发布) 2-已拒绝 3-已下架。 详情接口先读缓存；缓存命中时用 SQL 对 {@code view_count} 做原子 +1 并同步
+ * <p>
+ * 状态约定：0-待审核 1-已通过(发布) 2-已拒绝 3-已下架。 详情接口先读缓存；缓存命中时用 SQL 对 {@code view_count}
+ * 做原子 +1 并同步
  * VO，未命中则查库更新后回写缓存。
  */
 @Service
@@ -105,27 +108,22 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     String prefix = CACHE_LIST_PUB_PREFIX + CacheKeyUtils.listFilterSegment();
     String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
 
-    AnnouncementPublishedPageCache cached =
-        redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+    AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
     // 列表「缓存穿透」：空页也写入 records=[]，命中后不再打库；records 为 null 时按空列表返回，避免坏 JSON 反复回源
     if (cached != null) {
-      List<AnnouncementVO> rows =
-          cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
-      Page<AnnouncementVO> hit =
-          new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+      List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+      Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
       hit.setRecords(rows);
       enrichUsernames(rows);
       return hit;
     }
 
-    LambdaQueryWrapper<AnnouncementEntity> wrapper =
-        new LambdaQueryWrapper<AnnouncementEntity>()
-            .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
-            .orderByDesc(AnnouncementEntity::getIsTop)
-            .orderByDesc(AnnouncementEntity::getPublishTime);
+    LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+        .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
+        .orderByDesc(AnnouncementEntity::getIsTop)
+        .orderByDesc(AnnouncementEntity::getPublishTime);
 
-    Page<AnnouncementEntity> page =
-        announcementMapper.selectPage(new Page<>(current, size), wrapper);
+    Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
 
     AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
     toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
@@ -163,8 +161,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
       entity.setType(dto.getType());
       entity.setIsTop(dto.getIsTop());
       updateById(entity);
-      evictDetailCache(id);
-      bumpPublishedListCacheVersion();
+      invalidateCachesAfterCommit(id);
     } finally {
       redisDistributedLock.unlock(lockKey, lockInstance);
     }
@@ -234,11 +231,10 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
   }
 
   private void doViewCountBump(Long id, String cacheKey, AnnouncementVO vo) {
-    LambdaUpdateWrapper<AnnouncementEntity> bump =
-        new LambdaUpdateWrapper<AnnouncementEntity>()
-            .eq(AnnouncementEntity::getId, id)
-            .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
-            .setSql("view_count = IFNULL(view_count, 0) + 1");
+    LambdaUpdateWrapper<AnnouncementEntity> bump = new LambdaUpdateWrapper<AnnouncementEntity>()
+        .eq(AnnouncementEntity::getId, id)
+        .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
+        .setSql("view_count = IFNULL(view_count, 0) + 1");
     int rows = announcementMapper.update(null, bump);
     if (rows <= 0) {
       redisJsonCacheTool.delete(cacheKey);
@@ -267,15 +263,13 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     /* 设置默认条数 */
     int n = (limit == null || limit <= 0) ? DEFAULT_HOT_LIMIT : limit;
     /* 查询条件：状态为已发布，未删除，按浏览量降序，按创建时间升序，限制条数 */
-    LambdaQueryWrapper<AnnouncementEntity> wrapper =
-        new LambdaQueryWrapper<AnnouncementEntity>()
-            .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
-            .orderByDesc(AnnouncementEntity::getViewCount)
-            .orderByAsc(AnnouncementEntity::getCreateTime)
-            .last("limit " + n);
+    LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+        .eq(AnnouncementEntity::getStatus, STATUS_PUBLISHED)
+        .orderByDesc(AnnouncementEntity::getViewCount)
+        .orderByAsc(AnnouncementEntity::getCreateTime)
+        .last("limit " + n);
     /* 转换为 VO 并返回 */
-    List<AnnouncementVO> list =
-        announcementMapper.selectList(wrapper).stream().map(this::toVo).toList();
+    List<AnnouncementVO> list = announcementMapper.selectList(wrapper).stream().map(this::toVo).toList();
     enrichUsernames(list);
     return list;
   }
@@ -314,32 +308,26 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
       LocalDateTime startTime,
       LocalDateTime endTime) {
     String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-    String prefix =
-        CACHE_LIST_ADMIN_PREFIX
-            + CacheKeyUtils.listFilterSegment(status, title, type, isTop, startTime, endTime);
+    String prefix = CACHE_LIST_ADMIN_PREFIX
+        + CacheKeyUtils.listFilterSegment(status, title, type, isTop, startTime, endTime);
     String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
-    AnnouncementPublishedPageCache cached =
-        redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+    AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
     if (cached != null) {
-      List<AnnouncementVO> rows =
-          cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
-      Page<AnnouncementVO> hit =
-          new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+      List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+      Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
       hit.setRecords(rows);
       enrichUsernames(rows);
       return hit;
     }
-    LambdaQueryWrapper<AnnouncementEntity> wrapper =
-        new LambdaQueryWrapper<AnnouncementEntity>()
-            .eq(status != null, AnnouncementEntity::getStatus, status)
-            .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
-            .eq(type != null, AnnouncementEntity::getType, type)
-            .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
-            .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
-            .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
-            .orderByDesc(AnnouncementEntity::getUpdateTime);
-    Page<AnnouncementEntity> page =
-        announcementMapper.selectPage(new Page<>(current, size), wrapper);
+    LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+        .eq(status != null, AnnouncementEntity::getStatus, status)
+        .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
+        .eq(type != null, AnnouncementEntity::getType, type)
+        .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
+        .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
+        .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
+        .orderByDesc(AnnouncementEntity::getUpdateTime);
+    Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
     AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
     toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
     toSave.setTotal(page.getTotal());
@@ -363,32 +351,26 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
       LocalDateTime startTime,
       LocalDateTime endTime) {
     String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-    String prefix =
-        CACHE_LIST_PENDING_PREFIX
-            + CacheKeyUtils.listFilterSegment(title, type, isTop, startTime, endTime);
+    String prefix = CACHE_LIST_PENDING_PREFIX
+        + CacheKeyUtils.listFilterSegment(title, type, isTop, startTime, endTime);
     String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
-    AnnouncementPublishedPageCache cached =
-        redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+    AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
     if (cached != null) {
-      List<AnnouncementVO> rows =
-          cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
-      Page<AnnouncementVO> hit =
-          new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+      List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+      Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
       hit.setRecords(rows);
       enrichUsernames(rows);
       return hit;
     }
-    LambdaQueryWrapper<AnnouncementEntity> wrapper =
-        new LambdaQueryWrapper<AnnouncementEntity>()
-            .eq(AnnouncementEntity::getStatus, STATUS_PENDING)
-            .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
-            .eq(type != null, AnnouncementEntity::getType, type)
-            .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
-            .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
-            .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
-            .orderByDesc(AnnouncementEntity::getUpdateTime);
-    Page<AnnouncementEntity> page =
-        announcementMapper.selectPage(new Page<>(current, size), wrapper);
+    LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+        .eq(AnnouncementEntity::getStatus, STATUS_PENDING)
+        .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
+        .eq(type != null, AnnouncementEntity::getType, type)
+        .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
+        .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
+        .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
+        .orderByDesc(AnnouncementEntity::getUpdateTime);
+    Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
     AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
     toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
     toSave.setTotal(page.getTotal());
@@ -443,33 +425,27 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
       LocalDateTime startTime,
       LocalDateTime endTime) {
     String ver = redisJsonCacheTool.getListCacheVersionOrZero(CACHE_LIST_VER_KEY);
-    String prefix =
-        CACHE_LIST_AUDITED_PREFIX
-            + CacheKeyUtils.listFilterSegment(title, type, isTop, startTime, endTime);
+    String prefix = CACHE_LIST_AUDITED_PREFIX
+        + CacheKeyUtils.listFilterSegment(title, type, isTop, startTime, endTime);
     String listKey = redisJsonCacheTool.buildVersionedListPageKey(prefix, ver, current, size);
-    AnnouncementPublishedPageCache cached =
-        redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
+    AnnouncementPublishedPageCache cached = redisJsonCacheTool.getObject(listKey, AnnouncementPublishedPageCache.class);
     if (cached != null) {
-      List<AnnouncementVO> rows =
-          cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
-      Page<AnnouncementVO> hit =
-          new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
+      List<AnnouncementVO> rows = cached.getRecords() != null ? cached.getRecords() : Collections.emptyList();
+      Page<AnnouncementVO> hit = new Page<>(cached.getCurrent(), cached.getSize(), cached.getTotal());
       hit.setRecords(rows);
       enrichUsernames(rows);
       return hit;
     }
-    LambdaQueryWrapper<AnnouncementEntity> wrapper =
-        new LambdaQueryWrapper<AnnouncementEntity>()
-            .in(AnnouncementEntity::getStatus, 1, 2)
-            .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
-            .eq(type != null, AnnouncementEntity::getType, type)
-            .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
-            .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
-            .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
-            .orderByDesc(AnnouncementEntity::getAuditTime)
-            .orderByDesc(AnnouncementEntity::getUpdateTime);
-    Page<AnnouncementEntity> page =
-        announcementMapper.selectPage(new Page<>(current, size), wrapper);
+    LambdaQueryWrapper<AnnouncementEntity> wrapper = new LambdaQueryWrapper<AnnouncementEntity>()
+        .in(AnnouncementEntity::getStatus, 1, 2)
+        .like(StringUtils.hasText(title), AnnouncementEntity::getTitle, title)
+        .eq(type != null, AnnouncementEntity::getType, type)
+        .eq(isTop != null, AnnouncementEntity::getIsTop, isTop)
+        .ge(startTime != null, AnnouncementEntity::getPublishTime, startTime)
+        .le(endTime != null, AnnouncementEntity::getPublishTime, endTime)
+        .orderByDesc(AnnouncementEntity::getAuditTime)
+        .orderByDesc(AnnouncementEntity::getUpdateTime);
+    Page<AnnouncementEntity> page = announcementMapper.selectPage(new Page<>(current, size), wrapper);
     AnnouncementPublishedPageCache toSave = new AnnouncementPublishedPageCache();
     toSave.setRecords(page.getRecords().stream().map(this::toVo).toList());
     toSave.setTotal(page.getTotal());
@@ -540,7 +516,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     if (StringUtils.hasText(existing)) {
       String trimmed = existing.trim();
       try {
-        urls.addAll(objectMapper.readValue(trimmed, new TypeReference<List<String>>() {}));
+        urls.addAll(objectMapper.readValue(trimmed, new TypeReference<List<String>>() {
+        }));
       } catch (JsonProcessingException e) {
         urls.add(trimmed);
       }
@@ -596,8 +573,10 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     }
     Set<Integer> ids = new HashSet<>();
     for (AnnouncementVO vo : rows) {
-      if (vo.getCreateUser() != null) ids.add(vo.getCreateUser());
-      if (vo.getAuditUser() != null) ids.add(vo.getAuditUser());
+      if (vo.getCreateUser() != null)
+        ids.add(vo.getCreateUser());
+      if (vo.getAuditUser() != null)
+        ids.add(vo.getAuditUser());
     }
 
     if (ids.isEmpty()) {
@@ -616,7 +595,22 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
   /* 单条 VO 填充用户名 */
   private void enrichUsername(AnnouncementVO vo) {
-    if (vo == null) return;
+    if (vo == null)
+      return;
     enrichUsernames(Collections.singletonList(vo));
+  }
+
+  // 在事务提交后清理缓存，避免事务回滚导致缓存不一致
+  private void invalidateCachesAfterCommit(Long id) {
+    // 注册事务同步器，在事务提交后执行缓存清理操作
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          // 在事务提交后执行缓存清理操作
+          @Override
+          public void afterCommit() {
+            evictDetailCache(id);
+            bumpPublishedListCacheVersion();
+          }
+        });
   }
 }
